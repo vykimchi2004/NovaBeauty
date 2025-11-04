@@ -1,0 +1,130 @@
+.container {
+  padding: 10px 10px;
+  background: #ffffff;
+}
+
+.inner {
+  width: 100%;
+  margin: 0;
+  padding: 20px 30px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #111;
+  margin: 0 0 12px 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  align-items: center;
+  gap: 24px;
+  background: #fde7f1;
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.cta {
+  display: inline-block;
+  background: #111;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 24px;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Responsive adjustments for intro and tiles */
+@media (max-width: 992px) {
+  .row {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: 16px;
+  }
+  .intro {
+    align-items: center;
+  }
+  .thumb {
+    width: 130px;
+    height: 130px;
+    border-radius: 28px;
+  }
+}
+
+@media (max-width: 768px) {
+  .thumb {
+    width: 110px;
+    height: 110px;
+    border-radius: 24px;
+  }
+  .thumb img {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .thumb {
+    width: 96px;
+    height: 96px;
+    border-radius: 20px;
+  }
+  .thumb img {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+.item {
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+}
+
+.thumb {
+  width: 150px;
+  height: 150px;
+  border-radius: 32px;
+  background: #fff;
+  margin: 0 auto 10px auto;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.thumb img {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+}
+
+.label {
+  font-weight: 600;
+}

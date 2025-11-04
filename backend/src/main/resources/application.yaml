@@ -1,0 +1,43 @@
+# spring.application.name=backend
+#  config port
+server:
+  port: 8080
+  servlet:
+    context-path: /nova_beauty
+
+#  Config cau hinh database
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/nova_beauty
+    driverClassName: com.mysql.cj.jdbc.Driver
+    username: root
+    password: root
+  # Chi dung jpa duoi day de tu dong tao table User, tuy nhien khi di lam can dua vao 1 script SQL
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    database-platform: org.hibernate.dialect.MySQLDialect
+  # validate: Hibernate chi kiem tra cac bang, cot, kieu du lieu trong DB co phu hop voi entity trong code hay không. Neu khong khop → bao loi, khong tu sua.
+  # update : Hibernate so sanh entity va DB → tu dong them hoac chinh sua bang/cot de khop. Tuy nhien, no khong xoa cac cot cu.
+
+#  Brevo Email Configuration
+brevo:
+  api:
+    key: ${BREVO_API_KEY_NOVA}
+  sender:
+    email: ${BREVO_EMAIL} # Email ?� verify trong Brevo
+
+#  Secret Key
+jwt:
+  signerKey: "/nvphzRqEgduNfnKy2ztU3XBeojbmK8jzDivxOxLIGnl+D5GfkjyXdLq15xz9af/\n"
+  valid-duration: 3600  # in second
+  refreshable-duration: 360000 # in seconds
+
+# Default avatar configuration
+app:
+  default-avatar: "/assets/images/default-avatar.png"
+
+# Layer1 - Controller: Quan ly cac mapping, endpoint
+# Layer2 - Service: Xu ly cac logic lien quan toi subdomain
+# Layer3 - Repository: Tang tuong tac truc tiep voi DBMS

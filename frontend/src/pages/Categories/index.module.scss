@@ -1,0 +1,33 @@
+.container {
+  padding: 10px 20px;
+}
+
+.inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 0;
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  display: grid;
+  place-items: center;
+  border: 1px solid #eee;
+  background: #fff;
+  border-radius: 12px;
+  min-height: 120px;
+  text-decoration: none;
+  color: #111;
+  font-weight: 700;
+}

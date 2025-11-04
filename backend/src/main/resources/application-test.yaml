@@ -1,0 +1,17 @@
+# Test Email Configuration
+spring:
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: your-actual-email@gmail.com  # Thay bằng email Gmail thực tế của bạn
+    password: your-app-password            # Thay bằng App Password từ Gmail
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          ssl:
+            trust: smtp.gmail.com
+            required: false
+

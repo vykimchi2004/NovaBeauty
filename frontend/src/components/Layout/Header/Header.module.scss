@@ -1,0 +1,152 @@
+.wrapper {
+  // background: #fde0e5;
+  padding: 17px 24px;
+}
+
+.inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.header-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+
+  span {
+    display: block;
+    height: 2px;
+    width: 22px;
+    background: #e5677d;
+    margin: 4px 0;
+    border-radius: 2px;
+  }
+}
+.icon{
+  color: #e5677d;
+}
+    
+.search {
+  display: flex;
+  align-items: center;
+  width: 50%;
+  margin: 0 20px 0 80px;
+
+  input {
+    width: 70%;
+    height: 40px;
+    padding: 0 20px;
+    border: 1px solid #e5677d;
+    border-radius: 20px 0 0 20px; /* bo góc bên trái */
+    font-size: 15px;
+    outline: none;
+  }
+
+  .search-btn {
+    margin-top: 5px;
+    height: 40px;
+    width: 40px;
+    border: 1px solid #e5677d;
+    border-left: none; /* gắn liền với input */
+    border-radius: 0 20px 20px 0; /* bo góc bên phải */
+    background: #e5677d;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
+    &:hover {
+      background: #d4566c;
+    }
+
+    .icon {
+      color: white;
+      font-size: 16px;
+    }
+  }
+}
+
+  @media (max-width: 992px) {
+.support {
+    display: none; // ẩn support
+  }
+  /* show search under header on mobile */
+  .search {
+    position: absolute;
+    width: calc(100% - 58px);
+    padding-left: 100px;
+    top:80px;
+    margin: 0;
+
+  }
+
+  .actions .text {
+    display: none; // chỉ ẩn chữ, giữ icon lại
+  }
+
+  .inner {
+    justify-content: center; 
+    position: relative;
+  }
+
+  /* give extra space under header so search doesn't overlap page content */
+  .wrapper { padding-bottom: 72px; }
+
+  /* show header hamburger in mobile, position top-left */
+  .header-hamburger {
+    display: block;
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  // Đặt actions cố định bên phải
+  .actions {
+    position: absolute;
+    right: 20px;  // cách mép phải 20px
+    top: 60%;
+    transform: translateY(-50%);
+  }
+      
+}
+  
+.actions {
+      display: flex;
+      gap: 19px;
+      font-size: 17px;
+      font-weight: 500;
+      cursor: pointer;
+
+  .cart, .account, .support {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    
+  }
+}
+.logo {
+  width: 140px;       // chỉnh theo size bạn muốn
+  display: block;
+  object-fit: contain;
+  cursor: pointer;
+}
+
+/* Account text: no underline and a subtle "lift" on hover */
+
+
+.text:hover {
+  transform: translateY(-4px);
+  text-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+  color: #e5677d; /* match icon color */
+  text-decoration: none;
+}
+
+/* Strong overrides to prevent underline on the login link and account text */
+:global(.login-link),
+.text {
+  text-decoration: none !important;
+  color: inherit !important;
+}
