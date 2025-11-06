@@ -8,7 +8,10 @@ import Accessories from '../pages/Categories/Accessories/Accessories';
 import HairCare from '../pages/Categories/HairCare/HairCare';
 import Promo from '../pages/Promo/Promo';
 import Products from '../pages/Products';
-import ProductDetail from '../pages/ProductDetail';
+import BestSellersPage from '../pages/BestSellers';
+import ProductDetail from '../pages/ProductDetail/ProductDetail';
+import Profile from '../pages/Profile';
+import AdminPage from '../pages/Admin/AdminPage';
 
 // Layouts
 import DefaultLayout from '../layouts/DefaultLayout';
@@ -25,7 +28,11 @@ const publicRoutes = [
   { path: '/haircare', component: HairCare, layout: DefaultLayout },
   { path: '/promo', component: Promo, layout: DefaultLayout },
   { path: '/products', component: Products, layout: DefaultLayout },
+  { path: '/best-sellers', component: BestSellersPage, layout: DefaultLayout },
   { path: '/product/:id', component: ProductDetail, layout: DefaultLayout },
+  { path: '/profile', component: Profile, layout: DefaultLayout },
+  // Admin shell with nested routes
+  { path: '/admin/*', component: AdminPage },
 ];
 
 const privateRoutes = [];

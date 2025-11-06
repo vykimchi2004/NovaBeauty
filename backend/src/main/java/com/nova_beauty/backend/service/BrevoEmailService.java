@@ -45,9 +45,9 @@ public class BrevoEmailService {
 
             // Prepare request body
             Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("sender", Map.of("email", senderEmail, "name", "LuminaBook"));
+            requestBody.put("sender", Map.of("email", senderEmail, "name", "NovaBeauty"));
             requestBody.put("to", new Object[] {Map.of("email", toEmail, "name", "User")});
-            requestBody.put("subject", "Mã xác thực OTP - LuminaBook");
+            requestBody.put("subject", "Mã xác thực OTP - NovaBeauty");
 
             String emailContent = String.format(
                     "Xin chào,\n\n"
@@ -93,7 +93,7 @@ public class BrevoEmailService {
 
             // Prepare request body
             Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("sender", Map.of("email", senderEmail, "name", "LuminaBook Admin"));
+            requestBody.put("sender", Map.of("email", senderEmail, "name", "NovaBeauty Admin"));
             requestBody.put("to", new Object[] {Map.of("email", toEmail, "name", staffName)});
             requestBody.put("subject", "Thông tin tài khoản nhân viên - NovaBeauty");
 

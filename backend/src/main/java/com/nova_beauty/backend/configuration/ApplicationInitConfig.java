@@ -29,7 +29,7 @@ public class ApplicationInitConfig {
     PasswordEncoder passwordEncoder;
 
     @NonFinal
-    static final String ADMIN_EMAIL = "admin@luminabook.com";
+    static final String ADMIN_EMAIL = "admin@novabeauty.com";
 
     @NonFinal
     static final String ADMIN_PASSWORD = "admin";
