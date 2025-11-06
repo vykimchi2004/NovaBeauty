@@ -1,53 +1,154 @@
-import { safeMessage } from './utils';
+import apiClient from './api';
+import { API_ENDPOINTS, STORAGE_KEYS } from './config';
+import { storage } from './utils';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '';
+/**
+ * Auth Service
+ * Handles all authentication-related API calls
+ */
 
-export async function sendVerificationCode(email) {
+// Send OTP to email
+export async function sendVerificationCode(email, mode = 'register') {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/send-code`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
+    const params = new URLSearchParams({ email, mode });
+    const response = await fetch(
+      `${apiClient.baseURL}${API_ENDPOINTS.AUTH.SEND_OTP}?${params}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+
     if (!response.ok) {
-      const message = await safeMessage(response);
-      throw new Error(message || 'Failed to send verification code');
+      const data = await response.json();
+      throw new Error(data?.message || 'Failed to send verification code');
     }
-    return response.json();
-  } catch (err) {
-    // Dev fallback: simulate success if API not ready
-    if (process.env.NODE_ENV !== 'production') {
-      /* eslint-disable no-console */
-      console.warn('[auth] sendVerificationCode fallback (dev):', err?.message || err);
-      /* eslint-enable no-console */
-      return new Promise((resolve) => setTimeout(() => resolve({ mock: true }), 500));
+
+    const data = await response.json();
+    // Backend trả về ApiResponse format: {code, message, result}
+    // Nếu code không phải 200 (success), throw error
+    if (data.code && data.code !== 200 && data.code !== 1000) {
+      throw new Error(data.message || 'Failed to send verification code');
     }
-    throw err;
+    return data.result;
+  } catch (error) {
+    console.error('[Auth Service] sendVerificationCode error:', error);
+    throw error;
   }
 }
 
-export async function verifyCode(email, code) {
+// Verify OTP
+export async function verifyCode(email, otp) {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/verify-code`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, code }),
+    return await apiClient.post(API_ENDPOINTS.AUTH.VERIFY_OTP, {
+      email,
+      otp,
     });
-    if (!response.ok) {
-      const message = await safeMessage(response);
-      throw new Error(message || 'Invalid or expired verification code');
+  } catch (error) {
+    console.error('[Auth Service] verifyCode error:', error);
+    throw error;
+  }
+}
+
+// Login (authenticate)
+export async function login(email, password) {
+  try {
+    const response = await apiClient.post(API_ENDPOINTS.AUTH.TOKEN, {
+      email,
+      password,
+    });
+
+    // Lưu token vào storage
+    if (response && response.token) {
+      storage.set(STORAGE_KEYS.TOKEN, response.token);
     }
-    return response.json();
-  } catch (err) {
-    // Dev fallback: accept any 4+ digit code if API not ready
-    if (process.env.NODE_ENV !== 'production') {
-      /* eslint-disable no-console */
-      console.warn('[auth] verifyCode fallback (dev):', err?.message || err);
-      /* eslint-enable no-console */
-      const ok = typeof code === 'string' ? code.trim().replace(/\D/g, '').length >= 4 : false;
-      if (!ok) throw new Error('Mã xác nhận không hợp lệ (mock)');
-      return new Promise((resolve) => setTimeout(() => resolve({ mock: true }), 400));
+
+    return response;
+  } catch (error) {
+    console.error('[Auth Service] login error:', error);
+    throw error;
+  }
+}
+
+// Register (create user)
+export async function register(userData) {
+  try {
+    // Tạo user mới
+    const response = await apiClient.post(API_ENDPOINTS.USERS.CREATE, userData);
+
+    // Nếu có token, lưu vào storage
+    if (response && response.token) {
+      storage.set(STORAGE_KEYS.TOKEN, response.token);
     }
-    throw err;
+
+    return response;
+  } catch (error) {
+    console.error('[Auth Service] register error:', error);
+    throw error;
+  }
+}
+
+// Reset password using OTP
+export async function resetPassword(email, otp, newPassword) {
+  try {
+    return await apiClient.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, {
+      email,
+      otp,
+      newPassword,
+    });
+  } catch (error) {
+    console.error('[Auth Service] resetPassword error:', error);
+    throw error;
+  }
+}
+
+// Change password (requires authentication)
+export async function changePassword(currentPassword, newPassword) {
+  try {
+    return await apiClient.post(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, {
+      currentPassword,
+      newPassword,
+    });
+  } catch (error) {
+    console.error('[Auth Service] changePassword error:', error);
+    throw error;
+  }
+}
+
+// Refresh token
+export async function refreshToken(refreshTokenValue) {
+  try {
+    const response = await apiClient.post(API_ENDPOINTS.AUTH.REFRESH_TOKEN, {
+      token: refreshTokenValue,
+    });
+
+    // Cập nhật token mới
+    if (response && response.token) {
+      storage.set(STORAGE_KEYS.TOKEN, response.token);
+    }
+
+    return response;
+  } catch (error) {
+    console.error('[Auth Service] refreshToken error:', error);
+    throw error;
+  }
+}
+
+// Logout
+export async function logout(token) {
+  try {
+    await apiClient.post(API_ENDPOINTS.AUTH.LOGOUT, {
+      token: token || storage.get(STORAGE_KEYS.TOKEN),
+    });
+
+    // Xóa token và user info
+    storage.remove(STORAGE_KEYS.TOKEN);
+    storage.remove(STORAGE_KEYS.USER);
+  } catch (error) {
+    console.error('[Auth Service] logout error:', error);
+    // Vẫn xóa token ngay cả khi API call fail
+    storage.remove(STORAGE_KEYS.TOKEN);
+    storage.remove(STORAGE_KEYS.USER);
+    throw error;
   }
 }

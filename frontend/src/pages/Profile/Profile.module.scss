@@ -1,0 +1,132 @@
+.container {
+  max-width: 1100px;
+  margin: 20px auto;
+  padding: 0 16px;
+  display: flex;
+  gap: 24px;
+}
+
+// Theme colors
+$primary: #ff80b5;
+$primary-600: #ff6aa8;
+$primary-700: #ff549b;
+$primary-50: #fff0f6;
+$border-soft: #ffd1e4;
+$text-dark: #212529;
+$white: #fff;
+
+.sidebar {
+  width: 400px;
+  
+}
+
+.sidebarBox {
+  border: 1px solid $border-soft;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.sidebarItem {
+  padding: 12px 14px;
+  cursor: pointer;
+  background: #fff;
+}
+
+.sidebarItemActive {
+  background: $primary-50;
+  color: $text-dark;
+}
+
+.logoutItem {
+  color: #e03131;
+}
+
+.content {
+  flex: 1;
+}
+
+.card {
+  border: 1px solid $border-soft;
+  border-radius: 8px;
+  background: #fff;
+  padding: 16px;
+  box-shadow: 0 2px 10px rgba(255, 128, 181, 0.08);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  h2 {
+    margin: 0;
+    color: $primary-700;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btnPrimary {
+  background: $primary;
+  color: $white;
+  box-shadow: 0 2px 6px rgba(255, 128, 181, 0.3);
+
+  &:hover { background: $primary-600; }
+  &:active { background: $primary-700; transform: translateY(1px); }
+}
+
+.btnSecondary {
+  background: #f1f3f5;
+  color: $text-dark;
+  border: 1px solid #e9ecef;
+  &:hover { background: #e9ecef; }
+}
+
+.btnDark {
+  background: $primary-700;
+  color: $white;
+  box-shadow: 0 2px 6px rgba(255, 84, 155, 0.25);
+  &:hover { background: $primary-600; }
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.input {
+  width: 90%;
+  padding: 10px;
+  margin-top: 6px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  &:focus {
+    outline: none;
+    border-color: $primary;
+    box-shadow: 0 0 0 3px rgba(255, 128, 181, 0.15);
+  }
+}
+
+.inputDisabled {
+  background: #f9f9f9;
+}
+
+.footerSpace {
+  margin-top: 16px;
+}
+
+

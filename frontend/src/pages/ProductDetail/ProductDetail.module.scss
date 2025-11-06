@@ -424,4 +424,159 @@
   }
 }
 
+.tabs-container {
+  display: flex;
+  gap: 12px;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 16px;
+  padding-bottom: 0;
+  position: sticky;
+  background: #fff;
+  z-index: 100;
+  padding-top: 12px;
+  margin-top: -12px;
+  padding-bottom: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: top 0.2s ease;
+}
+
+.tab-button {
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: #2c3e50;
+  border-radius: 0;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  position: relative;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+
+  &:hover {
+    color: #ff80b5;
+  }
+
+  &.active {
+    color: #ff80b5;
+    border-bottom-color: #ff80b5;
+  }
+}
+
+.tab-content {
+  margin-top: 32px;
+  margin-bottom: 48px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid #eee;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .content-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 16px;
+  }
+
+  p {
+    font-size: 15px;
+    line-height: 1.8;
+    color: #666;
+    margin-bottom: 16px;
+  }
+}
+
+.ingredients-list,
+.benefits-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    padding: 16px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 15px;
+    line-height: 1.8;
+    color: #666;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    b,
+    strong {
+      color: #2c3e50;
+      font-weight: 600;
+    }
+  }
+}
+
+.howto-list {
+  padding-left: 20px;
+  margin: 16px 0;
+
+  li {
+    margin-bottom: 16px;
+    font-size: 15px;
+    line-height: 1.8;
+    color: #666;
+
+    strong {
+      color: #2c3e50;
+      font-weight: 600;
+    }
+  }
+}
+
+.highlights-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+
+  li {
+    padding: 16px 0;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 15px;
+    line-height: 1.8;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .check-icon {
+      color: #ff80b5;
+      font-size: 20px;
+      font-weight: bold;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    div {
+      color: #666;
+
+      strong {
+        color: #2c3e50;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+.note {
+  margin-top: 24px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #ff80b5;
+  font-size: 14px;
+  line-height: 1.8;
+  color: #666;
+}
+
 

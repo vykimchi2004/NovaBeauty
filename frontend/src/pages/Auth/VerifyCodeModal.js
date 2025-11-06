@@ -109,9 +109,13 @@ function VerifyCodeModal({ isOpen, onClose, onSubmit, email, onResend, onBack, i
           </button>
         )}
 
-        <h2 className={cx('title')}>Xác nhận mã code</h2>
+        <h2 className={cx('title')}>Đăng ký</h2>
         <p className={cx('subtitle')}>
-          Vui lòng nhập mã xác nhận đã được gửi đến email của bạn {maskedEmail && `(${maskedEmail})`}.
+          {maskedEmail ? (
+            <>Nhập mã gồm 6 chữ số đã được gửi tới {maskedEmail}</>
+          ) : (
+            <>Vui lòng nhập mã xác nhận đã được gửi đến email của bạn</>
+          )}
         </p>
 
         <div className={cx('otp')} onPaste={handlePaste}>
@@ -132,7 +136,7 @@ function VerifyCodeModal({ isOpen, onClose, onSubmit, email, onResend, onBack, i
         </div>
 
         <button type="button" onClick={handleSubmit} className={cx('loginBtn')} disabled={!canSubmit}>
-          Xác nhận
+          Xác nhận mã
         </button>
 
         <p className={cx('switch-text')}>
