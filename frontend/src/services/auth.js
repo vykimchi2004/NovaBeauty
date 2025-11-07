@@ -40,10 +40,16 @@ export async function sendVerificationCode(email, mode = 'register') {
 // Verify OTP
 export async function verifyCode(email, otp) {
   try {
-    return await apiClient.post(API_ENDPOINTS.AUTH.VERIFY_OTP, {
-      email,
-      otp,
+    // Endpoint public, không cần token
+    const url = apiClient.buildURL(API_ENDPOINTS.AUTH.VERIFY_OTP);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, otp }),
     });
+    return await apiClient.handleResponse(response);
   } catch (error) {
     console.error('[Auth Service] verifyCode error:', error);
     throw error;
@@ -53,17 +59,25 @@ export async function verifyCode(email, otp) {
 // Login (authenticate)
 export async function login(email, password) {
   try {
-    const response = await apiClient.post(API_ENDPOINTS.AUTH.TOKEN, {
-      email,
-      password,
+    // Không dùng apiClient.post() vì nó sẽ tự động thêm token cũ vào header
+    // Endpoint login không cần token, và token cũ có thể gây lỗi nếu không hợp lệ
+    const url = apiClient.buildURL(API_ENDPOINTS.AUTH.TOKEN);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
     });
 
+    const data = await apiClient.handleResponse(response);
+
     // Lưu token vào storage
-    if (response && response.token) {
-      storage.set(STORAGE_KEYS.TOKEN, response.token);
+    if (data && data.token) {
+      storage.set(STORAGE_KEYS.TOKEN, data.token);
     }
 
-    return response;
+    return data;
   } catch (error) {
     console.error('[Auth Service] login error:', error);
     throw error;
@@ -73,15 +87,24 @@ export async function login(email, password) {
 // Register (create user)
 export async function register(userData) {
   try {
-    // Tạo user mới
-    const response = await apiClient.post(API_ENDPOINTS.USERS.CREATE, userData);
+    // Không dùng apiClient.post() vì endpoint này là public, không cần token
+    const url = apiClient.buildURL(API_ENDPOINTS.USERS.CREATE);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData),
+    });
+
+    const data = await apiClient.handleResponse(response);
 
     // Nếu có token, lưu vào storage
-    if (response && response.token) {
-      storage.set(STORAGE_KEYS.TOKEN, response.token);
+    if (data && data.token) {
+      storage.set(STORAGE_KEYS.TOKEN, data.token);
     }
 
-    return response;
+    return data;
   } catch (error) {
     console.error('[Auth Service] register error:', error);
     throw error;
@@ -91,11 +114,16 @@ export async function register(userData) {
 // Reset password using OTP
 export async function resetPassword(email, otp, newPassword) {
   try {
-    return await apiClient.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, {
-      email,
-      otp,
-      newPassword,
+    // Endpoint public, không cần token
+    const url = apiClient.buildURL(API_ENDPOINTS.AUTH.RESET_PASSWORD);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, otp, newPassword }),
     });
+    return await apiClient.handleResponse(response);
   } catch (error) {
     console.error('[Auth Service] resetPassword error:', error);
     throw error;
@@ -118,16 +146,24 @@ export async function changePassword(currentPassword, newPassword) {
 // Refresh token
 export async function refreshToken(refreshTokenValue) {
   try {
-    const response = await apiClient.post(API_ENDPOINTS.AUTH.REFRESH_TOKEN, {
-      token: refreshTokenValue,
+    // Endpoint public, không cần token cũ
+    const url = apiClient.buildURL(API_ENDPOINTS.AUTH.REFRESH_TOKEN);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ token: refreshTokenValue }),
     });
 
+    const data = await apiClient.handleResponse(response);
+
     // Cập nhật token mới
-    if (response && response.token) {
-      storage.set(STORAGE_KEYS.TOKEN, response.token);
+    if (data && data.token) {
+      storage.set(STORAGE_KEYS.TOKEN, data.token);
     }
 
-    return response;
+    return data;
   } catch (error) {
     console.error('[Auth Service] refreshToken error:', error);
     throw error;
@@ -137,9 +173,19 @@ export async function refreshToken(refreshTokenValue) {
 // Logout
 export async function logout(token) {
   try {
-    await apiClient.post(API_ENDPOINTS.AUTH.LOGOUT, {
-      token: token || storage.get(STORAGE_KEYS.TOKEN),
+    // Endpoint public, không cần token trong header (token được gửi trong body)
+    const url = apiClient.buildURL(API_ENDPOINTS.AUTH.LOGOUT);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        token: token || storage.get(STORAGE_KEYS.TOKEN),
+      }),
     });
+
+    await apiClient.handleResponse(response);
 
     // Xóa token và user info
     storage.remove(STORAGE_KEYS.TOKEN);
