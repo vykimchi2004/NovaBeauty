@@ -3,6 +3,7 @@
   margin: 0 auto;
   padding: 24px;
   background: #fff;
+  scroll-behavior: smooth;
 }
 
 .breadcrumb {
@@ -429,15 +430,25 @@
   gap: 12px;
   border-bottom: 1px solid #eee;
   margin-bottom: 16px;
-  padding-bottom: 0;
-  position: sticky;
-  background: #fff;
-  z-index: 100;
-  padding-top: 12px;
-  margin-top: -12px;
   padding-bottom: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  transition: top 0.2s ease;
+  padding-top: 12px;
+  
+  &.tabs-fixed {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    z-index: 100;
+    padding: 12px 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: box-shadow 0.3s ease;
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 0;
+    border-bottom: 1px solid #eee;
+  }
 }
 
 .tab-button {
@@ -469,6 +480,7 @@
   margin-bottom: 48px;
   padding-bottom: 32px;
   border-bottom: 1px solid #eee;
+  scroll-margin-top: 80px; // Space for fixed tabs
 
   &:last-child {
     border-bottom: none;

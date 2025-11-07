@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from './ProductDetail.module.scss';
@@ -12,7 +12,9 @@ function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [activeTab, setActiveTab] = useState('description');
+  const [showFixedTabs, setShowFixedTabs] = useState(false);
   const tabsSectionRef = useRef(null);
+  const tabsContainerRef = useRef(null);
   const contentRefs = {
     description: useRef(null),
     ingredients: useRef(null),
@@ -55,32 +57,82 @@ function ProductDetail() {
     { label: 'Xuất xứ thương hiệu', value: 'Hàn Quốc' },
   ];
 
+  // Custom smooth scroll function
+  const smoothScrollTo = (targetPosition, duration = 600) => {
+    const startPosition = window.pageYOffset || document.documentElement.scrollTop;
+    const distance = targetPosition - startPosition;
+    let startTime = null;
+
+    function animation(currentTime) {
+      if (startTime === null) startTime = currentTime;
+      const timeElapsed = currentTime - startTime;
+      const progress = Math.min(timeElapsed / duration, 1);
+      
+      // Easing function for smooth animation (ease-in-out)
+      const ease = progress < 0.5 
+        ? 2 * progress * progress 
+        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+      
+      window.scrollTo(0, startPosition + distance * ease);
+      
+      if (timeElapsed < duration) {
+        requestAnimationFrame(animation);
+      }
+    }
+
+    requestAnimationFrame(animation);
+  };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (tabsSectionRef.current) {
+        const rect = tabsSectionRef.current.getBoundingClientRect();
+        // Show fixed tabs when the tabs section reaches the top
+        setShowFixedTabs(rect.top <= 0);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll(); // Check initial state
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const handleQuantityChange = (delta) => {
     setQuantity((prev) => Math.max(1, prev + delta));
   };
 
   const handleTabClick = (tabId) => {
     setActiveTab(tabId);
-    // Scroll to content section when clicking a tab
+    // Scroll to content section when clicking a tab with smooth animation
     if (contentRefs[tabId]?.current) {
-      setTimeout(() => {
-        const element = contentRefs[tabId].current;
-        if (!element) return;
+      const element = contentRefs[tabId].current;
+      if (!element) return;
+      
+      // Wait for next frame to ensure DOM is ready
+      requestAnimationFrame(() => {
+        // Get the fixed tabs height for offset calculation
+        const fixedTabsHeight = showFixedTabs && tabsContainerRef.current 
+          ? tabsContainerRef.current.offsetHeight 
+          : 0;
+        const offset = fixedTabsHeight > 0 ? fixedTabsHeight + 20 : 20;
         
-        // Get the tabs container height for offset calculation
-        const tabsContainer = tabsSectionRef.current?.querySelector('[class*="tabs-container"]');
-        const tabsHeight = tabsContainer ? tabsContainer.offsetHeight : 60;
-        
-        // Calculate scroll position
-        const elementTop = element.getBoundingClientRect().top;
+        // Get current scroll position
         const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        const offsetPosition = currentScrollTop + elementTop - tabsHeight - 20;
         
-        window.scrollTo({
-          top: Math.max(0, offsetPosition),
-          behavior: 'smooth'
-        });
-      }, 100);
+        // Get element position relative to viewport
+        const elementRect = element.getBoundingClientRect();
+        const elementTop = elementRect.top + currentScrollTop;
+        
+        // Calculate target position with offset
+        const targetPosition = Math.max(0, elementTop - offset);
+        
+        // Check if we need to scroll (element is below current position)
+        if (targetPosition > currentScrollTop || elementRect.top < offset) {
+          // Use custom smooth scroll function for guaranteed smooth animation
+          smoothScrollTo(targetPosition, 600);
+        }
+      });
     }
   };
 
@@ -212,7 +264,37 @@ function ProductDetail() {
 
       {/* Detail Tabs */}
       <div className={cx('description-section')} ref={tabsSectionRef}>
-        <div className={cx('tabs-container')}>
+        {/* Fixed tabs that appear when scrolling */}
+        {showFixedTabs && (
+          <div className={cx('tabs-container', 'tabs-fixed')} ref={tabsContainerRef}>
+            {[
+              { id: 'description', label: 'Mô tả sản phẩm' },
+              { id: 'ingredients', label: 'Thành phần' },
+              { id: 'benefits', label: 'Công dụng' },
+              { id: 'howto', label: 'Cách dùng' },
+              { id: 'highlights', label: 'Review' },
+            ].map((t) => (
+              <button
+                key={t.id}
+                onClick={() => handleTabClick(t.id)}
+                style={{
+                  padding: '10px 14px',
+                  border: 'none',
+                  background: activeTab === t.id ? '#ff80b5' : 'transparent',
+                  color: activeTab === t.id ? '#fff' : '#2c3e50',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
+        
+        {/* Original tabs container */}
+        <div className={cx('tabs-container')}>  
           {[
             { id: 'description', label: 'Mô tả sản phẩm' },
             { id: 'ingredients', label: 'Thành phần' },

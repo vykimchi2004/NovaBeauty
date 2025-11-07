@@ -5,6 +5,7 @@
 }
 html {
   font-size: 62.5%;
+  scroll-behavior: smooth;
 }
 * {
   box-sizing: border-box;
@@ -14,6 +15,7 @@ html {
 html {
   min-width: 675px;
   overflow-x: hidden; /* Khóa độ rộng, không cho phép cuộn ngang */
+  scroll-behavior: smooth;
 }
 
 body {
