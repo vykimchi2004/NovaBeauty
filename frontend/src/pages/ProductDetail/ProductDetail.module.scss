@@ -456,22 +456,21 @@
   border: none;
   background: transparent;
   color: #2c3e50;
-  border-radius: 0;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
   font-size: 14px;
   transition: all 0.2s ease;
-  position: relative;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
 
   &:hover {
+    background: rgba(255, 128, 181, 0.12);
     color: #ff80b5;
   }
 
   &.active {
-    color: #ff80b5;
-    border-bottom-color: #ff80b5;
+    background: #ff80b5;
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(255, 128, 181, 0.25);
   }
 }
 
@@ -589,6 +588,143 @@
   font-size: 14px;
   line-height: 1.8;
   color: #666;
+}
+
+.info-table-wrapper {
+  overflow-x: auto;
+}
+
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  tbody tr {
+    border-top: 1px solid #eee;
+  }
+}
+
+.info-row {
+  background: #fff;
+}
+
+.info-cell-label {
+  width: 28%;
+  padding: 14px 16px;
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.info-cell-value {
+  padding: 14px 16px;
+  color: #666;
+}
+
+.reviews-title {
+  margin-bottom: 24px;
+}
+
+.reviews-summary {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 32px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.reviews-score {
+  font-size: 48px;
+  font-weight: 700;
+  color: #ff80b5;
+}
+
+.reviews-summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reviews-stars {
+  display: flex;
+  gap: 4px;
+}
+
+.reviews-star {
+  font-size: 24px;
+  color: #ddd;
+
+  &.filled {
+    color: #ff80b5;
+  }
+}
+
+.reviews-count {
+  color: #666;
+  font-size: 14px;
+}
+
+.review-form {
+  margin-top: 32px;
+
+  h4 {
+    margin-bottom: 16px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #2c3e50;
+  }
+}
+
+.review-rating-input {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.review-form-star {
+  font-size: 22px;
+  color: #ddd;
+  cursor: pointer;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: #ff80b5;
+  }
+}
+
+.review-textarea {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.review-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.review-submit {
+  padding: 10px 24px;
+  background: #ff80b5;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #ff6b9d;
+    box-shadow: 0 4px 12px rgba(255, 128, 181, 0.35);
+  }
 }
 
 
