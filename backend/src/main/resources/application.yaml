@@ -38,6 +38,12 @@ jwt:
 app:
   default-avatar: "/assets/images/default-avatar.png"
 
+# GHN shipment configuration
+ghn:
+  token: ${GHN_TOKEN:change-me}
+  shopId: ${GHN_SHOP_ID:0}
+  baseUrl: ${GHN_BASE_URL:https://online-gateway.ghn.vn}
+
 # Layer1 - Controller: Quan ly cac mapping, endpoint
 # Layer2 - Service: Xu ly cac logic lien quan toi subdomain
 # Layer3 - Repository: Tang tuong tac truc tiep voi DBMS

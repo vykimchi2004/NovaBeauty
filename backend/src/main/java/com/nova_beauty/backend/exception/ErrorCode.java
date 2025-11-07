@@ -35,6 +35,14 @@ public enum ErrorCode {
 
     // REVIEW
     REVIEW_NOT_EXISTED(4001, "Review không tồn tại", HttpStatus.NOT_FOUND),
+
+    // External service & cart/ticket/voucher additions
+    EXTERNAL_SERVICE_ERROR(5001, "External service error", HttpStatus.INTERNAL_SERVER_ERROR),
+    OUT_OF_STOCK(5002, "Số lượng không hợp lệ hoặc hết hàng", HttpStatus.BAD_REQUEST),
+    CART_ITEM_NOT_EXISTED(5003, "Giỏ hàng trống hoặc không tìm thấy mục", HttpStatus.NOT_FOUND),
+    VOUCHER_NOT_EXISTED(5004, "Voucher không tồn tại hoặc không hợp lệ", HttpStatus.NOT_FOUND),
+    INVALID_VOUCHER_MINIUM(5005, "Đơn hàng không đạt giá trị tối thiểu của voucher", HttpStatus.BAD_REQUEST),
+    TICKET_NOT_EXISTED(5006, "Ticket không tồn tại", HttpStatus.NOT_FOUND),
     ;
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {

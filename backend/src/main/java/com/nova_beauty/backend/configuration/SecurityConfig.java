@@ -29,7 +29,10 @@ public class SecurityConfig {
         "/auth/refresh",
         "/auth/send-otp",
         "/auth/verify-otp",
-        "/auth/reset-password"
+        "/auth/reset-password",
+        "/media/**",
+        "/api/tickets",
+        "/product_media/**"
     };
 
     private final CustomJwtDecoder customJwtDecoder;
@@ -41,10 +44,10 @@ public class SecurityConfig {
     // Cấu hình security: Quản lý quyền truy cập endpoint
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity.authorizeHttpRequests(request -> request.requestMatchers(HttpMethod.POST, PUBLIC_ENDPOINTS)
-                .permitAll() // Các endpoint trong PUBLIC_ENDPOINT khi gọi bằng POST sẽ không cần token
-                .anyRequest()
-                .authenticated()); // Tất cả request khác đề buộc phải có JWT hợp lệ
+        httpSecurity.authorizeHttpRequests(request -> request
+                .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                .requestMatchers(HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll()
+                .anyRequest().authenticated());
 
         // Bật chế độ resource server theo chuẩn OAuth2, xác thực request bằng JWT
         httpSecurity.oauth2ResourceServer(
