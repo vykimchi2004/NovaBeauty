@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.nova_beauty.backend.enums.ProductStatus;
+
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -33,7 +35,7 @@ public class ProductResponse {
     Double tax;
     Double discountValue;
     Integer quantitySold;
-    Boolean status;
+    ProductStatus status;
     LocalDate publicationDate;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
@@ -41,6 +43,12 @@ public class ProductResponse {
     // Submitted by user info
     String submittedBy;
     String submittedByName;
+
+    // Approval info
+    String approvedBy;
+    String approvedByName;
+    LocalDateTime approvedAt;
+    String rejectionReason;
 
     // Category info
     String categoryId;

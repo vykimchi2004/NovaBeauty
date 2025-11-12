@@ -21,6 +21,8 @@ public interface PromotionRepository extends JpaRepository<Promotion, String> {
     // Basic queries
     Optional<Promotion> findByCode(String code);
 
+    Optional<Promotion> findByCodeAndIsActiveTrue(String code);
+
     boolean existsByCode(String code);
 
     // Status-based queries
@@ -53,4 +55,19 @@ public interface PromotionRepository extends JpaRepository<Promotion, String> {
 
     @Query("SELECT p FROM Promotion p JOIN p.productApply pr WHERE pr.id = :productId AND p.status = 'APPROVED'")
     List<Promotion> findByProductId(@Param("productId") String productId);
+
+    // Active by product/category (approved, active, not expired)
+    @Query("SELECT p FROM Promotion p JOIN p.productApply pr "
+            + "WHERE pr.id = :productId AND p.status = 'APPROVED' AND p.isActive = true "
+            + "AND (p.expiryDate IS NULL OR p.expiryDate >= :today)")
+    List<Promotion> findActiveByProductId(@Param("productId") String productId, @Param("today") LocalDate today);
+
+    @Query("SELECT p FROM Promotion p JOIN p.categoryApply c "
+            + "WHERE c.id = :categoryId AND p.status = 'APPROVED' AND p.isActive = true "
+            + "AND (p.expiryDate IS NULL OR p.expiryDate >= :today)")
+    List<Promotion> findActiveByCategoryId(@Param("categoryId") String categoryId, @Param("today") LocalDate today);
+
+    // Tìm các promotion đã hết hạn nhưng chưa được chuyển vào bảng hết hạn
+    @Query("SELECT p FROM Promotion p WHERE p.expiryDate < :today AND p.status != :expiredStatus")
+    List<Promotion> findExpiredPromotions(@Param("today") LocalDate today, @Param("expiredStatus") PromotionStatus expiredStatus);
 }

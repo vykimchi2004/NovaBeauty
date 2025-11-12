@@ -14,6 +14,7 @@ import com.nova_beauty.backend.dto.response.ProductResponse;
 import com.nova_beauty.backend.entity.Category;
 import com.nova_beauty.backend.entity.Product;
 import com.nova_beauty.backend.entity.User;
+import com.nova_beauty.backend.enums.ProductStatus;
 import com.nova_beauty.backend.exception.AppException;
 import com.nova_beauty.backend.exception.ErrorCode;
 import com.nova_beauty.backend.mapper.ProductMapper;
@@ -55,6 +56,7 @@ public class ProductService {
         Product product = productMapper.toProduct(request);
         product.setSubmittedBy(user);
         product.setCategory(category);
+        product.setStatus(ProductStatus.PENDING); // Set default status to PENDING
         product.setCreatedAt(LocalDateTime.now());
         product.setUpdatedAt(LocalDateTime.now());
         product.setQuantitySold(0);
@@ -80,7 +82,7 @@ public class ProductService {
     }
 
     public List<ProductResponse> getActiveProducts() {
-        List<Product> products = productRepository.findByStatus(true);
+        List<Product> products = productRepository.findByStatus(ProductStatus.APPROVED);
 
         return products.stream().map(productMapper::toResponse).toList();
     }

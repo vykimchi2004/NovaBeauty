@@ -20,6 +20,8 @@ public interface ProductMapper {
     // Entity to Response
     @Mapping(target = "submittedBy", source = "submittedBy.id")
     @Mapping(target = "submittedByName", source = "submittedBy.fullName")
+    @Mapping(target = "approvedBy", source = "approvedBy.id")
+    @Mapping(target = "approvedByName", source = "approvedBy.fullName")
     @Mapping(target = "categoryId", source = "category.id")
     @Mapping(target = "categoryName", source = "category.name")
     @Mapping(target = "mediaUrls", source = "mediaList", qualifiedByName = "mapMediaUrls")
@@ -41,6 +43,11 @@ public interface ProductMapper {
     @Mapping(target = "inventory", ignore = true)
     @Mapping(target = "banners", ignore = true)
     @Mapping(target = "quantitySold", ignore = true)
+    @Mapping(target = "approvedBy", ignore = true)
+    @Mapping(target = "approvedAt", ignore = true)
+    @Mapping(target = "rejectionReason", ignore = true)
+    @Mapping(target = "promotionApply", ignore = true)
+    @Mapping(target = "status", ignore = true)
     Product toProduct(ProductCreationRequest request);
 
     // Update Entity
@@ -55,6 +62,11 @@ public interface ProductMapper {
     @Mapping(target = "inventory", ignore = true)
     @Mapping(target = "banners", ignore = true)
     @Mapping(target = "quantitySold", ignore = true)
+    @Mapping(target = "approvedBy", ignore = true)
+    @Mapping(target = "approvedAt", ignore = true)
+    @Mapping(target = "rejectionReason", ignore = true)
+    @Mapping(target = "promotionApply", ignore = true)
+    @Mapping(target = "status", ignore = true)
     void updateProduct(@MappingTarget Product product, ProductUpdateRequest request);
 
     @Named("mapMediaUrls")

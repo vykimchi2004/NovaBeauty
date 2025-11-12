@@ -73,7 +73,4 @@ public class ProductCreationRequest {
 
     @NotBlank(message = "Danh mục không được để trống")
     String categoryId;
-
-    @Builder.Default
-    Boolean status = true;
 }

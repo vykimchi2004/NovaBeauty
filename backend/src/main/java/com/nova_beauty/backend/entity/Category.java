@@ -47,4 +47,9 @@ public class Category {
     // Products in this category
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     List<Product> products;
+
+    // Promotions
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "promotion")
+    Promotion promotionApply;
 }

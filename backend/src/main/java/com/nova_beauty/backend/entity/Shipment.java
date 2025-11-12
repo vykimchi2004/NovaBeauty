@@ -30,7 +30,9 @@ public class Shipment {
 
     OffsetDateTime expectedDeliveryTime;
 
-    // Link to order by code to avoid hard dependency on Order entity
+    @OneToOne
+    @JoinColumn(name = "order_id")
+    Order order;
 
     @Enumerated(EnumType.STRING)
     ShipmentProvider provider;

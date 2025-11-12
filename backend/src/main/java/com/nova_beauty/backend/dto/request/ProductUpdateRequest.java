@@ -67,6 +67,4 @@ public class ProductUpdateRequest {
     LocalDate publicationDate;
 
     String categoryId;
-
-    Boolean status;
 }
