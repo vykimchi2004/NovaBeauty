@@ -133,6 +133,7 @@ function DefaultLayout({ children }) {
     '/products': 'Tất cả sản phẩm',
     '/best-sellers': 'Top sản phẩm bán chạy',
     '/profile': 'Hồ sơ cá nhân',
+    '/support': 'Hỗ trợ khách hàng',
   };
 
   const path = location.pathname || '/';

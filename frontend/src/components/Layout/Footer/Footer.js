@@ -62,7 +62,7 @@ function Footer() {
             <Link to= '/payment-policy' onClick={handleScrollToTop}>Chính sách thanh toán</Link>
             <Link to= '/shipping-policy' onClick={handleScrollToTop}>Chính sách vận chuyển</Link>
             <Link to= '/return-policy' onClick={handleScrollToTop}>Chính sách đổi trả</Link>
-            <Link to= '/faq' onClick={handleScrollToTop}>FAQ</Link>
+            <Link to= '/support?section=faq' onClick={handleScrollToTop}>FAQ</Link>
           </div>
         </div>
 

@@ -12,6 +12,7 @@ import BestSellersPage from '../pages/BestSellers';
 import ProductDetail from '../pages/ProductDetail/ProductDetail';
 import Profile from '../pages/Profile';
 import AdminPage from '../pages/Admin/AdminPage';
+import Support from '../pages/Support/Support';
 
 // Layouts
 import DefaultLayout from '../layouts/DefaultLayout';
@@ -31,6 +32,7 @@ const publicRoutes = [
   { path: '/best-sellers', component: BestSellersPage, layout: DefaultLayout },
   { path: '/product/:id', component: ProductDetail, layout: DefaultLayout },
   { path: '/profile', component: Profile, layout: DefaultLayout },
+  { path: '/support', component: Support, layout: DefaultLayout },
   // Admin shell with nested routes
   { path: '/admin/*', component: AdminPage },
 ];

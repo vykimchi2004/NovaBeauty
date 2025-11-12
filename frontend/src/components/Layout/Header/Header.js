@@ -39,10 +39,18 @@ function Header({ cartCount = 0, open = false, setOpen = () => {}, onLoginClick,
         </div>
 
         <div className={cx('actions')}>
-          <div className={cx('support')}>
+          <Link
+            to="/support"
+            className={cx('support')}
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.scrollTo) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }}
+          >
             <FontAwesomeIcon className={cx('icon')} icon={faPhone} />
-            <span className={cx('text')}>19002631</span>
-          </div>
+            <span className={cx('text')}>Liên hệ</span>
+          </Link>
 
           {/* Account: nếu có user -> dropdown, không thì mở Login */}
           <div
