@@ -2,7 +2,9 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  min-width: 675px; /* Khóa độ rộng tối thiểu */
   min-height: 100vh;
+  overflow-x: hidden; /* Khóa độ rộng, không cho phép cuộn ngang */
 }
 
 .container {
@@ -15,4 +17,42 @@
   width: 100%;
   min-height: 500px;
   background: #fff;
+}
+
+.breadcrumb {
+  padding: 20px 60px;
+  font-size: 14px;
+  color: #6c757d;
+}
+
+@media (max-width: 768px) {
+  .breadcrumb {
+    padding: 15px 20px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .breadcrumb {
+    padding: 12px 15px;
+    font-size: 12px;
+  }
+}
+
+.crumbLink {
+  color: #ff80b5;
+  text-decoration: none;
+}
+
+.crumbLink:hover {
+  text-decoration: none;
+  transition: color 0.2s ease;
+  
+}
+.sep {
+  margin: 0 8px;
+}
+
+.crumbCurrent {
+  color: #495057;
 }

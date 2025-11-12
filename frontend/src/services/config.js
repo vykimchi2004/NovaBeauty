@@ -1,43 +1,100 @@
 // API Configuration
-export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '';
+export const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/nova_beauty';
 
 // API Endpoints
 export const API_ENDPOINTS = {
     // Auth
     AUTH: {
-        SEND_CODE: '/api/auth/send-code',
-        VERIFY_CODE: '/api/auth/verify-code',
-        LOGIN: '/api/auth/login',
-        REGISTER: '/api/auth/register',
-        LOGOUT: '/api/auth/logout',
-        REFRESH_TOKEN: '/api/auth/refresh',
+        SEND_OTP: '/auth/send-otp',
+        VERIFY_OTP: '/auth/verify-otp',
+        TOKEN: '/auth/token',
+        REFRESH_TOKEN: '/auth/refresh',
+        LOGOUT: '/auth/logout',
+        RESET_PASSWORD: '/auth/reset-password',
+        CHANGE_PASSWORD: '/auth/change-password',
+    },
+    // Users
+    USERS: {
+        CREATE: '/users',
+        GET_ALL: '/users',
+        GET_MY_INFO: '/users/my-info',
+        GET_BY_ID: (id) => `/users/${id}`,
+        UPDATE: (id) => `/users/${id}`,
+        DELETE: (id) => `/users/${id}`,
+        CREATE_STAFF: '/users/staff',
+        ROLES: '/users/roles',
     },
     // Products
     PRODUCTS: {
-        LIST: '/api/products',
-        DETAIL: (id) => `/api/products/${id}`,
-        SEARCH: '/api/products/search',
-        BY_CATEGORY: (category) => `/api/products/category/${category}`,
+        CREATE: '/products',
+        LIST: '/products',
+        ACTIVE: '/products/active',
+        DETAIL: (id) => `/products/${id}`,
+        SEARCH: '/products/search',
+        BY_CATEGORY: (categoryId) => `/products/category/${categoryId}`,
+        BY_PRICE_RANGE: '/products/price-range',
+        MY_PRODUCTS: '/products/my-products',
+        UPDATE: (id) => `/products/${id}`,
+        DELETE: (id) => `/products/${id}`,
     },
     // Categories
     CATEGORIES: {
-        LIST: '/api/categories',
-        DETAIL: (id) => `/api/categories/${id}`,
+        CREATE: '/categories',
+        LIST: '/categories',
+        ROOT: '/categories/root',
+        ACTIVE: '/categories/active',
+        DETAIL: (id) => `/categories/${id}`,
+        SUB_CATEGORIES: (parentId) => `/categories/${parentId}/subcategories`,
+        UPDATE: (id) => `/categories/${id}`,
+        DELETE: (id) => `/categories/${id}`,
     },
-    // Cart
+    // Banners
+    BANNERS: {
+        CREATE: '/banners',
+        LIST: '/banners',
+        ACTIVE: '/banners/active',
+        DETAIL: (id) => `/banners/${id}`,
+        UPDATE: (id) => `/banners/${id}`,
+        UPDATE_ORDER: (id) => `/banners/${id}/order`,
+        DELETE: (id) => `/banners/${id}`,
+    },
+    // Promotions
+    PROMOTIONS: {
+        CREATE: '/promotions',
+        LIST: '/promotions',
+        ACTIVE: '/promotions/active',
+        PENDING: '/promotions/pending',
+        BY_STATUS: (status) => `/promotions/status/${status}`,
+        MY_PROMOTIONS: '/promotions/my-promotions',
+        DETAIL: (id) => `/promotions/${id}`,
+        UPDATE: (id) => `/promotions/${id}`,
+        DELETE: (id) => `/promotions/${id}`,
+        APPROVE: '/promotions/approve',
+    },
+    // Reviews
+    REVIEWS: {
+        CREATE: '/reviews',
+        LIST: '/reviews/all-reviews',
+        MY_REVIEWS: '/reviews/my-reviews',
+        BY_PRODUCT: (productId) => `/reviews/product/${productId}`,
+        DETAIL: (id) => `/reviews/${id}`,
+        REPLY: (id) => `/reviews/${id}/reply`,
+        DELETE: (id) => `/reviews/${id}`,
+    },
+    // Cart (placeholder - chưa có backend)
     CART: {
-        GET: '/api/cart',
-        ADD: '/api/cart/add',
-        UPDATE: '/api/cart/update',
-        REMOVE: '/api/cart/remove',
-        CLEAR: '/api/cart/clear',
+        GET: '/cart',
+        ADD: '/cart/add',
+        UPDATE: '/cart/update',
+        REMOVE: '/cart/remove',
+        CLEAR: '/cart/clear',
     },
-    // Orders
+    // Orders (placeholder - chưa có backend)
     ORDERS: {
-        LIST: '/api/orders',
-        CREATE: '/api/orders',
-        DETAIL: (id) => `/api/orders/${id}`,
-        CANCEL: (id) => `/api/orders/${id}/cancel`,
+        LIST: '/orders',
+        CREATE: '/orders',
+        DETAIL: (id) => `/orders/${id}`,
+        CANCEL: (id) => `/orders/${id}/cancel`,
     },
 };
 

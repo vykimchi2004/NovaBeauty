@@ -1,12 +1,42 @@
+.heroWrapper {
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* main slider + 2 stacked banners */
+  gap: 1px;
+  align-items: stretch;
+}
+
 .hero-slider {
   position: relative;
-  width: 100%;
+  width: 94%;
   height: 550px; /* fixed banner height */
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin: 10px 0 10px 50px;
 }
+
+/* Tablet */
+@media (max-width: 992px) {
+  .heroWrapper {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-slider {
+    width: calc(100% - 40px);
+    height: 400px;
+    margin: 50px 20px;
+  }
+
+  .rightBanners {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: none;
+    margin: 0px 20px;
+    gap: 0px;
+  }
+}
+
 
 /* Each slide is absolutely positioned and fills the container area; contents (img) will be centered at 90% width */
 .slide {
@@ -27,12 +57,11 @@
   z-index: 2;
 }
 
-/* Image sizing: full width of the slider */
 .slide img,
 .hero-slider img {
-  width: 92%;
-  height: 98%;
-  object-fit: cover;
+  width: 100%;
+  height: 100%;
+  border-radius: 20px;
   display: block;
 }
 
@@ -55,10 +84,14 @@
 }
 
 .prev {
-  left: 26px;
+  left: 10px;
+  height: 40px;
+  width: 40px;
 }
 .next {
-  right: 26px;
+  right: 10px;
+  height: 40px;
+  width: 40px;
 }
 
 .dots {
@@ -81,4 +114,33 @@
 
 .dot.active {
   background: #fff;
+}
+
+.rightBanners {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  margin: 10px 50px 10px 0;
+  gap: 10px;
+  border-radius: 20px;
+}
+
+@media (max-width: 992px) {
+  .rightBanners {
+    margin: 10px 20px;
+  }
+}
+
+.sideBanner {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 20px;
+}
+
+.sideBanner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
