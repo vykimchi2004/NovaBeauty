@@ -1,30 +1,37 @@
+// Theme colors
+$primary: #e5677d;
+$primary-600: #e5677d;
+$primary-700: #e5677d;
+$primary-50: #fff0f6;
+$border-soft: #ffd1e4;
+$text-dark: #212529;
+$white: #fff;
+
 .wrapper {
   width: 100%;
   max-width: 100%;
   margin: 0;
-  padding: 0;
+  padding: 24px;
+  background: #f8f9fa;
+  min-height: 100vh;
 }
 
 .header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: 24px;
-  flex-wrap: wrap;
-  gap: 16px;
 }
 
 .title {
   font-size: 28px;
   font-weight: 700;
-  color: #1a1a1a;
-  margin: 0;
+  color: $text-dark;
+  margin: 0 0 20px 0;
 }
 
 .stats {
   display: flex;
   gap: 24px;
   flex-wrap: wrap;
+  margin-bottom: 20px;
 }
 
 .statItem {
@@ -32,7 +39,7 @@
   color: #666;
   
   strong {
-    color: #e5677d;
+    color: $primary;
     font-weight: 600;
     margin-left: 4px;
   }
@@ -51,17 +58,19 @@
 }
 
 .retryBtn {
-  background: #e5677d;
+  background: $primary-700;
   color: white;
   border: none;
   padding: 6px 12px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
-  transition: background 0.2s;
+  font-weight: 600;
+  transition: all 0.2s;
   
   &:hover {
-    background: #d4566c;
+    background: $primary-600;
+    box-shadow: 0 2px 8px rgba(255, 84, 155, 0.3);
   }
 }
 
@@ -102,12 +111,13 @@
   border: 1px solid #ddd;
   border-radius: 8px;
   font-size: 14px;
+  background: $white;
   transition: border-color 0.2s, box-shadow 0.2s;
   
   &:focus {
     outline: none;
-    border-color: #e5677d;
-    box-shadow: 0 0 0 3px rgba(229, 103, 125, 0.1);
+    border-color: $primary;
+    box-shadow: 0 0 0 3px rgba(255, 128, 181, 0.15);
   }
   
   &::placeholder {
@@ -125,19 +135,20 @@
   border: 1px solid #ddd;
   border-radius: 8px;
   font-size: 14px;
-  background: white;
+  background: $white;
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
   min-width: 160px;
   
   &:focus {
     outline: none;
-    border-color: #e5677d;
+    border-color: $primary;
+    box-shadow: 0 0 0 3px rgba(255, 128, 181, 0.15);
   }
 }
 
 .tableWrapper {
-  background: white;
+  background: $white;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   overflow: hidden;
@@ -147,12 +158,12 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1000px;
+  min-width: 800px;
 }
 
 .table thead {
-  background: linear-gradient(135deg, #e5677d 0%, #f78ca0 100%);
-  color: white;
+  background: $primary-700;
+  color: $white;
 }
 
 .table th {
@@ -168,31 +179,67 @@
   transition: background-color 0.2s;
   
   &:hover {
-    background-color: #fafafa;
+    background-color: $primary-50;
   }
   
   &.inactive {
     opacity: 0.7;
     background-color: #f9f9f9;
   }
+
+  &:last-child {
+    border-bottom: none;
+  }
 }
 
 .table td {
   padding: 16px 12px;
   font-size: 14px;
-  color: #333;
+  color: $text-dark;
   vertical-align: middle;
 }
 
 .idCell {
+  font-weight: 600;
+  color: $text-dark;
   font-family: 'Courier New', monospace;
   font-size: 12px;
+  word-break: break-all;
+}
+
+.idValue {
+  display: inline-block;
+  word-break: break-all;
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.copyBtn {
+  border: none;
+  background: #f5f5f5;
   color: #666;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: #e0e0e0;
+    color: #333;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
 }
 
 .userName {
   font-weight: 500;
-  color: #1a1a1a;
+  color: $text-dark;
 }
 
 .infoCell {
@@ -208,10 +255,9 @@
 }
 
 .address {
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
+  white-space: normal;
+  line-height: 1.4;
 }
 
 .statusBadge {
@@ -219,13 +265,13 @@
   padding: 6px 12px;
   border-radius: 12px;
   font-size: 12px;
-  font-weight: 500;
-  background: #fee;
-  color: #c33;
-  
+  font-weight: 600;
+  background: rgba(224, 49, 49, 0.1);
+  color: #e03131;
+
   &.active {
-    background: #efe;
-    color: #3a3;
+    background: rgba(47, 158, 68, 0.1);
+    color: #2f9e44;
   }
 }
 
@@ -236,42 +282,67 @@
 }
 
 .actionBtn {
-  width: 36px;
-  height: 36px;
+  padding: 6px 16px;
   border: none;
   border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   transition: all 0.2s;
-  font-size: 14px;
-  
-  &.editBtn {
-    background: #d1ecf1;
-    color: #0c5460;
-    
+  white-space: nowrap;
+
+  &.viewBtn {
+    background: #1c7ed6;
+    color: $white;
+
     &:hover {
-      background: #bee5eb;
+      background: #1971c2;
+      box-shadow: 0 2px 8px rgba(28, 126, 214, 0.3);
+    }
+  }
+
+  &.editBtn {
+    background: #1c7ed6;
+    color: $white;
+
+    &:hover {
+      background: #1971c2;
+      box-shadow: 0 2px 8px rgba(28, 126, 214, 0.3);
     }
   }
   
-  &.toggleBtn {
-    background: #fff3cd;
-    color: #856404;
-    
+  &.lockBtn {
+    background: #2f9e44;
+    color: $white;
+
     &:hover {
-      background: #ffe69c;
+      background: #2b8a3e;
+      box-shadow: 0 2px 8px rgba(47, 158, 68, 0.3);
+    }
+  }
+
+  &.unlockBtn {
+    background: #2f9e44;
+    color: $white;
+
+    &:hover {
+      background: #2b8a3e;
+      box-shadow: 0 2px 8px rgba(47, 158, 68, 0.3);
     }
   }
   
   &.deleteBtn {
-    background: #f8d7da;
-    color: #721c24;
-    
+    background: #e03131;
+    color: $white;
+
     &:hover {
-      background: #f5c6cb;
+      background: #c92a2a;
+      box-shadow: 0 2px 8px rgba(224, 49, 49, 0.3);
     }
+  }
+
+  &:active {
+    transform: scale(0.98);
   }
 }
 
@@ -283,6 +354,10 @@
 }
 
 @media (max-width: 992px) {
+  .wrapper {
+    padding: 16px;
+  }
+
   .header {
     flex-direction: column;
     align-items: flex-start;
@@ -310,6 +385,23 @@
   }
 }
 
+@media (max-width: 640px) {
+  .title {
+    font-size: 22px;
+  }
+
+  .actionBtn {
+    padding: 5px 12px;
+    font-size: 12px;
+  }
+
+  .table th,
+  .table td {
+    padding: 12px 8px;
+    font-size: 13px;
+  }
+}
+
 // Modal Styles
 .modalOverlay {
   position: fixed;
@@ -327,44 +419,32 @@
 
 .modal {
   background: white;
-  border-radius: 12px;
+  border-radius: 16px;
   width: 100%;
   max-width: 600px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  animation: modalSlideIn 0.3s ease;
-}
-
-@keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
 .modalHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
+  padding: 24px;
   border-bottom: 1px solid #f0f0f0;
 }
 
 .modalTitle {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
   color: #1a1a1a;
   margin: 0;
 }
 
 .closeBtn {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border: none;
   background: #f5f5f5;
   border-radius: 50%;
@@ -374,10 +454,10 @@
   cursor: pointer;
   color: #666;
   transition: all 0.2s;
+  font-size: 24px;
   
   &:hover {
     background: #e0e0e0;
-    color: #333;
   }
 }
 
@@ -411,8 +491,8 @@
   
   &:focus {
     outline: none;
-    border-color: #e5677d;
-    box-shadow: 0 0 0 3px rgba(229, 103, 125, 0.1);
+    border-color: $primary;
+    box-shadow: 0 0 0 3px rgba(255, 128, 181, 0.15);
   }
   
   &::placeholder {
@@ -424,6 +504,17 @@
   resize: vertical;
   min-height: 80px;
   font-family: inherit;
+}
+
+.disabledInput {
+  background-color: #f5f5f5;
+  color: #666;
+  cursor: not-allowed;
+  
+  &:focus {
+    border-color: #ddd;
+    box-shadow: none;
+  }
 }
 
 .formCheckbox {
@@ -441,26 +532,25 @@
 }
 
 .cancelBtn {
-  padding: 10px 20px;
-  border: 1px solid #ddd;
-  background: white;
-  color: #666;
+  padding: 12px 24px;
+  border: none;
   border-radius: 8px;
-  cursor: pointer;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
+  cursor: pointer;
   transition: all 0.2s;
+  background: #f5f5f5;
+  color: #666;
   
   &:hover {
-    background: #f5f5f5;
-    border-color: #ccc;
+    background: #e0e0e0;
   }
 }
 
 .saveBtn {
-  padding: 10px 20px;
+  padding: 12px 24px;
   border: none;
-  background: #e5677d;
+  background: $primary-700;
   color: white;
   border-radius: 8px;
   cursor: pointer;
@@ -469,8 +559,8 @@
   transition: all 0.2s;
   
   &:hover {
-    background: #d4566c;
-    box-shadow: 0 4px 12px rgba(229, 103, 125, 0.3);
+    background: $primary-600;
+    box-shadow: 0 4px 12px rgba(255, 84, 155, 0.3);
   }
   
   &:active {
@@ -478,3 +568,94 @@
   }
 }
 
+// Detail Modal Styles
+.detailModal {
+  max-width: 700px;
+}
+
+.detailBody {
+  padding: 24px;
+}
+
+.detailSection {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.detailItem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #f0f0f0;
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}
+
+.detailLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detailIcon {
+  color: $primary;
+  font-size: 16px;
+  width: 18px;
+}
+
+.detailValue {
+  font-size: 16px;
+  color: $text-dark;
+  font-weight: 500;
+  padding-left: 28px;
+  word-break: break-word;
+  line-height: 1.6;
+
+  &.idValue {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    color: #666;
+    background: #f5f5f5;
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: inline-block;
+    max-width: 100%;
+    word-break: break-all;
+  }
+
+  &.address {
+    white-space: pre-wrap;
+    line-height: 1.6;
+  }
+}
+
+.detailEditBtn {
+  background: $primary-700;
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: $primary-600;
+    box-shadow: 0 4px 12px rgba(255, 84, 155, 0.3);
+  }
+  
+  &:active {
+    transform: scale(0.98);
+  }
+}

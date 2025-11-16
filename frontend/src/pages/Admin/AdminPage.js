@@ -3,19 +3,20 @@ import { NavLink, Route, Routes, useNavigate } from 'react-router-dom';
 import styles from './AdminPage.module.scss';
 import { STORAGE_KEYS } from '~/services/config';
 import { storage } from '~/services/utils';
+import { logout } from '~/services/auth';
 import logo from '~/assets/icons/logo.png';
 import classNames from 'classnames/bind';
 
 // Sections
-import ManageStaffAccounts from './ManageStaffAccounts';
-import ManageCategories from './ManageCategories';
-import ManageComplaints from './ManageComplaints';
-import ManageContent from './ManageContent';
-import ManageCustomerAccounts from './ManageCustomerAccounts';
-import ManageOrders from './ManageOrders';
-import ManageProduct from './ManageProduct';
-import ManageVouchersPromotions from './ManageVouchersPromotions';
-import ReportsAnalytics from './ReportsAnalytics';
+import ManageStaffAccounts from './ManageStaffAccounts/ManageStaffAccounts';
+import ManageCategories from './ManageCategories/ManageCategories';
+import ManageComplaints from './ManageComplaints/ManageComplaints';
+import ManageContent from './ManageContent/ManageContent';
+import ManageCustomerAccounts from './ManageCustomerAccounts/ManageCustomerAccounts';
+import ManageOrders from './ManageOrders/ManageOrders';
+import ManageProduct from './ManageProduct/ManageProduct';
+import ManageVouchersPromotions from './ManageVouchersPromotions/ManageVouchersPromotions';
+import ReportsAnalytics from './ReportsAnalytics/ReportsAnalytics';
 
 const adminEmail = 'admin@novabeauty.com';
 const cx = classNames.bind(styles);
@@ -23,6 +24,7 @@ const cx = classNames.bind(styles);
 function AdminPage() {
   const navigate = useNavigate?.();
   const [openUserMenu, setOpenUserMenu] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const userMenuRef = useRef(null);
 
   // Guard: only admin can access
@@ -45,6 +47,27 @@ function AdminPage() {
     return () => document.removeEventListener('click', onClick);
   }, []);
 
+  const handleLogoutClick = () => {
+    setOpenUserMenu(false);
+    setShowLogoutConfirm(true);
+  };
+
+  const handleLogoutConfirm = async () => {
+    setShowLogoutConfirm(false);
+    try {
+      await logout().catch(() => {});
+    } finally {
+      storage.remove(STORAGE_KEYS.USER);
+      storage.remove(STORAGE_KEYS.TOKEN);
+      if (navigate) navigate('/', { replace: true });
+      else window.location.href = '/';
+    }
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutConfirm(false);
+  };
+
   return (
     <div className={cx('wrapper')}>
       <header className={cx('topbar')}>
@@ -62,10 +85,7 @@ function AdminPage() {
             <div className={cx('dropdown')}>
               <button
                 className={cx('dropdownItem')}
-                onClick={() => {
-                  storage.remove(STORAGE_KEYS.USER);
-                  if (navigate) navigate('/'); else window.location.href = '/';
-                }}
+                onClick={handleLogoutClick}
               >
                 Đăng xuất
               </button>
@@ -88,7 +108,7 @@ function AdminPage() {
             <NavLink to="/admin/content" className={({ isActive }) => cx('menuBtn', { active: isActive })}>QL Nội dung</NavLink>
             <NavLink to="/admin/reports" className={({ isActive }) => cx('menuBtn', { active: isActive })}>Báo cáo & Thống kê</NavLink>
           </nav>
-          <button className={cx('logoutBtn')} onClick={() => { storage.remove(STORAGE_KEYS.USER); if (navigate) navigate('/'); else window.location.href = '/'; }}>Đăng xuất</button>
+          <button className={cx('logoutBtn')} onClick={handleLogoutClick}>Đăng xuất</button>
         </aside>
 
         <section className={cx('content')}>
@@ -106,6 +126,32 @@ function AdminPage() {
           </Routes>
         </section>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className={cx('logoutModalOverlay')} onClick={handleLogoutCancel}>
+          <div className={cx('logoutModal')} onClick={(e) => e.stopPropagation()}>
+            <h3 className={cx('logoutModalTitle')}>Xác nhận đăng xuất</h3>
+            <p className={cx('logoutModalMessage')}>Bạn có chắc chắn muốn đăng xuất không?</p>
+            <div className={cx('logoutModalActions')}>
+              <button
+                type="button"
+                className={cx('logoutModalBtn', 'logoutModalBtnCancel')}
+                onClick={handleLogoutCancel}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className={cx('logoutModalBtn', 'logoutModalBtnConfirm')}
+                onClick={handleLogoutConfirm}
+              >
+                Đăng xuất
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

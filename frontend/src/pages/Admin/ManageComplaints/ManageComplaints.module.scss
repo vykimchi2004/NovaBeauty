@@ -1,0 +1,163 @@
+@import '../ManageProduct/ManageProduct.module.scss';
+
+.statusBadge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+
+  &.pending {
+    background: #fff3cd;
+    color: #856404;
+  }
+
+  &.progress {
+    background: #cfe2ff;
+    color: #084298;
+  }
+
+  &.resolved {
+    background: #d4edda;
+    color: #155724;
+  }
+
+  &.escalated {
+    background: #f8d7da;
+    color: #721c24;
+  }
+
+  &.default {
+    background: #e9ecef;
+    color: #495057;
+  }
+}
+
+.viewBtn {
+  background: #e3f2fd;
+  color: #1976d2;
+
+  &:hover {
+    background: #bbdefb;
+  }
+}
+
+.escalateBtn {
+  background: #fff3cd;
+  color: #856404;
+
+  &:hover {
+    background: #ffe69c;
+  }
+}
+
+.modalContent {
+  padding: 24px;
+}
+
+.detailSection {
+  margin-bottom: 24px;
+
+  h4 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.detailItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+  }
+
+  span {
+    font-size: 14px;
+    color: #333;
+  }
+
+  &.fullWidth {
+    grid-column: 1 / -1;
+  }
+}
+
+.contentBox {
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #333;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.resolveSection {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 24px;
+
+  h4 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+}
+
+.resolveTextarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:focus {
+    border-color: #e5677d;
+    box-shadow: 0 0 0 3px rgba(255, 128, 181, 0.15);
+  }
+}
+
+.resolveBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px 24px;
+  background: #28a745;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #218838;
+    transform: translateY(-1px);
+  }
+}
+
+@media (max-width: 768px) {
+  .detailGrid {
+    grid-template-columns: 1fr;
+  }
+}
+

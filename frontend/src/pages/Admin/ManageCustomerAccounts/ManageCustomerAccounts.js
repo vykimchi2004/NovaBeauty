@@ -2,19 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faSearch,
-  faTrash,
-  faLock,
-  faUnlock,
   faEnvelope,
   faPhone,
-  faMapMarkerAlt,
   faCalendarAlt,
+  faTimes,
+  faEye,
   faEdit,
-  faTimes
+  faMapMarkerAlt,
+  faUser
 } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from './ManageCustomerAccounts.module.scss';
 import { getUsers, deleteUser, updateUser } from '~/services/user';
+import notify from '~/utils/notification';
 
 const cx = classNames.bind(styles);
 
@@ -25,6 +25,7 @@ function ManageCustomerAccounts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [error, setError] = useState(null);
+  const [viewingCustomer, setViewingCustomer] = useState(null);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [editForm, setEditForm] = useState({
     fullName: '',
@@ -53,6 +54,9 @@ function ManageCustomerAccounts() {
       const customerList = data.filter(user => {
         const roleName = user.role?.name?.toUpperCase() || '';
         return roleName !== 'ADMIN' && roleName !== 'STAFF' && roleName !== 'CUSTOMER_SUPPORT';
+      }).sort((a, b) => {
+        if (a.isActive === b.isActive) return 0;
+        return a.isActive ? -1 : 1; // Active trước, locked sau
       });
       setCustomers(customerList);
       setFilteredCustomers(customerList);
@@ -88,18 +92,23 @@ function ManageCustomerAccounts() {
   };
 
   const handleDelete = async (userId) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa tài khoản này?')) {
-      return;
-    }
+    const confirmed = await notify.confirm(
+      'Bạn có chắc chắn muốn xóa tài khoản này?',
+      'Xác nhận xóa tài khoản',
+      'Xóa',
+      'Hủy'
+    );
+    
+    if (!confirmed) return;
 
     try {
       await deleteUser(userId);
       // Remove from local state
       setCustomers(customers.filter(c => c.id !== userId));
-      alert('Xóa tài khoản thành công!');
+      notify.success('Xóa tài khoản thành công!');
     } catch (err) {
       console.error('Error deleting customer:', err);
-      alert('Không thể xóa tài khoản. Vui lòng thử lại.');
+      notify.error('Không thể xóa tài khoản. Vui lòng thử lại.');
     }
   };
 
@@ -107,15 +116,34 @@ function ManageCustomerAccounts() {
     try {
       const newStatus = !customer.isActive;
       await updateUser(customer.id, { isActive: newStatus });
-      // Update local state
-      setCustomers(customers.map(c =>
-        c.id === customer.id ? { ...c, isActive: newStatus } : c
-      ));
-      alert(newStatus ? 'Đã kích hoạt tài khoản!' : 'Đã khóa tài khoản!');
+      // Reload lại data nhưng giữ nguyên filter và search
+      await fetchCustomers();
+      notify.success(newStatus ? 'Đã kích hoạt tài khoản! Email thông báo đã được gửi đến khách hàng.' : 'Đã khóa tài khoản! Email thông báo đã được gửi đến khách hàng.');
     } catch (err) {
       console.error('Error updating customer status:', err);
-      alert('Không thể cập nhật trạng thái. Vui lòng thử lại.');
+      notify.error('Không thể cập nhật trạng thái. Vui lòng thử lại.');
     }
+  };
+
+  const handleViewDetail = (customer) => {
+    setViewingCustomer(customer);
+  };
+
+  const handleCloseDetail = () => {
+    setViewingCustomer(null);
+  };
+
+  const handleEditFromDetail = () => {
+    if (!viewingCustomer) return;
+    setEditingCustomer(viewingCustomer);
+    setEditForm({
+      fullName: viewingCustomer.fullName || '',
+      email: viewingCustomer.email || '',
+      phoneNumber: viewingCustomer.phoneNumber || '',
+      address: viewingCustomer.address || '',
+      isActive: viewingCustomer.isActive !== undefined ? viewingCustomer.isActive : true
+    });
+    setViewingCustomer(null); // Đóng modal chi tiết
   };
 
   const handleEdit = (customer) => {
@@ -144,16 +172,40 @@ function ManageCustomerAccounts() {
     if (!editingCustomer) return;
 
     try {
-      await updateUser(editingCustomer.id, editForm);
-      // Update local state
-      setCustomers(customers.map(c =>
-        c.id === editingCustomer.id ? { ...c, ...editForm } : c
-      ));
-      alert('Cập nhật thông tin thành công!');
+      // Chỉ gửi các field có giá trị và đã thay đổi
+      // Email và FullName không được phép sửa
+      const updateData = {};
+      
+      // PhoneNumber - cho phép empty string, chỉ gửi nếu thay đổi
+      if (editForm.phoneNumber !== editingCustomer.phoneNumber) {
+        updateData.phoneNumber = editForm.phoneNumber || '';
+      }
+      
+      // Address - cho phép empty string, chỉ gửi nếu thay đổi
+      if (editForm.address !== editingCustomer.address) {
+        updateData.address = editForm.address || '';
+      }
+      
+      // isActive - chỉ gửi nếu thay đổi
+      if (editForm.isActive !== editingCustomer.isActive) {
+        updateData.isActive = editForm.isActive;
+      }
+
+      // Kiểm tra xem có field nào thay đổi không
+      if (Object.keys(updateData).length === 0) {
+        notify.warning('Không có thay đổi nào để cập nhật.');
+        return;
+      }
+
+      await updateUser(editingCustomer.id, updateData);
+      // Reload lại data nhưng giữ nguyên filter và search
+      await fetchCustomers();
+      notify.success('Cập nhật thông tin thành công! Email thông báo đã được gửi đến khách hàng.');
       handleCloseEdit();
     } catch (err) {
       console.error('Error updating customer:', err);
-      alert('Không thể cập nhật thông tin. Vui lòng thử lại.');
+      const errorMessage = err?.message || 'Không thể cập nhật thông tin. Vui lòng thử lại.';
+      notify.error(errorMessage);
     }
   };
 
@@ -238,7 +290,6 @@ function ManageCustomerAccounts() {
               <th>Tên khách hàng</th>
               <th>Email</th>
               <th>Số điện thoại</th>
-              <th>Địa chỉ</th>
               <th>Ngày tạo</th>
               <th>Trạng thái</th>
               <th>Thao tác</th>
@@ -247,14 +298,16 @@ function ManageCustomerAccounts() {
           <tbody>
             {filteredCustomers.length === 0 ? (
               <tr>
-                <td colSpan="8" className={cx('empty')}>
+                <td colSpan="7" className={cx('empty')}>
                   Không tìm thấy khách hàng nào
                 </td>
               </tr>
             ) : (
               filteredCustomers.map((customer) => (
                 <tr key={customer.id} className={cx({ inactive: !customer.isActive })}>
-                  <td className={cx('idCell')}>{customer.id?.substring(0, 8)}...</td>
+                  <td className={cx('idCell')}>
+                    <span className={cx('idValue')}>{customer.id || 'N/A'}</span>
+                  </td>
                   <td>
                     <span className={cx('userName')}>{customer.fullName || 'N/A'}</span>
                   </td>
@@ -272,14 +325,6 @@ function ManageCustomerAccounts() {
                   </td>
                   <td>
                     <div className={cx('infoCell')}>
-                      <FontAwesomeIcon icon={faMapMarkerAlt} className={cx('infoIcon')} />
-                      <span className={cx('address')} title={customer.address}>
-                        {customer.address || 'N/A'}
-                      </span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className={cx('infoCell')}>
                       <FontAwesomeIcon icon={faCalendarAlt} className={cx('infoIcon')} />
                       {formatDate(customer.createAt)}
                     </div>
@@ -292,25 +337,25 @@ function ManageCustomerAccounts() {
                   <td>
                     <div className={cx('actions')}>
                       <button
-                        onClick={() => handleEdit(customer)}
-                        className={cx('actionBtn', 'editBtn')}
-                        title="Sửa thông tin"
+                        onClick={() => handleViewDetail(customer)}
+                        className={cx('actionBtn', 'viewBtn')}
+                        title="Xem chi tiết"
                       >
-                        <FontAwesomeIcon icon={faEdit} />
+                        Xem
                       </button>
                       <button
                         onClick={() => handleToggleStatus(customer)}
-                        className={cx('actionBtn', 'toggleBtn')}
-                        title={customer.isActive ? 'Khóa tài khoản' : 'Mở khóa tài khoản'}
+                        className={cx('actionBtn', customer.isActive ? 'lockBtn' : 'unlockBtn')}
+                        title={customer.isActive ? 'Khóa' : 'Mở khóa'}
                       >
-                        <FontAwesomeIcon icon={customer.isActive ? faLock : faUnlock} />
+                        {customer.isActive ? 'Khóa' : 'Mở khóa'}
                       </button>
                       <button
                         onClick={() => handleDelete(customer.id)}
                         className={cx('actionBtn', 'deleteBtn')}
-                        title="Xóa tài khoản"
+                        title="Xóa"
                       >
-                        <FontAwesomeIcon icon={faTrash} />
+                        Xóa
                       </button>
                     </div>
                   </td>
@@ -320,6 +365,82 @@ function ManageCustomerAccounts() {
           </tbody>
         </table>
       </div>
+
+      {/* View Detail Modal */}
+      {viewingCustomer && (
+        <div className={cx('modalOverlay')} onClick={handleCloseDetail}>
+          <div className={cx('modal', 'detailModal')} onClick={(e) => e.stopPropagation()}>
+            <div className={cx('modalHeader')}>
+              <h3 className={cx('modalTitle')}>Chi tiết tài khoản khách hàng</h3>
+              <button className={cx('closeBtn')} onClick={handleCloseDetail}>
+                <FontAwesomeIcon icon={faTimes} />
+              </button>
+            </div>
+            <div className={cx('modalBody', 'detailBody')}>
+              <div className={cx('detailSection')}>
+                <div className={cx('detailItem')}>
+                  <div className={cx('detailLabel')}>
+                    <FontAwesomeIcon icon={faUser} className={cx('detailIcon')} />
+                    Tên khách hàng
+                  </div>
+                  <div className={cx('detailValue')}>{viewingCustomer.fullName || 'N/A'}</div>
+                </div>
+
+                <div className={cx('detailItem')}>
+                  <div className={cx('detailLabel')}>
+                    <FontAwesomeIcon icon={faEnvelope} className={cx('detailIcon')} />
+                    Email
+                  </div>
+                  <div className={cx('detailValue')}>{viewingCustomer.email || 'N/A'}</div>
+                </div>
+
+                <div className={cx('detailItem')}>
+                  <div className={cx('detailLabel')}>
+                    <FontAwesomeIcon icon={faPhone} className={cx('detailIcon')} />
+                    Số điện thoại
+                  </div>
+                  <div className={cx('detailValue')}>{viewingCustomer.phoneNumber || 'N/A'}</div>
+                </div>
+
+                <div className={cx('detailItem')}>
+                  <div className={cx('detailLabel')}>
+                    <FontAwesomeIcon icon={faMapMarkerAlt} className={cx('detailIcon')} />
+                    Địa chỉ
+                  </div>
+                  <div className={cx('detailValue', 'address')}>
+                    {viewingCustomer.address || 'N/A'}
+                  </div>
+                </div>
+
+                <div className={cx('detailItem')}>
+                  <div className={cx('detailLabel')}>
+                    <FontAwesomeIcon icon={faCalendarAlt} className={cx('detailIcon')} />
+                    Ngày tạo tài khoản
+                  </div>
+                  <div className={cx('detailValue')}>{formatDate(viewingCustomer.createAt)}</div>
+                </div>
+
+                <div className={cx('detailItem')}>
+                  <div className={cx('detailLabel')}>Trạng thái</div>
+                  <div className={cx('detailValue')}>
+                    <span className={cx('statusBadge', { active: viewingCustomer.isActive })}>
+                      {viewingCustomer.isActive ? 'Hoạt động' : 'Đã khóa'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className={cx('modalFooter')}>
+              <button className={cx('cancelBtn')} onClick={handleCloseDetail}>
+                Đóng
+              </button>
+              <button className={cx('editBtn', 'detailEditBtn')} onClick={handleEditFromDetail}>
+                Sửa thông tin
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Modal */}
       {editingCustomer && (
@@ -336,9 +457,10 @@ function ManageCustomerAccounts() {
                 <label className={cx('formLabel')}>Tên khách hàng</label>
                 <input
                   type="text"
-                  className={cx('formInput')}
+                  className={cx('formInput', 'disabledInput')}
                   value={editForm.fullName}
-                  onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
+                  readOnly
+                  disabled
                   placeholder="Nhập tên khách hàng"
                 />
               </div>
@@ -346,9 +468,10 @@ function ManageCustomerAccounts() {
                 <label className={cx('formLabel')}>Email</label>
                 <input
                   type="email"
-                  className={cx('formInput')}
+                  className={cx('formInput', 'disabledInput')}
                   value={editForm.email}
-                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  readOnly
+                  disabled
                   placeholder="Nhập email"
                 />
               </div>

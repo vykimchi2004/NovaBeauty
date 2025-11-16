@@ -1,0 +1,68 @@
+@import '../ManageProduct/ManageProduct.module.scss';
+
+.statusBadge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+
+  &.created {
+    background: #e3f2fd;
+    color: #1976d2;
+  }
+
+  &.confirmed {
+    background: #fff3cd;
+    color: #856404;
+  }
+
+  &.paid {
+    background: #d4edda;
+    color: #155724;
+  }
+
+  &.shipped {
+    background: #cfe2ff;
+    color: #084298;
+  }
+
+  &.delivered {
+    background: #d1e7dd;
+    color: #0f5132;
+  }
+
+  &.cancelled {
+    background: #f8d7da;
+    color: #721c24;
+  }
+
+  &.default {
+    background: #e9ecef;
+    color: #495057;
+  }
+}
+
+.addressCell {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+
+  p {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+
+  small {
+    font-size: 14px;
+    color: #999;
+  }
+}
+
