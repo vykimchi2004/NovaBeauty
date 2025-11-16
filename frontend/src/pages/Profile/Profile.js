@@ -22,6 +22,7 @@ import {
 import ProfileSection from './sections/ProfileSection';
 import PasswordSection from './sections/PasswordSection';
 import OrdersSection from './sections/OrdersSection';
+import ComplaintSection from './sections/ComplaintSection';
 
 const cx = classNames.bind(styles);
 
@@ -55,6 +56,7 @@ function ProfilePage() {
     confirm: '',
   });
   const [passwordMessage, setPasswordMessage] = useState('');
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const getStatusClass = (status) => STATUS_CLASS_MAP[status] || '';
 
@@ -72,7 +74,7 @@ function ProfilePage() {
   const handleLogoutKeyDown = (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      handleLogout();
+      handleLogoutClick();
     }
   };
 
@@ -160,7 +162,12 @@ function ProfilePage() {
     setTimeout(() => setPasswordMessage(''), 3000);
   };
 
-  const handleLogout = async () => {
+  const handleLogoutClick = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const handleLogoutConfirm = async () => {
+    setShowLogoutConfirm(false);
     try {
       await logout().catch(() => {});
     } finally {
@@ -172,6 +179,10 @@ function ProfilePage() {
         try { window.location.assign('/'); } catch (_) {}
       }, 0);
     }
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutConfirm(false);
   };
 
   useEffect(() => {
@@ -266,6 +277,10 @@ function ProfilePage() {
       return <OrdersSection orders={ORDERS_DATA} getStatusClass={getStatusClass} />;
     }
 
+    if (activeSection === 'complaint') {
+      return <ComplaintSection />;
+    }
+
     const placeholder = PLACEHOLDER_CONTENT[activeSection];
     if (placeholder) {
       return (
@@ -343,7 +358,7 @@ function ProfilePage() {
 
           <div
             className={cx('sidebarItem', 'logoutItem')}
-            onClick={handleLogout}
+            onClick={handleLogoutClick}
             role="button"
             tabIndex={0}
             onKeyDown={handleLogoutKeyDown}
@@ -357,6 +372,32 @@ function ProfilePage() {
       <section className={cx('content')}>
         {renderContent()}
       </section>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className={cx('logoutModalOverlay')} onClick={handleLogoutCancel}>
+          <div className={cx('logoutModal')} onClick={(e) => e.stopPropagation()}>
+            <h3 className={cx('logoutModalTitle')}>Xác nhận đăng xuất</h3>
+            <p className={cx('logoutModalMessage')}>Bạn có chắc chắn muốn đăng xuất không?</p>
+            <div className={cx('logoutModalActions')}>
+              <button
+                type="button"
+                className={cx('btn', 'btnSecondary', 'logoutModalBtn')}
+                onClick={handleLogoutCancel}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className={cx('btn', 'btnLogout', 'logoutModalBtn')}
+                onClick={handleLogoutConfirm}
+              >
+                Đăng xuất
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

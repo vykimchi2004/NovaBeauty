@@ -175,7 +175,7 @@ $white: #fff;
 }
 
 .input {
-  width: 100%;
+  width: 99%;
   padding: 10px;
   margin-top: 6px;
   border: 1px solid #ddd;
@@ -532,6 +532,244 @@ $white: #fff;
   }
 }
 
+// Complaint section styles
+.complaintsCard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.complaintsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  h2 {
+    margin: 0;
+    padding: 0;
+    color: $primary-700;
+  }
+}
+
+.newComplaintBtn {
+  padding: 10px 20px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.complaintsTableWrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.complaintsTable {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+
+  thead {
+    background: #f8f9fa;
+    border-bottom: 2px solid $border-soft;
+
+    th {
+      padding: 16px;
+      text-align: left;
+      font-weight: 600;
+      color: $text-dark;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid #f1f3f5;
+      transition: background-color 0.15s ease;
+
+      &:hover {
+        background: $primary-50;
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+
+    td {
+      padding: 16px;
+      color: $text-dark;
+      font-size: 14px;
+      vertical-align: middle;
+    }
+  }
+}
+
+.complaintId,
+.complaintOrder {
+  font-weight: 600;
+  color: $text-dark;
+}
+
+.complaintDate {
+  color: #6c757d;
+}
+
+.complaintStatus {
+  font-weight: 600;
+  font-size: 14px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.statusProcessing {
+  color: #1c7ed6;
+  background: rgba(28, 126, 214, 0.1);
+}
+
+.statusCompleted {
+  color: #2f9e44;
+  background: rgba(47, 158, 68, 0.1);
+}
+
+.statusRejected {
+  color: #e03131;
+  background: rgba(224, 49, 49, 0.1);
+}
+
+.btnViewDetails {
+  background: #1c7ed6;
+  color: $white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 4px rgba(28, 126, 214, 0.2);
+
+  &:hover {
+    background: #1971c2;
+    box-shadow: 0 4px 8px rgba(28, 126, 214, 0.3);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.emptyTableMessage {
+  text-align: center;
+  padding: 40px 16px !important;
+  color: #868e96;
+  font-size: 14px;
+}
+
+@media (max-width: 1024px) {
+  .complaintsHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .newComplaintBtn {
+    width: 100%;
+  }
+}
+
+// Logout confirmation modal
+.logoutModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.2s ease;
+}
+
+.logoutModal {
+  background: $white;
+  border-radius: 16px;
+  padding: 32px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.3s ease;
+}
+
+.logoutModalTitle {
+  margin: 0 0 16px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: $text-dark;
+  text-align: center;
+}
+
+.logoutModalMessage {
+  margin: 0 0 24px 0;
+  font-size: 14px;
+  color: #6c757d;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.logoutModalActions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.logoutModalBtn {
+  flex: 1;
+  padding: 12px 24px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btnLogout {
+  background: #e03131;
+  color: $white;
+  border: none;
+  box-shadow: 0 2px 6px rgba(224, 49, 49, 0.3);
+
+  &:hover {
+    background: #c92a2a;
+    box-shadow: 0 4px 12px rgba(224, 49, 49, 0.4);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (max-width: 640px) {
   .ordersTabs {
     overflow-x: auto;
@@ -539,5 +777,42 @@ $white: #fff;
 
   .ordersTab {
     white-space: nowrap;
+  }
+
+  .complaintsTable {
+    font-size: 12px;
+
+    thead th {
+      padding: 12px 8px;
+      font-size: 12px;
+    }
+
+    tbody td {
+      padding: 12px 8px;
+      font-size: 12px;
+    }
+  }
+
+  .complaintStatus {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+
+  .btnViewDetails {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .logoutModal {
+    padding: 24px 20px;
+    margin: 16px;
+  }
+
+  .logoutModalTitle {
+    font-size: 18px;
+  }
+
+  .logoutModalMessage {
+    font-size: 13px;
   }
 }
