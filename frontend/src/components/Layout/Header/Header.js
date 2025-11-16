@@ -1,4 +1,5 @@
 import classNames from 'classnames/bind';
+import React from 'react';
 import styles from './Header.module.scss';
 import Hamburger from '~/components/Common/Hamburger';
 import logoImg from '~/assets/icons/logo.png';
@@ -7,7 +8,18 @@ import { faPhone, faUser, faShoppingCart, faSearch } from '@fortawesome/free-sol
 import { Link } from 'react-router-dom';
 const cx = classNames.bind(styles);
 
-function Header({ cartCount = 0, open = false, setOpen = () => {}, onLoginClick }) {
+function Header({ cartCount = 0, open = false, setOpen = () => {}, onLoginClick, user, onLogoutClick, onProfileClick }) {
+  const displayName = (user && (user.username || user.fullName || user.name || (user.email && String(user.email).split('@')[0]))) || 'Tài khoản';
+  const [showMenu, setShowMenu] = React.useState(false);
+
+  React.useEffect(() => {
+    const onDocClick = (e) => {
+      if (!e.target.closest) return;
+      if (!e.target.closest('.nb-account')) setShowMenu(false);
+    };
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, []);
   return (
     <header className={cx('wrapper')}>
       <div className={cx('inner')}>
@@ -32,10 +44,61 @@ function Header({ cartCount = 0, open = false, setOpen = () => {}, onLoginClick 
             <span className={cx('text')}>19002631</span>
           </div>
 
-          {/* Khi click vào account thì mở form Login */}
-          <div className={cx('account')} onClick={onLoginClick} style={{ cursor: 'pointer' }}>
+          {/* Account: nếu có user -> dropdown, không thì mở Login */}
+          <div
+            className={`${cx('account')} nb-account`}
+            onClick={() => {
+              if (user) {
+                setShowMenu((s) => !s);
+              } else {
+                onLoginClick?.();
+              }
+            }}
+            style={{ cursor: 'pointer', position: 'relative' }}
+          >
             <FontAwesomeIcon className={cx('icon')} icon={faUser} />
-            <span className={cx('text')}>Tài khoản</span>
+            <span className={cx('text')}>{displayName}</span>
+
+            {user && showMenu && (
+              <div
+                className={cx('dropdown')}
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  background: '#fff',
+                  border: '1px solid #eee',
+                  borderRadius: 6,
+                  boxShadow: '0 6px 24px rgba(0,0,0,0.08)',
+                  minWidth: 180,
+                  zIndex: 1000,
+                  padding: 8
+                }}
+              >
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMenu(false);
+                    onProfileClick?.();
+                  }}
+                  style={{ padding: '10px 12px', borderRadius: 6 }}
+                  className={cx('dropdown-item')}
+                >
+                  Xem chi tiết
+                </div>
+                <div
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    setShowMenu(false);
+                    await onLogoutClick?.();
+                  }}
+                  style={{ padding: '10px 12px', borderRadius: 6, color: '#e03131' }}
+                  className={cx('dropdown-item')}
+                >
+                  Đăng xuất
+                </div>
+              </div>
+            )}
           </div>
 
           <div className={cx('cart')}>

@@ -3,7 +3,11 @@ import ReactDOM from 'react-dom';
 import styles from './AuthLayout.module.scss';
 import classNames from 'classnames/bind';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faEyeSlash, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { sendVerificationCode, verifyCode, register, login } from '~/services/auth';
+import { getMyInfo } from '~/services/user';
+import { STORAGE_KEYS } from '~/services/config';
+import { storage } from '~/services/utils';
 
 const cx = classNames.bind(styles);
 
@@ -31,6 +35,24 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
     return () => (document.body.style.overflow = 'unset');
   }, [isOpen]);
 
+  // Reset toàn bộ state mỗi khi modal được mở lại
+  useEffect(() => {
+    if (isOpen) {
+      setStep(1);
+      setEmail('');
+      setError('');
+      setLoading(false);
+      setOtp(['', '', '', '', '', '']);
+      setSeconds(60);
+      setUsername('');
+      setPassword('');
+      setConfirm('');
+      setAgree(false);
+      setShowPass1(false);
+      setShowPass2(false);
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     if (step === 2 && seconds > 0) {
       const timer = setTimeout(() => setSeconds((s) => s - 1), 1000);
@@ -46,14 +68,17 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
     if (!email) return setError('Vui lòng nhập email hợp lệ');
     setError('');
     setLoading(true);
-    // Giả lập gửi mã
-    setTimeout(() => {
+    try {
+      await sendVerificationCode(email, 'register');
       setLoading(false);
       setStep(2);
       setOtp(['', '', '', '', '', '']);
       setSeconds(60);
       setTimeout(() => inputsRef.current[0]?.focus(), 100);
-    }, 1000);
+    } catch (err) {
+      setLoading(false);
+      setError(err.message || 'Gửi mã xác nhận thất bại');
+    }
   };
 
   const handleVerifyCode = async () => {
@@ -61,19 +86,17 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
     if (code.length !== 6) return setError('Vui lòng nhập đủ 6 chữ số');
     setLoading(true);
     setError('');
-    // Giả lập xác nhận mã
-    setTimeout(() => {
-      if (code === '123456') {
-        setStep(3);
-        setLoading(false);
-      } else {
-        setError('Mã xác nhận không đúng. Hãy thử lại.');
-        setLoading(false);
-      }
-    }, 1000);
+    try {
+      await verifyCode(email, code);
+      setStep(3);
+    } catch (err) {
+      setError(err.message || 'Mã xác nhận không đúng hoặc đã hết hạn.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     if (!username.trim()) return setError('Vui lòng nhập tên hiển thị');
     if (password.length < 6) return setError('Mật khẩu phải ít nhất 6 ký tự');
@@ -82,28 +105,52 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
 
     setError('');
     setLoading(true);
-    // Giả lập đăng ký thành công
-    setTimeout(() => {
-      setLoading(false);
-      // Store user data and trigger login
-      const userData = { email, username, id: Date.now() };
-      localStorage.setItem('user', JSON.stringify(userData));
-      window.dispatchEvent(new CustomEvent('userRegistered', { detail: userData }));
+    try {
+      // 1) Tạo tài khoản
+      await register({ email, password, fullName: username });
+
+      // 2) Đăng nhập ngay sau khi đăng ký
+      await login(email, password);
+
+      // 3) Lấy thông tin user
+      let userInfo = null;
+      try {
+        userInfo = await getMyInfo();
+        if (userInfo) {
+          storage.set(STORAGE_KEYS.USER, userInfo);
+        }
+      } catch (err) {
+        // fallback nếu backend chưa có my-info
+        userInfo = { email, fullName: username, username };
+        storage.set(STORAGE_KEYS.USER, userInfo);
+      }
+
+      // 4) Phát sự kiện để UI cập nhật và đóng modal
+      window.dispatchEvent(new CustomEvent('userRegistered', { detail: userInfo }));
       onClose();
-    }, 1000);
+      // 5) Reload để đồng bộ toàn bộ UI
+      window.location.reload();
+    } catch (err) {
+      setError(err.message || 'Đăng ký thất bại');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const resendCode = () => {
+  const resendCode = async () => {
     if (seconds > 0) return;
     setError('');
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await sendVerificationCode(email, 'register');
       setOtp(['', '', '', '', '', '']);
       setSeconds(60);
       inputsRef.current[0]?.focus();
-      alert('Mã xác nhận mới đã được gửi!');
-    }, 1000);
+    } catch (err) {
+      setError(err.message || 'Gửi lại mã thất bại');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ======================== GIAO DIỆN ==========================
@@ -112,6 +159,30 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
       <div className={cx('modal')} onClick={(e) => e.stopPropagation()}>
         <button className={cx('closeBtn')} onClick={onClose}>
           &times;
+        </button>
+        <button
+          className={cx('backBtn')}
+          onClick={() => {
+            setError('');
+            if (step === 1) {
+              onOpenLogin?.();
+              return;
+            }
+            if (step === 2) {
+              setOtp(['', '', '', '', '', '']);
+              setSeconds(60);
+            }
+            if (step === 3) {
+              setPassword('');
+              setConfirm('');
+              setAgree(false);
+              setShowPass1(false);
+              setShowPass2(false);
+            }
+            setStep((s) => Math.max(1, s - 1));
+          }}
+        >
+          <FontAwesomeIcon icon={faArrowLeft} />
         </button>
         
 
@@ -257,3 +328,5 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
 }
 
 export default RegisterModal;
+
+

@@ -1,9 +1,10 @@
 import React from 'react';
-import classNames from 'classnames';
+import classNames from 'classnames/bind';
 import styles from './Hamburger.module.scss';
 
 function Hamburger({ open = false, setOpen = () => {}, className = '', ariaLabel = 'Toggle menu' }) {
-  const btnClass = classNames(className, styles.hamburger, { [styles.open]: open });
+  const cx = classNames.bind(styles);
+  const btnClass = cx('hamburger', { open }, className);
 
   return (
     <button

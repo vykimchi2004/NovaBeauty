@@ -45,8 +45,17 @@ class ApiClient {
         }
 
         if (!response.ok) {
+            // Backend trả về ApiResponse format: {code, message, result}
             const message = data?.message || data || `HTTP error! status: ${response.status}`;
-            throw new Error(message);
+            const error = new Error(message);
+            error.code = data?.code || response.status;
+            throw error;
+        }
+
+        // Backend trả về ApiResponse format: {code, message, result}
+        // Trả về result để frontend dễ sử dụng
+        if (isJson && data && typeof data === 'object' && 'result' in data) {
+            return data.result;
         }
 
         return data;

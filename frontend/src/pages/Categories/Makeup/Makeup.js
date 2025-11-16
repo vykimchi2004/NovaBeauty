@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from './Category.module.scss';
 import image1 from '~/assets/images/products/image1.jpg';
+import { scrollToTop } from '~/services/utils';
 
 const cx = classNames.bind(styles);
 
@@ -141,7 +142,7 @@ function Makeup() {
 
         <div className={cx('product-grid')}>
           {products.map((p) => (
-            <Link key={p.id} to={`/product/${p.id}`} className={cx('product-card')}>
+            <Link key={p.id} to={`/product/${p.id}`} className={cx('product-card')} onClick={() => scrollToTop()}>
               <div className={cx('img-wrap')}>
                 <img src={image1} alt={p.name} />
                 <span className={cx('freeship')}>FREESHIP</span>

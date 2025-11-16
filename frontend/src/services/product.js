@@ -17,18 +17,6 @@ export async function getProducts(params = {}) {
         return await apiClient.get(endpoint);
     } catch (error) {
         console.error('[Product Service] getProducts error:', error);
-        
-        // Dev fallback: return mock data if API not ready
-        if (process.env.NODE_ENV !== 'production') {
-            console.warn('[Product Service] Using mock data (dev mode)');
-            return {
-                data: [],
-                total: 0,
-                page: 1,
-                limit: 10,
-            };
-        }
-        
         throw error;
     }
 }
@@ -39,73 +27,100 @@ export async function getProductById(id) {
         return await apiClient.get(API_ENDPOINTS.PRODUCTS.DETAIL(id));
     } catch (error) {
         console.error('[Product Service] getProductById error:', error);
-        
-        // Dev fallback: return mock data if API not ready
-        if (process.env.NODE_ENV !== 'production') {
-            console.warn('[Product Service] Using mock data (dev mode)');
-            return {
-                id: Number(id),
-                name: `Sản phẩm ${id}`,
-                description: 'Sản phẩm mô tả',
-                price: 299000,
-                oldPrice: 399000,
-                images: [],
-                category: null,
-            };
-        }
-        
         throw error;
     }
 }
 
 // Search products
-export async function searchProducts(query, params = {}) {
+export async function searchProducts(keyword, params = {}) {
     try {
         const searchParams = new URLSearchParams({
-            q: query,
+            keyword,
             ...params,
         });
         
         return await apiClient.get(`${API_ENDPOINTS.PRODUCTS.SEARCH}?${searchParams}`);
     } catch (error) {
         console.error('[Product Service] searchProducts error:', error);
-        
-        // Dev fallback
-        if (process.env.NODE_ENV !== 'production') {
-            console.warn('[Product Service] Using mock data (dev mode)');
-            return {
-                data: [],
-                total: 0,
-                query,
-            };
-        }
-        
         throw error;
     }
 }
 
 // Get products by category
-export async function getProductsByCategory(category, params = {}) {
+export async function getProductsByCategory(categoryId, params = {}) {
     try {
         const queryString = new URLSearchParams(params).toString();
         const endpoint = queryString
-            ? `${API_ENDPOINTS.PRODUCTS.BY_CATEGORY(category)}?${queryString}`
-            : API_ENDPOINTS.PRODUCTS.BY_CATEGORY(category);
+            ? `${API_ENDPOINTS.PRODUCTS.BY_CATEGORY(categoryId)}?${queryString}`
+            : API_ENDPOINTS.PRODUCTS.BY_CATEGORY(categoryId);
         
         return await apiClient.get(endpoint);
     } catch (error) {
         console.error('[Product Service] getProductsByCategory error:', error);
-        
-        // Dev fallback
-        if (process.env.NODE_ENV !== 'production') {
-            console.warn('[Product Service] Using mock data (dev mode)');
-            return {
-                data: [],
-                total: 0,
-                category,
-            };
-        }
-        
+        throw error;
+    }
+}
+
+// Get active products
+export async function getActiveProducts() {
+    try {
+        return await apiClient.get(API_ENDPOINTS.PRODUCTS.ACTIVE);
+    } catch (error) {
+        console.error('[Product Service] getActiveProducts error:', error);
+        throw error;
+    }
+}
+
+// Get products by price range
+export async function getProductsByPriceRange(minPrice, maxPrice) {
+    try {
+        const params = new URLSearchParams({
+            minPrice: minPrice.toString(),
+            maxPrice: maxPrice.toString(),
+        });
+        return await apiClient.get(`${API_ENDPOINTS.PRODUCTS.BY_PRICE_RANGE}?${params}`);
+    } catch (error) {
+        console.error('[Product Service] getProductsByPriceRange error:', error);
+        throw error;
+    }
+}
+
+// Get my products (for authenticated users)
+export async function getMyProducts() {
+    try {
+        return await apiClient.get(API_ENDPOINTS.PRODUCTS.MY_PRODUCTS);
+    } catch (error) {
+        console.error('[Product Service] getMyProducts error:', error);
+        throw error;
+    }
+}
+
+// Create product (requires authentication)
+export async function createProduct(productData) {
+    try {
+        return await apiClient.post(API_ENDPOINTS.PRODUCTS.CREATE, productData);
+    } catch (error) {
+        console.error('[Product Service] createProduct error:', error);
+        throw error;
+    }
+}
+
+// Update product (requires authentication)
+export async function updateProduct(productId, productData) {
+    try {
+        return await apiClient.put(API_ENDPOINTS.PRODUCTS.UPDATE(productId), productData);
+    } catch (error) {
+        console.error('[Product Service] updateProduct error:', error);
+        throw error;
+    }
+}
+
+// Delete product (requires authentication)
+export async function deleteProduct(productId) {
+    try {
+        return await apiClient.delete(API_ENDPOINTS.PRODUCTS.DELETE(productId));
+    } catch (error) {
+        console.error('[Product Service] deleteProduct error:', error);
         throw error;
     }
 }

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from './BestSellers.module.scss';
 import productImg from '../../../assets/images/products/image1.jpg';
+import { scrollToTop } from '~/services/utils';
 
 const cx = classNames.bind(styles);
 
@@ -21,7 +22,6 @@ const CAROUSEL_THRESHOLD = 4;
 function BestSellers() {
   console.log('BestSellers component is rendering!');
   const isCarousel = mockProducts.length > CAROUSEL_THRESHOLD;
-  const [viewAll, setViewAll] = useState(false);
   const trackRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -47,7 +47,7 @@ function BestSellers() {
       track.removeEventListener('scroll', check);
       window.removeEventListener('resize', check);
     };
-  }, [isCarousel, viewAll]);
+  }, [isCarousel]);
 
   const scrollBy = (dir = 1) => {
     const track = trackRef.current;
@@ -65,34 +65,9 @@ function BestSellers() {
           <h2 id="bestsellers-heading" className={cx('title')}>
             TOP SẢN PHẨM BÁN CHẠY
           </h2>
-          <div className={cx('controls')}>
-            <button className={cx('viewAll')} onClick={() => setViewAll((v) => !v)}>
-              {viewAll ? 'Thu gọn' : 'Xem tất cả'}
-            </button>
-          </div>
         </div>
 
-        {viewAll ? (
-          <div className={cx('grid')}>
-            {mockProducts.map((p) => (
-              <article key={p.id} className={cx('card')}>
-                <Link to={`/product/${p.id}`} className={cx('img-wrap')}>
-                  <img src={p.img} alt={p.name} />
-                  <span className={cx('freeship')}>FREESHIP</span>
-                </Link>
-                <div className={cx('info')}>
-                  <h3 className={cx('name')}>{p.name}</h3>
-                  <p className={cx('desc')}>Mô tả sản phẩm đang bán chạy</p>
-                  <div className={cx('price-section')}>
-                    <span className={cx('price')}>{p.price}</span>
-                    <span className={cx('old-price')}>₫599,000</span>
-                    <span className={cx('discount')}>-10%</span>
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : isCarousel ? (
+        {isCarousel ? (
           <div className={cx('carousel')}>
             <button
               className={cx('arrow', 'left')}
@@ -107,7 +82,7 @@ function BestSellers() {
               {mockProducts.map((p) => (
                 <div key={p.id} className={cx('slide')}>
                   <article className={cx('card')}>
-                    <Link to={`/product/${p.id}`} className={cx('img-wrap')}>
+                    <Link to={`/product/${p.id}`} className={cx('img-wrap')} onClick={() => scrollToTop()}>
                       <img src={p.img} alt={p.name} />
                       <span className={cx('freeship')}>FREESHIP</span>
                     </Link>
@@ -138,7 +113,7 @@ function BestSellers() {
           <div className={cx('grid')}>
             {mockProducts.map((p) => (
               <article key={p.id} className={cx('card')}>
-                <Link to={`/product/${p.id}`} className={cx('img-wrap')}>
+                <Link to={`/product/${p.id}`} className={cx('img-wrap')} onClick={() => scrollToTop()}>
                   <img src={p.img} alt={p.name} />
                   <span className={cx('freeship')}>FREESHIP</span>
                 </Link>
@@ -155,6 +130,12 @@ function BestSellers() {
             ))}
           </div>
         )}
+
+        <div className={cx('controls')}>
+          <Link to="/best-sellers" className={cx('viewAll')} onClick={() => scrollToTop()}>
+            Xem tất cả
+          </Link>
+        </div>
       </div>
     </section>
   );

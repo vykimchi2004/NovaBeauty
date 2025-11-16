@@ -4,8 +4,15 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPhone, faEnvelope, faMapMarkerAlt } from "@fortawesome/free-solid-svg-icons";
 import { faInstagram, faFacebookF, faYoutube, faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { Link } from "react-router-dom";
+import { scrollToTop } from "~/services/utils";
 
 const cx = classNames.bind(styles);
+
+const handleScrollToTop = () => {
+  setTimeout(() => {
+    scrollToTop('smooth');
+  }, 0);
+};
 
 function Footer() {
   return (
@@ -40,22 +47,22 @@ function Footer() {
         <div className={cx("col")}>
           <h4>DANH MỤC</h4>
           <div className={cx('links-list')}>
-            <Link to='/makeup'>Trang điểm</Link>
-            <Link to='/skincare'>Chăm sóc da</Link>
-            <Link to='/personal-care'>Chăm sóc cơ thể</Link>
-            <Link to='/haircare'>Chăm sóc tóc</Link>
-            <Link to='/perfume'>Tool & Brushes</Link>
+            <Link to='/makeup' onClick={handleScrollToTop}>Trang điểm</Link>
+            <Link to='/skincare' onClick={handleScrollToTop}>Chăm sóc da</Link>
+            <Link to='/personal-care' onClick={handleScrollToTop}>Chăm sóc cơ thể</Link>
+            <Link to='/haircare' onClick={handleScrollToTop}>Chăm sóc tóc</Link>
+            <Link to='/perfume' onClick={handleScrollToTop}>Tool & Brushes</Link>
           </div>
         </div>
 
         <div className={cx("col")}>
           <h4>Hỗ trợ khách hàng</h4>
           <div className={cx('links-list')}>
-            <Link to= '/shopping-guide'>Hướng dẫn mua hàng</Link>
-            <Link to= '/payment-policy'>Chính sách thanh toán</Link>
-            <Link to= '/shipping-policy'>Chính sách vận chuyển</Link>
-            <Link to= '/return-policy'>Chính sách đổi trả</Link>
-            <Link to= '/faq'>FAQ</Link>
+            <Link to= '/shopping-guide' onClick={handleScrollToTop}>Hướng dẫn mua hàng</Link>
+            <Link to= '/payment-policy' onClick={handleScrollToTop}>Chính sách thanh toán</Link>
+            <Link to= '/shipping-policy' onClick={handleScrollToTop}>Chính sách vận chuyển</Link>
+            <Link to= '/return-policy' onClick={handleScrollToTop}>Chính sách đổi trả</Link>
+            <Link to= '/faq' onClick={handleScrollToTop}>FAQ</Link>
           </div>
         </div>
 
