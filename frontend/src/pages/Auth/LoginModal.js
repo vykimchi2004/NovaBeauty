@@ -16,7 +16,8 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
   const navigate = useNavigate?.();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [renderKey, setRenderKey] = useState(0);
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
@@ -28,7 +29,8 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
 
   useEffect(() => {
     if (isOpen) {
-      setError('');
+      setEmailError('');
+      setPasswordError('');
       setLoading(false);
       setShowPassword(false);
       setRenderKey((k) => k + 1); // Force remount inputs to clear values
@@ -41,7 +43,8 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
   }, [isOpen]);
 
   const handleClose = () => {
-    setError('');
+    setEmailError('');
+    setPasswordError('');
     setLoading(false);
     setShowPassword(false);
     if (emailRef.current) emailRef.current.value = '';
@@ -57,13 +60,33 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
     const email = form.email.value.trim();
     const password = form.password.value;
 
-    if (!email || !password) {
-      setError('Vui lòng nhập đầy đủ thông tin');
-      return;
+    // Reset errors
+    setEmailError('');
+    setPasswordError('');
+
+    let hasError = false;
+
+    // Validation
+    if (!email) {
+      setEmailError('Vui lòng nhập email');
+      hasError = true;
+    } else {
+      // Check email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        setEmailError('Email không đúng định dạng');
+        hasError = true;
+      }
     }
 
+    if (!password) {
+      setPasswordError('Vui lòng nhập mật khẩu');
+      hasError = true;
+    }
+
+    if (hasError) return;
+
     setLoading(true);
-    setError('');
 
     try {
       // Gọi API login
@@ -91,21 +114,48 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
 
         // Điều hướng theo tài khoản
         const loggedInEmail = (userInfo?.email || email || '').toLowerCase();
-        if (loggedInEmail === 'admin@novabeauty.com') {
+        const roleName = userInfo?.role?.name?.toUpperCase() || '';
+        
+        if (loggedInEmail === 'admin@novabeauty.com' || roleName === 'ADMIN') {
           if (navigate) {
             navigate('/admin', { replace: true });
           } else {
             window.location.href = '/admin';
+          }
+        } else if (roleName === 'STAFF' || roleName === 'CUSTOMER_SUPPORT') {
+          // Redirect staff to staff page
+          if (navigate) {
+            navigate('/staff', { replace: true });
+          } else {
+            window.location.href = '/staff';
           }
         } else {
           // Refresh page để cập nhật UI cho user thường
           window.location.reload();
         }
       } else {
-        setError('Đăng nhập thất bại. Vui lòng thử lại.');
+        setPasswordError('Đăng nhập thất bại. Vui lòng thử lại.');
       }
     } catch (err) {
-      setError(err.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.');
+      // Kiểm tra xem lỗi có liên quan đến mật khẩu không
+      const errorMessage = err.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.';
+      const lowerMessage = errorMessage.toLowerCase();
+      
+      // Nếu lỗi liên quan đến mật khẩu, hiển thị dưới password field
+      if (lowerMessage.includes('mật khẩu') || 
+          lowerMessage.includes('password') || 
+          lowerMessage.includes('unauthorized') || 
+          lowerMessage.includes('unauthenticated') ||
+          lowerMessage.includes('invalid credentials') ||
+          lowerMessage.includes('sai mật khẩu') ||
+          lowerMessage.includes('wrong password')) {
+        setPasswordError('Mật khẩu không đúng');
+      } else if (lowerMessage.includes('email') || lowerMessage.includes('user not found')) {
+        setEmailError(errorMessage);
+      } else {
+        // Mặc định hiển thị dưới password vì thường lỗi đăng nhập là do mật khẩu sai
+        setPasswordError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -126,22 +176,22 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
           </span>
         </p>
 
-        <form key={renderKey} onSubmit={handleSubmit} className={cx('form')}>
-          {error && <div className={cx('error')} style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
-          
+        <form key={renderKey} onSubmit={handleSubmit} className={cx('form')} noValidate>
           <div className={cx('formGroup')}>
             <label>Email</label>
-            <input ref={emailRef} name="email" type="email" placeholder="Nhập email của bạn" required disabled={loading} />
+            <input ref={emailRef} name="email" type="email" placeholder="Nhập email của bạn" disabled={loading} />
+            {emailError && <div className={cx('error')}>{emailError}</div>}
           </div>
 
           <div className={cx('formGroup')}>
             <label>Mật khẩu</label>
             <div className={cx('passwordWrapper')}>
-              <input ref={passwordRef} name="password" type={showPassword ? 'text' : 'password'} placeholder="Nhập mật khẩu" required disabled={loading} />
-              <button type="button" className={cx('eyeBtn')} onClick={() => setShowPassword((prev) => !prev)} disabled={loading}>
+              <input ref={passwordRef} name="password" type={showPassword ? 'text' : 'password'} placeholder="Nhập mật khẩu" disabled={loading} />
+              <button type="button" className={cx('eyeBtn')} onClick={() => setShowPassword((prev) => !prev)} disabled={loading} tabIndex={-1}>
                 <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
               </button>
             </div>
+            {passwordError && <div className={cx('error')}>{passwordError}</div>}
           </div>
 
           <div className={cx('options')}>

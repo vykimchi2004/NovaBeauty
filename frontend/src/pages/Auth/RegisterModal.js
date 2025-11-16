@@ -7,20 +7,57 @@ import { faEye, faEyeSlash, faArrowLeft } from '@fortawesome/free-solid-svg-icon
 import { sendVerificationCode, verifyCode, register, login } from '~/services/auth';
 import { getMyInfo } from '~/services/user';
 import { STORAGE_KEYS } from '~/services/config';
-import { storage } from '~/services/utils';
+import { storage, validatePassword } from '~/services/utils';
 
 const cx = classNames.bind(styles);
+
+// Hàm dịch lỗi sang tiếng Việt và xác định field
+const translateError = (errorMessage) => {
+  if (!errorMessage) return { message: 'Đăng ký thất bại', field: 'username' };
+  
+  const lowerMessage = errorMessage.toLowerCase();
+  
+  // Dịch các lỗi phổ biến
+  if (lowerMessage.includes('uncategorized error') || lowerMessage.includes('uncategorized')) {
+    return { message: 'Đã xảy ra lỗi. Vui lòng thử lại sau.', field: 'username' };
+  }
+  if (lowerMessage.includes('user existed') || (lowerMessage.includes('email') && lowerMessage.includes('existed'))) {
+    return { message: 'Email này đã được sử dụng', field: 'email' };
+  }
+  if (lowerMessage.includes('username') && (lowerMessage.includes('invalid') || lowerMessage.includes('at least'))) {
+    return { message: 'Tên hiển thị không hợp lệ', field: 'username' };
+  }
+  if (lowerMessage.includes('password') && lowerMessage.includes('invalid')) {
+    return { message: 'Mật khẩu không hợp lệ', field: 'password' };
+  }
+  if (lowerMessage.includes('email') && (lowerMessage.includes('invalid') || lowerMessage.includes('format'))) {
+    return { message: 'Email không đúng định dạng', field: 'email' };
+  }
+  if (lowerMessage.includes('otp') || (lowerMessage.includes('mã') && lowerMessage.includes('không đúng'))) {
+    return { message: 'Mã xác nhận không đúng hoặc đã hết hạn', field: 'otp' };
+  }
+  if (lowerMessage.includes('failed to send email') || lowerMessage.includes('email send failed')) {
+    return { message: 'Không thể gửi email. Vui lòng thử lại sau.', field: 'email' };
+  }
+  if (lowerMessage.includes('unauthorized') || lowerMessage.includes('unauthenticated')) {
+    return { message: 'Bạn không có quyền thực hiện thao tác này', field: 'username' };
+  }
+  
+  // Mặc định trả về message gốc nếu không match, nhưng cố gắng dịch nếu có thể
+  return { message: errorMessage, field: 'username' };
+};
 
 function RegisterModal({ isOpen, onClose, onOpenLogin }) {
   const [step, setStep] = useState(1); // 1: nhập email, 2: xác nhận mã, 3: tạo tài khoản
   const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Bước 2: OTP
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const inputsRef = useRef([]);
   const [seconds, setSeconds] = useState(60);
+  const [otpError, setOtpError] = useState('');
 
   // Bước 3: tạo tài khoản
   const [username, setUsername] = useState('');
@@ -29,6 +66,10 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
   const [agree, setAgree] = useState(false);
   const [showPass1, setShowPass1] = useState(false);
   const [showPass2, setShowPass2] = useState(false);
+  const [usernameError, setUsernameError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [agreeError, setAgreeError] = useState('');
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : 'unset';
@@ -40,7 +81,8 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
     if (isOpen) {
       setStep(1);
       setEmail('');
-      setError('');
+      setEmailError('');
+      setOtpError('');
       setLoading(false);
       setOtp(['', '', '', '', '', '']);
       setSeconds(60);
@@ -50,6 +92,10 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
       setAgree(false);
       setShowPass1(false);
       setShowPass2(false);
+      setUsernameError('');
+      setPasswordError('');
+      setConfirmPasswordError('');
+      setAgreeError('');
     }
   }, [isOpen]);
 
@@ -65,8 +111,11 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
   // ======================== XỬ LÝ CÁC BƯỚC ==========================
   const handleSendEmail = async (e) => {
     e.preventDefault();
-    if (!email) return setError('Vui lòng nhập email hợp lệ');
-    setError('');
+    setEmailError('');
+    if (!email) {
+      setEmailError('Vui lòng nhập email hợp lệ');
+      return;
+    }
     setLoading(true);
     try {
       await sendVerificationCode(email, 'register');
@@ -77,20 +126,31 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
       setTimeout(() => inputsRef.current[0]?.focus(), 100);
     } catch (err) {
       setLoading(false);
-      setError(err.message || 'Gửi mã xác nhận thất bại');
+      const { message } = translateError(err.message);
+      setEmailError(message || 'Gửi mã xác nhận thất bại');
     }
   };
 
   const handleVerifyCode = async () => {
     const code = otp.join('');
-    if (code.length !== 6) return setError('Vui lòng nhập đủ 6 chữ số');
+    setOtpError('');
+    if (code.length !== 6) {
+      setOtpError('Vui lòng nhập đủ 6 chữ số');
+      return;
+    }
     setLoading(true);
-    setError('');
     try {
       await verifyCode(email, code);
       setStep(3);
     } catch (err) {
-      setError(err.message || 'Mã xác nhận không đúng hoặc đã hết hạn.');
+      const { message } = translateError(err.message);
+      // Kiểm tra nếu lỗi liên quan đến OTP
+      const lowerMessage = (err.message || '').toLowerCase();
+      if (lowerMessage.includes('otp') || lowerMessage.includes('mã') || lowerMessage.includes('code')) {
+        setOtpError(message || 'Mã xác nhận không đúng hoặc đã hết hạn.');
+      } else {
+        setOtpError(message || 'Mã xác nhận không đúng hoặc đã hết hạn.');
+      }
     } finally {
       setLoading(false);
     }
@@ -98,12 +158,47 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (!username.trim()) return setError('Vui lòng nhập tên hiển thị');
-    if (password.length < 6) return setError('Mật khẩu phải ít nhất 6 ký tự');
-    if (password !== confirm) return setError('Mật khẩu xác nhận không khớp');
-    if (!agree) return setError('Vui lòng đồng ý điều khoản');
+    
+    // Reset errors
+    setUsernameError('');
+    setPasswordError('');
+    setConfirmPasswordError('');
+    setAgreeError('');
 
-    setError('');
+    let hasError = false;
+
+    if (!username.trim()) {
+      setUsernameError('Vui lòng nhập tên hiển thị');
+      hasError = true;
+    }
+    
+    // Validate password theo quy định backend
+    if (!password) {
+      setPasswordError('Vui lòng nhập mật khẩu');
+      hasError = true;
+    } else if (!confirm) {
+      setConfirmPasswordError('Vui lòng xác nhận mật khẩu');
+      hasError = true;
+    } else {
+      const passwordValidation = validatePassword(password, confirm);
+      if (!passwordValidation.isValid) {
+        // Nếu lỗi là về khớp mật khẩu, hiển thị ở confirm field
+        if (passwordValidation.error.includes('không khớp')) {
+          setConfirmPasswordError(passwordValidation.error);
+        } else {
+          setPasswordError(passwordValidation.error);
+        }
+        hasError = true;
+      }
+    }
+    
+    if (!agree) {
+      setAgreeError('Vui lòng đồng ý điều khoản');
+      hasError = true;
+    }
+
+    if (hasError) return;
+
     setLoading(true);
     try {
       // 1) Tạo tài khoản
@@ -131,7 +226,19 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
       // 5) Reload để đồng bộ toàn bộ UI
       window.location.reload();
     } catch (err) {
-      setError(err.message || 'Đăng ký thất bại');
+      // Dịch lỗi và hiển thị ở đúng field
+      const { message, field } = translateError(err.message);
+      
+      if (field === 'email') {
+        // Nếu lỗi liên quan đến email, quay lại step 1 để hiển thị ở email field
+        setStep(1);
+        setEmailError(message);
+      } else if (field === 'password') {
+        setPasswordError(message);
+      } else {
+        // Lỗi khác (username, uncategorized, etc.) hiển thị ở username field
+        setUsernameError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -139,7 +246,7 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
 
   const resendCode = async () => {
     if (seconds > 0) return;
-    setError('');
+    setOtpError('');
     setLoading(true);
     try {
       await sendVerificationCode(email, 'register');
@@ -147,7 +254,8 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
       setSeconds(60);
       inputsRef.current[0]?.focus();
     } catch (err) {
-      setError(err.message || 'Gửi lại mã thất bại');
+      const { message } = translateError(err.message);
+      setOtpError(message || 'Gửi lại mã thất bại');
     } finally {
       setLoading(false);
     }
@@ -155,7 +263,7 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
 
   // ======================== GIAO DIỆN ==========================
   const modal = (
-    <div className={cx('overlay')} onClick={onClose}>
+    <div className={cx('overlay')}>
       <div className={cx('modal')} onClick={(e) => e.stopPropagation()}>
         <button className={cx('closeBtn')} onClick={onClose}>
           &times;
@@ -163,7 +271,12 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
         <button
           className={cx('backBtn')}
           onClick={() => {
-            setError('');
+            setEmailError('');
+            setOtpError('');
+            setUsernameError('');
+            setPasswordError('');
+            setConfirmPasswordError('');
+            setAgreeError('');
             if (step === 1) {
               onOpenLogin?.();
               return;
@@ -191,7 +304,7 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
         {step === 1 && (
           <>
             <p className={cx('subtitle')}>Nhập email của bạn để nhận mã xác nhận.</p>
-            <form onSubmit={handleSendEmail} className={cx('form')}>
+            <form onSubmit={handleSendEmail} className={cx('form')} noValidate>
               <div className={cx('formGroup')}>
                 <label>Email</label>
                 <input
@@ -199,10 +312,9 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Nhập email của bạn"
-                  required
                 />
+                {emailError && <div className={cx('error')}>{emailError}</div>}
               </div>
-              {error && <div className={cx('error')}>{error}</div>}
               <button type="submit" className={cx('loginBtn')} disabled={loading}>
                 {loading ? 'Đang gửi...' : 'Gửi mã xác nhận'}
               </button>
@@ -243,7 +355,7 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
                 />
               ))}
             </div>
-            {error && <div className={cx('error')}>{error}</div>}
+            {otpError && <div className={cx('error')} style={{ textAlign: 'center', marginTop: '8px' }}>{otpError}</div>}
             <p className={cx('resend')}>
               {seconds > 0 ? (
                 <>Gửi lại mã sau 00:{String(seconds).padStart(2, '0')}</>
@@ -264,7 +376,7 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
 
         {step === 3 && (
           <>
-            <form onSubmit={handleRegister} className={cx('form')}>
+            <form onSubmit={handleRegister} className={cx('form')} noValidate>
               <div className={cx('formGroup')}>
                 <label>Tên hiển thị</label>
                 <input
@@ -272,8 +384,8 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Tên hiển thị"
-                  required
                 />
+                {usernameError && <div className={cx('error')}>{usernameError}</div>}
               </div>
 
               <div className={cx('formGroup')}>
@@ -284,12 +396,12 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Nhập mật khẩu"
-                    required
                   />
-                  <button type="button" className={cx('eyeBtn')} onClick={() => setShowPass1((prev) => !prev)}>
+                  <button type="button" className={cx('eyeBtn')} onClick={() => setShowPass1((prev) => !prev)} tabIndex={-1}>
                     <FontAwesomeIcon icon={showPass1 ? faEyeSlash : faEye} />
                   </button>
                 </div>
+                {passwordError && <div className={cx('error')}>{passwordError}</div>}
               </div>
 
               <div className={cx('formGroup')}>
@@ -300,20 +412,22 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}
                     placeholder="Nhập lại mật khẩu"
-                    required
                   />
-                  <button type="button" className={cx('eyeBtn')} onClick={() => setShowPass2((prev) => !prev)}>
+                  <button type="button" className={cx('eyeBtn')} onClick={() => setShowPass2((prev) => !prev)} tabIndex={-1}>
                     <FontAwesomeIcon icon={showPass2 ? faEyeSlash : faEye} />
                   </button>
                 </div>
+                {confirmPasswordError && <div className={cx('error')}>{confirmPasswordError}</div>}
               </div>
 
-              <label className={cx('remember_agree')}>
-                <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /> Tôi đồng ý với
-                điều khoản
-              </label>
+              <div>
+                <label className={cx('remember_agree')}>
+                  <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /> Tôi đồng ý với
+                  điều khoản
+                </label>
+                {agreeError && <div className={cx('error')}>{agreeError}</div>}
+              </div>
 
-              {error && <div className={cx('error')}>{error}</div>}
               <button type="submit" className={cx('loginBtn')} disabled={loading}>
                 {loading ? 'Đang đăng ký...' : 'Đăng ký'}
               </button>

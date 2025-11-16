@@ -215,7 +215,24 @@
     display: flex;
     align-items: center;
     gap: 9px;
+    text-decoration: none;
     
+    &:hover {
+      text-decoration: none;
+    }
+  }
+}
+
+.cart {
+  text-decoration: none !important;
+  color: inherit;
+  
+  &:hover {
+    text-decoration: none !important;
+  }
+  
+  .text {
+    text-decoration: none !important;
   }
 }
 .logo {

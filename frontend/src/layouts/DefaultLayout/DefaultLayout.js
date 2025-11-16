@@ -9,10 +9,13 @@ import LoginModal from '~/pages/Auth/LoginModal';
 import RegisterModal from '~/pages/Auth/RegisterModal';
 import ForgotPasswordModal from '~/pages/Auth/ForgotPasswordModal';
 import VerifyCodeModal from '~/pages/Auth/VerifyCodeModal';
+import ResetPasswordModal from '~/pages/Auth/ResetPasswordModal';
 import { verifyCode, resetPassword, sendVerificationCode, logout } from '~/services/auth';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { STORAGE_KEYS } from '~/services/config';
 import { storage } from '~/services/utils';
+
+const ADMIN_EMAILS = ['admin@novabeauty.com', 'admin@novabeuty.com'];
 
 function DefaultLayout({ children }) {
   const cx = classNames.bind(styles);
@@ -20,21 +23,30 @@ function DefaultLayout({ children }) {
   const location = useLocation?.() || { pathname: '/' };
   const [open, setOpen] = useState(false);
 
-  // Quản lý modal đang mở: null | 'login' | 'register' | 'forgot' | 'verify-code'
+  // Quản lý modal đang mở: null | 'login' | 'register' | 'forgot' | 'verify-code' | 'reset-password'
   const [activeModal, setActiveModal] = useState(null);
   const [currentUser, setCurrentUser] = useState(() => storage.get(STORAGE_KEYS.USER));
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  
+  // Khi reload lại trang, nếu admin đang đăng nhập thì điều hướng về /admin
+  React.useEffect(() => {
+    const email = currentUser?.email?.toLowerCase();
+    if (!navigate || !email) return;
+
+    if (ADMIN_EMAILS.includes(email) && !location.pathname.startsWith('/admin')) {
+      navigate('/admin', { replace: true });
+    }
+  }, [currentUser, navigate, location.pathname]);
   
   // State cho forgot password flow
   const [forgotEmail, setForgotEmail] = useState('');
   const [verifiedOtp, setVerifiedOtp] = useState('');
-  const [showResetPassword, setShowResetPassword] = useState(false);
 
   // Đóng tất cả modal
   const closeModal = () => {
     setActiveModal(null);
     setForgotEmail('');
     setVerifiedOtp('');
-    setShowResetPassword(false);
   };
 
   // Xử lý đăng nhập thành công
@@ -47,47 +59,36 @@ function DefaultLayout({ children }) {
   // Xử lý khi OTP được gửi (forgot password)
   const handleForgotCodeSent = (email) => {
     setForgotEmail(email);
-    setActiveModal('verify-code');
+    setActiveModal('verify-code'); // Đóng forgot modal và mở verify modal
   };
 
   // Xử lý verify OTP cho forgot password
   const handleVerifyForgotCode = async (code) => {
     try {
       await verifyCode(forgotEmail, code);
-      // Lưu OTP đã verify và chuyển sang form đặt lại mật khẩu
+      // Lưu OTP đã verify và chuyển sang modal đặt lại mật khẩu
       setVerifiedOtp(code);
-      setShowResetPassword(true);
-      setActiveModal(null);
+      setActiveModal('reset-password');
     } catch (err) {
       throw err; // Let VerifyCodeModal handle the error
     }
   };
 
   // Xử lý reset password
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
-    const password = e.target.password.value;
-    const confirmPassword = e.target.confirmPassword.value;
-
-    if (password !== confirmPassword) {
-      alert('Mật khẩu không khớp');
-      return;
-    }
-
-    if (password.length < 8) {
-      alert('Mật khẩu phải ít nhất 8 ký tự');
-      return;
-    }
-
+  const handleResetPassword = async (newPassword) => {
     try {
       // Sử dụng OTP đã verify ở bước trước
-      await resetPassword(forgotEmail, verifiedOtp, password);
-      alert('Đặt lại mật khẩu thành công! Vui lòng đăng nhập.');
-      closeModal();
-      setActiveModal('login');
+      await resetPassword(forgotEmail, verifiedOtp, newPassword);
+      // ResetPasswordModal sẽ hiển thị thông báo thành công
     } catch (err) {
-      alert(err.message || 'Đặt lại mật khẩu thất bại');
+      throw new Error(err.message || 'Đặt lại mật khẩu thất bại');
     }
+  };
+
+  // Xử lý sau khi reset password thành công
+  const handleResetPasswordSuccess = () => {
+    closeModal();
+    setActiveModal('login');
   };
 
   // Resend OTP cho forgot password
@@ -141,25 +142,49 @@ function DefaultLayout({ children }) {
   const isProductDetail = path.startsWith('/product/');
   const productName = isProductDetail && location.state && location.state.name ? location.state.name : null;
 
+  // Load cart count từ API
+  const [cartCount, setCartCount] = useState(0);
+
+  React.useEffect(() => {
+    const loadCartCount = async () => {
+      try {
+        const { default: cartService } = await import('~/services/cart');
+        const count = await cartService.getCartCount();
+        setCartCount(count);
+      } catch (error) {
+        // Nếu chưa đăng nhập hoặc lỗi, set về 0
+        setCartCount(0);
+      }
+    };
+
+    loadCartCount();
+
+    // Lắng nghe event cartUpdated để cập nhật số lượng
+    const handleCartUpdated = async () => {
+      try {
+        const { default: cartService } = await import('~/services/cart');
+        const count = await cartService.getCartCount();
+        setCartCount(count);
+      } catch (error) {
+        setCartCount(0);
+      }
+    };
+
+    window.addEventListener('cartUpdated', handleCartUpdated);
+    return () => window.removeEventListener('cartUpdated', handleCartUpdated);
+  }, []);
+
   return (
     <div className={cx('wrapper')}>
       {/* Header + Navbar */}
       <Header
-        cartCount={0}
+        cartCount={cartCount}
         open={open}
         setOpen={setOpen}
         onLoginClick={() => setActiveModal('login')}
         user={currentUser}
-        onLogoutClick={async () => {
-          try {
-            await logout();
-          } catch (_) {}
-          setCurrentUser(null);
-          try {
-            storage.remove(STORAGE_KEYS.USER);
-          } catch (_) {}
-          // Optional: reload để đảm bảo UI sạch
-          window.location.reload();
+        onLogoutClick={() => {
+          setShowLogoutConfirm(true);
         }}
         onProfileClick={() => {
           if (navigate) navigate('/profile');
@@ -223,67 +248,52 @@ function DefaultLayout({ children }) {
         onResend={handleResendForgotCode}
         onBack={() => setActiveModal('forgot')}
         initialSeconds={60}
+        title="Quên mật khẩu"
       />
 
-      {/* Reset Password Form (shown after OTP verification) */}
-      {showResetPassword && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            padding: '30px',
-            borderRadius: '10px',
-            maxWidth: '400px',
-            width: '90%'
-          }}>
-            <h2>Đặt lại mật khẩu</h2>
-            <form onSubmit={handleResetPassword}>
-              <div style={{ marginBottom: '15px' }}>
-                <label>Mật khẩu mới</label>
-                <input
-                  type="password"
-                  name="password"
-                  placeholder="Nhập mật khẩu mới"
-                  required
-                  style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-                />
-              </div>
-              <div style={{ marginBottom: '15px' }}>
-                <label>Xác nhận mật khẩu</label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  placeholder="Nhập lại mật khẩu"
-                  required
-                  style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-                />
-              </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  style={{ flex: 1, padding: '10px', backgroundColor: '#ccc', border: 'none', borderRadius: '5px' }}
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  style={{ flex: 1, padding: '10px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '5px' }}
-                >
-                  Đặt lại
-                </button>
-              </div>
-            </form>
+      {/* Reset Password Modal (shown after OTP verification) */}
+      <ResetPasswordModal
+        isOpen={activeModal === 'reset-password'}
+        onClose={closeModal}
+        onSubmit={handleResetPassword}
+        onBack={() => setActiveModal('verify-code')}
+        onSuccess={handleResetPasswordSuccess}
+      />
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className={cx('logoutModalOverlay')} onClick={() => setShowLogoutConfirm(false)}>
+          <div className={cx('logoutModal')} onClick={(e) => e.stopPropagation()}>
+            <h3 className={cx('logoutModalTitle')}>Xác nhận đăng xuất</h3>
+            <p className={cx('logoutModalMessage')}>Bạn có chắc chắn muốn đăng xuất không?</p>
+            <div className={cx('logoutModalActions')}>
+              <button
+                type="button"
+                className={cx('logoutModalBtn', 'logoutModalBtnCancel')}
+                onClick={() => setShowLogoutConfirm(false)}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className={cx('logoutModalBtn', 'logoutModalBtnConfirm')}
+                onClick={async () => {
+                  setShowLogoutConfirm(false);
+                  try {
+                    await logout();
+                  } catch (_) {}
+                  setCurrentUser(null);
+                  try {
+                    storage.remove(STORAGE_KEYS.USER);
+                    storage.remove(STORAGE_KEYS.TOKEN);
+                  } catch (_) {}
+                  // Optional: reload để đảm bảo UI sạch
+                  window.location.reload();
+                }}
+              >
+                Đăng xuất
+              </button>
+            </div>
           </div>
         </div>
       )}

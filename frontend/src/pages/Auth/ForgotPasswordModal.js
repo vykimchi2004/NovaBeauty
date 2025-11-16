@@ -11,7 +11,7 @@ const cx = classNames.bind(styles);
 
 function ForgotPasswordModal({ isOpen, onClose, onBackToLogin, onCodeSent }) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [renderKey, setRenderKey] = useState(0);
   const emailRef = useRef(null);
 
@@ -22,7 +22,7 @@ function ForgotPasswordModal({ isOpen, onClose, onBackToLogin, onCodeSent }) {
 
   useEffect(() => {
     if (isOpen) {
-      setError('');
+      setEmailError('');
       setLoading(false);
       setRenderKey((k) => k + 1);
       setTimeout(() => {
@@ -32,7 +32,7 @@ function ForgotPasswordModal({ isOpen, onClose, onBackToLogin, onCodeSent }) {
   }, [isOpen]);
 
   const handleClose = () => {
-    setError('');
+    setEmailError('');
     setLoading(false);
     if (emailRef.current) emailRef.current.value = '';
     onClose?.();
@@ -44,25 +44,33 @@ function ForgotPasswordModal({ isOpen, onClose, onBackToLogin, onCodeSent }) {
     e.preventDefault();
     const email = e.target.email.value.trim();
     
+    setEmailError('');
+    
     if (!email) {
-      setError('Vui lòng nhập email');
+      setEmailError('Vui lòng nhập email');
+      return;
+    }
+
+    // Kiểm tra nếu là admin email thì không cho phép quên mật khẩu
+    const normalizedEmail = email.toLowerCase();
+    if (normalizedEmail === 'admin@novabeauty.com' || normalizedEmail === 'admin@novabeuty.com') {
+      setEmailError('Bạn không có quyền này');
       return;
     }
 
     setLoading(true);
-    setError('');
 
     try {
       // Gọi API gửi OTP với mode='forgot'
       await sendVerificationCode(email, 'forgot');
       
-      // Chuyển sang modal verify code
+      // Chuyển sang modal verify code (không đóng modal này, để parent xử lý)
       if (onCodeSent) {
         onCodeSent(email);
       }
-      onClose();
+      // Không gọi onClose() ở đây, để parent component quản lý việc đóng/mở modal
     } catch (err) {
-      setError(err.message || 'Không thể gửi mã xác nhận. Vui lòng thử lại.');
+      setEmailError(err.message || 'Không thể gửi mã xác nhận. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -79,12 +87,11 @@ function ForgotPasswordModal({ isOpen, onClose, onBackToLogin, onCodeSent }) {
         </button>
 
         <p className={cx('subtitle')}>Chúng tôi sẽ gửi cho bạn mã code qua email để đặt lại mật khẩu.</p>
-        <form key={renderKey} onSubmit={handleSubmit} className={cx('form')}>
-          {error && <div className={cx('error')} style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
-          
+        <form key={renderKey} onSubmit={handleSubmit} className={cx('form')} noValidate>
           <div className={cx('formGroup')}>
             <label>Email</label>
-            <input ref={emailRef} name="email" type="email" placeholder="example@email.com" required disabled={loading} />
+            <input ref={emailRef} name="email" type="email" placeholder="example@email.com" disabled={loading} />
+            {emailError && <div className={cx('error')}>{emailError}</div>}
           </div>
           <button type="submit" className={cx('loginBtn')} disabled={loading}>
             {loading ? 'Đang gửi...' : 'Gửi'}

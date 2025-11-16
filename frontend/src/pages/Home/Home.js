@@ -13,10 +13,10 @@ const Home = () => {
 
   return (
     <div className={cx('home')}>
-      <Hero />
+      <Vouchers />
       <BestSellers />
       <FeaturedCategories />
-      <Vouchers />
+      <Hero />
       {/* other home sections can be added here */}
     </div>
   );

@@ -16,7 +16,7 @@
   background: #fff;
   border-radius: 12px;
   padding: 40px 48px;
-  width: 420px;
+  width: 450px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
   animation: fadeIn 0.25s ease;
 }
@@ -75,10 +75,19 @@
   margin-bottom: 6px;
 }
 
+/* --- Error message --- */
+.error {
+  color: #e5677d;
+  font-size: 13px;
+  margin-top: 4px;
+  margin-bottom: 0;
+  line-height: 1.4;
+}
+
 input,
 .form-input {
   width: 100%;
-  padding: 12px 5px;
+  padding: 15px 0 15px 15px;
   border-radius: 8px;
   margin: 6px 0 0;
   border: 1px solid #ddd;
@@ -95,15 +104,22 @@ input,
 .passwordWrapper {
   position: relative;
 
+
   .eyeBtn {
     position: absolute;
-    right: 10px;
+    right: 2px;
     top: 50%;
     transform: translateY(-50%);
     background: none;
     border: none;
     cursor: pointer;
     color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
   }
 }
 

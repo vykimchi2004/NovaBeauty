@@ -6,7 +6,7 @@ import { maskEmail } from '~/services/utils';
 
 const cx = classNames.bind(styles);
 
-function VerifyCodeModal({ isOpen, onClose, onSubmit, email, onResend, onBack, initialSeconds = 60 }) {
+function VerifyCodeModal({ isOpen, onClose, onSubmit, email, onResend, onBack, initialSeconds = 60, title = 'Xác nhận mã' }) {
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
   const [secondsLeft, setSecondsLeft] = useState(initialSeconds);
   const inputRefs = useRef(Array.from({ length: 6 }, () => React.createRef()));
@@ -109,7 +109,7 @@ function VerifyCodeModal({ isOpen, onClose, onSubmit, email, onResend, onBack, i
           </button>
         )}
 
-        <h2 className={cx('title')}>Đăng ký</h2>
+        <h2 className={cx('title')}>{title}</h2>
         <p className={cx('subtitle')}>
           {maskedEmail ? (
             <>Nhập mã gồm 6 chữ số đã được gửi tới {maskedEmail}</>

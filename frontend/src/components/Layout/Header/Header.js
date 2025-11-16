@@ -109,10 +109,18 @@ function Header({ cartCount = 0, open = false, setOpen = () => {}, onLoginClick,
             )}
           </div>
 
-          <div className={cx('cart')}>
+          <Link
+            to="/cart"
+            className={cx('cart')}
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.scrollTo) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }}
+          >
             <FontAwesomeIcon className={cx('icon')} icon={faShoppingCart} />
             <span className={cx('text')}>Giỏ hàng ({cartCount})</span>
-          </div>
+          </Link>
         </div>
       </div>
     </header>
