@@ -5,7 +5,7 @@
 
 .inner {
   width: 100%;
-  max-width: 1300px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -20,8 +20,8 @@
   display: grid;
   grid-template-columns: 220px 1fr;
   align-items: center;
-  gap: 24px;
-  background: #fde7f1;
+  gap: 90px;
+  background: #fffcfd;
   border-radius: 12px;
   padding: 16px 20px;
 }
@@ -81,10 +81,6 @@
     height: 110px;
     border-radius: 24px;
   }
-  .thumb img {
-    width: 56px;
-    height: 56px;
-  }
 }
 
 @media (max-width: 480px) {
@@ -95,10 +91,6 @@
     width: 96px;
     height: 96px;
     border-radius: 20px;
-  }
-  .thumb img {
-    width: 48px;
-    height: 48px;
   }
 }
 
@@ -114,15 +106,24 @@
   border-radius: 32px;
   background: #fff;
   margin: 0 auto 10px auto;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  position: relative;
 }
 
 .thumb img {
-  width: 100px;
-  height: 100px;
-  object-fit: contain;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.1);
+  transition: transform 0.3s ease;
+}
+
+.item:hover .thumb img {
+  transform: scale(1.15);
 }
 
 .label {

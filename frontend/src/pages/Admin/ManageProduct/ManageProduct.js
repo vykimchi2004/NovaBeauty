@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faSearch,
@@ -15,9 +15,12 @@ import classNames from 'classnames/bind';
 import styles from './ManageProduct.module.scss';
 import { getProducts, deleteProduct, createProduct, updateProduct } from '~/services/product';
 import { getCategories } from '~/services/category';
+import { uploadProductMedia } from '~/services/media';
 import notify from '~/utils/notification';
+import fallbackImage from '~/assets/images/products/image1.jpg';
 
 const cx = classNames.bind(styles);
+const MAX_MEDIA_ITEMS = 6;
 
 function ManageProduct() {
   const [products, setProducts] = useState([]);
@@ -37,8 +40,6 @@ function ManageProduct() {
     description: '',
     detailedDescription: '',
     size: '',
-    author: '',
-    publisher: '',
     brand: '',
     brandOrigin: '',
     manufacturingLocation: '',
@@ -51,9 +52,13 @@ function ManageProduct() {
     tax: '',
     discountValue: '',
     publicationDate: '',
-    categoryId: ''
+    categoryId: '',
+    mediaUrls: [],
+    defaultMediaUrl: ''
   });
   const [formErrors, setFormErrors] = useState({});
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchProducts();
@@ -63,6 +68,13 @@ function ManageProduct() {
   useEffect(() => {
     filterProducts();
   }, [searchTerm, filterStatus, products]);
+
+  useEffect(() => {
+    if (!showModal && fileInputRef.current) {
+      fileInputRef.current.value = '';
+      setUploadingMedia(false);
+    }
+  }, [showModal]);
 
   const fetchProducts = async () => {
     try {
@@ -119,8 +131,6 @@ function ManageProduct() {
       description: '',
       detailedDescription: '',
       size: '',
-      author: '',
-      publisher: '',
       brand: '',
       brandOrigin: '',
       manufacturingLocation: '',
@@ -133,7 +143,9 @@ function ManageProduct() {
       tax: '',
       discountValue: '',
       publicationDate: new Date().toISOString().split('T')[0],
-      categoryId: ''
+      categoryId: '',
+      mediaUrls: [],
+      defaultMediaUrl: ''
     });
     setFormErrors({});
     setShowModal(true);
@@ -146,8 +158,6 @@ function ManageProduct() {
       description: product.description || '',
       detailedDescription: product.detailedDescription || '',
       size: product.size || '',
-      author: product.author || '',
-      publisher: product.publisher || '',
       brand: product.brand || '',
       brandOrigin: product.brandOrigin || '',
       manufacturingLocation: product.manufacturingLocation || '',
@@ -160,7 +170,9 @@ function ManageProduct() {
       tax: product.tax?.toString() || '',
       discountValue: product.discountValue?.toString() || '',
       publicationDate: product.publicationDate || new Date().toISOString().split('T')[0],
-      categoryId: product.categoryId || ''
+      categoryId: product.categoryId || '',
+      mediaUrls: product.mediaUrls || [],
+      defaultMediaUrl: product.defaultMediaUrl || (product.mediaUrls && product.mediaUrls[0]) || ''
     });
     setFormErrors({});
     setShowModal(true);
@@ -196,18 +208,6 @@ function ManageProduct() {
       errors.name = 'Tên sản phẩm không được vượt quá 255 ký tự';
     }
     
-    if (!formData.author?.trim()) {
-      errors.author = 'Tác giả không được để trống';
-    } else if (formData.author.trim().length > 255) {
-      errors.author = 'Tên tác giả không được vượt quá 255 ký tự';
-    }
-    
-    if (!formData.publisher?.trim()) {
-      errors.publisher = 'Nhà xuất bản không được để trống';
-    } else if (formData.publisher.trim().length > 255) {
-      errors.publisher = 'Tên nhà xuất bản không được vượt quá 255 ký tự';
-    }
-    
     if (!formData.price || formData.price === '') {
       errors.price = 'Giá sản phẩm không được để trống';
     } else {
@@ -223,6 +223,10 @@ function ManageProduct() {
     
     if (!formData.categoryId) {
       errors.categoryId = 'Danh mục không được để trống';
+    }
+
+    if (!formData.mediaUrls || formData.mediaUrls.length === 0) {
+      errors.mediaUrls = 'Vui lòng tải lên ít nhất một ảnh sản phẩm';
     }
     
     // Kiểm tra các trường số khác
@@ -262,7 +266,9 @@ function ManageProduct() {
         price: parseFloat(formData.price),
         tax: formData.tax ? parseFloat(formData.tax) : null,
         discountValue: formData.discountValue ? parseFloat(formData.discountValue) : null,
-        publicationDate: formData.publicationDate
+        publicationDate: formData.publicationDate,
+        mediaUrls: formData.mediaUrls,
+        defaultMediaUrl: formData.defaultMediaUrl || formData.mediaUrls[0] || null,
       };
 
       if (editingProduct) {
@@ -372,6 +378,77 @@ function ManageProduct() {
     return <span className={cx('statusBadge', statusInfo.class)}>{statusInfo.label}</span>;
   };
 
+  const handleMediaSelect = async (event) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    const remainingSlots = MAX_MEDIA_ITEMS - (formData.mediaUrls?.length || 0);
+    if (remainingSlots <= 0) {
+      notify.warning(`Bạn chỉ có thể tải tối đa ${MAX_MEDIA_ITEMS} ảnh cho mỗi sản phẩm.`);
+      event.target.value = '';
+      return;
+    }
+
+    const filesToUpload = files.slice(0, remainingSlots);
+
+    try {
+      setUploadingMedia(true);
+      const uploadedUrls = await uploadProductMedia(filesToUpload);
+      if (!uploadedUrls || uploadedUrls.length === 0) {
+        notify.error('Không thể tải ảnh lên. Vui lòng thử lại.');
+        return;
+      }
+
+      setFormData((prev) => {
+        const nextUrls = [...(prev.mediaUrls || []), ...uploadedUrls];
+        return {
+          ...prev,
+          mediaUrls: nextUrls,
+          defaultMediaUrl: prev.defaultMediaUrl || nextUrls[0] || '',
+        };
+      });
+
+      setFormErrors((prev) => {
+        if (!prev.mediaUrls) return prev;
+        const next = { ...prev };
+        delete next.mediaUrls;
+        return next;
+      });
+
+      notify.success('Tải ảnh thành công!');
+    } catch (error) {
+      console.error('Error uploading product media:', error);
+      notify.error(error.message || 'Không thể tải ảnh lên. Vui lòng thử lại.');
+    } finally {
+      setUploadingMedia(false);
+      if (event.target) {
+        event.target.value = '';
+      }
+    }
+  };
+
+  const handleRemoveMedia = (index) => {
+    setFormData((prev) => {
+      const nextUrls = [...(prev.mediaUrls || [])];
+      const [removed] = nextUrls.splice(index, 1);
+      const nextDefault =
+        removed && removed === prev.defaultMediaUrl ? (nextUrls[0] || '') : prev.defaultMediaUrl;
+
+      return {
+        ...prev,
+        mediaUrls: nextUrls,
+        defaultMediaUrl: nextDefault || '',
+      };
+    });
+  };
+
+  const handleSetDefaultMedia = (url) => {
+    setFormData((prev) => ({
+      ...prev,
+      defaultMediaUrl: url,
+    }));
+  };
+
   if (loading) {
     return (
       <div className={cx('wrapper')}>
@@ -417,7 +494,6 @@ function ManageProduct() {
         <table className={cx('table')}>
           <thead>
             <tr>
-              <th>ID</th>
               <th>Tên sản phẩm</th>
               <th>Danh mục</th>
               <th>Thương hiệu</th>
@@ -548,30 +624,6 @@ function ManageProduct() {
               </div>
 
               <div className={cx('formRow')}>
-                <div className={cx('formGroup', { error: formErrors.author })}>
-                  <label>Tác giả *</label>
-                  <input
-                    type="text"
-                    value={formData.author}
-                    onChange={(e) => setFormData({ ...formData, author: e.target.value })}
-                    placeholder="Nhập tên tác giả"
-                  />
-                  {formErrors.author && <span className={cx('errorText')}>{formErrors.author}</span>}
-                </div>
-
-                <div className={cx('formGroup', { error: formErrors.publisher })}>
-                  <label>Nhà xuất bản *</label>
-                  <input
-                    type="text"
-                    value={formData.publisher}
-                    onChange={(e) => setFormData({ ...formData, publisher: e.target.value })}
-                    placeholder="Nhập nhà xuất bản"
-                  />
-                  {formErrors.publisher && <span className={cx('errorText')}>{formErrors.publisher}</span>}
-                </div>
-              </div>
-
-              <div className={cx('formRow')}>
                 <div className={cx('formGroup')}>
                   <label>Thương hiệu</label>
                   <input
@@ -603,6 +655,61 @@ function ManageProduct() {
                 />
               </div>
 
+              <div className={cx('formGroup', { error: formErrors.mediaUrls })}>
+                <label>Ảnh sản phẩm *</label>
+                <div className={cx('mediaUploadRow')}>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleMediaSelect}
+                    disabled={uploadingMedia || (formData.mediaUrls?.length || 0) >= MAX_MEDIA_ITEMS}
+                    className={cx('mediaFileInput')}
+                  />
+                  <small>
+                    Có thể tải tối đa {MAX_MEDIA_ITEMS} ảnh. Ảnh đầu tiên sẽ là ảnh chính, bạn có thể thay đổi sau khi tải lên.
+                  </small>
+                </div>
+                {uploadingMedia && <span className={cx('uploadingText')}>Đang tải ảnh...</span>}
+                {formErrors.mediaUrls && <span className={cx('errorText')}>{formErrors.mediaUrls}</span>}
+
+                <div className={cx('mediaPreviewGrid')}>
+                  {(formData.mediaUrls || []).map((url, index) => (
+                    <div
+                      key={`${url}-${index}`}
+                      className={cx('mediaPreviewItem', {
+                        active: formData.defaultMediaUrl === url,
+                      })}
+                    >
+                      <img src={url} alt={`Ảnh sản phẩm ${index + 1}`} />
+                      <div className={cx('mediaPreviewActions')}>
+                        <button
+                          type="button"
+                          className={cx('mediaActionBtn')}
+                          onClick={() => handleSetDefaultMedia(url)}
+                          disabled={formData.defaultMediaUrl === url}
+                        >
+                          {formData.defaultMediaUrl === url ? 'Ảnh chính' : 'Đặt làm ảnh chính'}
+                        </button>
+                        <button
+                          type="button"
+                          className={cx('mediaActionBtn', 'danger')}
+                          onClick={() => handleRemoveMedia(index)}
+                        >
+                          Xóa
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {(!formData.mediaUrls || formData.mediaUrls.length === 0) && (
+                    <div className={cx('mediaPlaceholder')}>
+                      <span>Chưa có ảnh nào. Vui lòng tải ảnh sản phẩm.</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className={cx('formGroup')}>
                 <label>Mô tả chi tiết</label>
                 <textarea
@@ -613,26 +720,24 @@ function ManageProduct() {
                 />
               </div>
 
-              <div className={cx('formRow')}>
-                <div className={cx('formGroup')}>
-                  <label>Thành phần</label>
-                  <textarea
-                    rows="3"
-                    value={formData.ingredients}
-                    onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
-                    placeholder="Thành phần sản phẩm"
-                  />
-                </div>
+              <div className={cx('formGroup')}>
+                <label>Thành phần</label>
+                <textarea
+                  rows="3"
+                  value={formData.ingredients}
+                  onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
+                  placeholder="Thành phần sản phẩm"
+                />
+              </div>
 
-                <div className={cx('formGroup')}>
-                  <label>Công dụng</label>
-                  <textarea
-                    rows="3"
-                    value={formData.uses}
-                    onChange={(e) => setFormData({ ...formData, uses: e.target.value })}
-                    placeholder="Công dụng của sản phẩm"
-                  />
-                </div>
+              <div className={cx('formGroup')}>
+                <label>Công dụng</label>
+                <textarea
+                  rows="3"
+                  value={formData.uses}
+                  onChange={(e) => setFormData({ ...formData, uses: e.target.value })}
+                  placeholder="Công dụng của sản phẩm"
+                />
               </div>
 
               <div className={cx('formActions')}>
@@ -660,6 +765,37 @@ function ManageProduct() {
             </div>
 
             <div className={cx('form')}>
+              <div className={cx('detailImage')}>
+                {viewingProduct.defaultMediaUrl || (viewingProduct.mediaUrls && viewingProduct.mediaUrls.length > 0) ? (
+                  <>
+                    <img 
+                      src={viewingProduct.defaultMediaUrl || viewingProduct.mediaUrls[0]} 
+                      alt={viewingProduct.name}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = fallbackImage;
+                      }}
+                    />
+                    {viewingProduct.mediaUrls && viewingProduct.mediaUrls.length > 1 && (
+                      <div className={cx('detailThumbList')}>
+                        {viewingProduct.mediaUrls.map((url, index) => (
+                          <img
+                            key={`${url}-${index}`}
+                            src={url}
+                            alt={`${viewingProduct.name} ${index + 1}`}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className={cx('mediaPlaceholder')}>Không có ảnh</div>
+                )}
+              </div>
+
               <div className={cx('formRow')}>
                 <div className={cx('formGroup')}>
                   <label>ID Sản phẩm</label>
@@ -690,17 +826,6 @@ function ManageProduct() {
                 <div className={cx('formGroup')}>
                   <label>Giảm giá</label>
                   <input type="text" value={formatPrice(viewingProduct.discountValue || 0)} readOnly />
-                </div>
-              </div>
-
-              <div className={cx('formRow')}>
-                <div className={cx('formGroup')}>
-                  <label>Tác giả</label>
-                  <input type="text" value={viewingProduct.author || '-'} readOnly />
-                </div>
-                <div className={cx('formGroup')}>
-                  <label>Nhà xuất bản</label>
-                  <input type="text" value={viewingProduct.publisher || '-'} readOnly />
                 </div>
               </div>
 

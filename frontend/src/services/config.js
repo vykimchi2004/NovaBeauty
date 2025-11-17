@@ -81,13 +81,15 @@ export const API_ENDPOINTS = {
         REPLY: (id) => `/reviews/${id}/reply`,
         DELETE: (id) => `/reviews/${id}`,
     },
-    // Cart (placeholder - chưa có backend)
+    // Media
+    MEDIA: {
+        UPLOAD_PRODUCT: '/media/upload-product',
+    },
+    // Cart
     CART: {
         GET: '/cart',
-        ADD: '/cart/add',
-        UPDATE: '/cart/update',
-        REMOVE: '/cart/remove',
-        CLEAR: '/cart/clear',
+        ADD_ITEM: '/cart/items',
+        APPLY_VOUCHER: '/cart/apply-voucher',
     },
     // Orders (placeholder - chưa có backend)
     ORDERS: {

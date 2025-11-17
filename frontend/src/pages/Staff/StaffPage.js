@@ -96,16 +96,7 @@ function StaffPage() {
         <aside className={cx('sidebar')}>
           <div className={cx('userProfile')}>
             <h3 className={cx('sidebarTitle')}>Hệ thống - Nhân viên</h3>
-            <div className={cx('profileCard')}>
-              <div className={cx('avatar')}>
-                <img 
-                  src={userInfo.avatarUrl || 'https://via.placeholder.com/60'} 
-                  alt="Avatar" 
-                  onError={(e) => {
-                    e.target.src = 'https://via.placeholder.com/60';
-                  }}
-                />
-              </div>
+            <div className={cx('profileCard', 'noAvatar')}>
               <div className={cx('userInfo')}>
                 <div className={cx('userName')}>{userInfo.fullName || 'Nhân viên'}</div>
                 <div className={cx('userRole')}>Nhân viên</div>
@@ -233,23 +224,23 @@ function StaffDashboard() {
 
 // Placeholder components - sẽ thay thế sau
 function StaffProductsPlaceholder() {
-  return <div className={cx('placeholder')}>Quản lý sản phẩm - Đang phát triển</div>;
+  return <div className={cx('placeholder')}></div>;
 }
 
 function StaffContentPlaceholder() {
-  return <div className={cx('placeholder')}>Quản lý nội dung - Đang phát triển</div>;
+  return <div className={cx('placeholder')}></div>;
 }
 
 function StaffVouchersPlaceholder() {
-  return <div className={cx('placeholder')}>Quản lý Voucher & Khuyến mãi - Đang phát triển</div>;
+  return <div className={cx('placeholder')}></div>;
 }
 
 function StaffOrdersPlaceholder() {
-  return <div className={cx('placeholder')}>Quản lý Đơn hàng - Đang phát triển</div>;
+  return <div className={cx('placeholder')}></div>;
 }
 
 function StaffProfilePlaceholder() {
-  return <div className={cx('placeholder')}>Hồ sơ cá nhân - Đang phát triển</div>;
+  return <div className={cx('placeholder')}></div>;
 }
 
 export default StaffPage;

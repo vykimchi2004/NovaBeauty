@@ -57,7 +57,15 @@ export async function createUser(userData) {
 // Create staff (admin only)
 export async function createStaff(staffData) {
     try {
-        return await apiClient.post(API_ENDPOINTS.USERS.CREATE_STAFF, staffData);
+        // Đảm bảo isActive = true khi tạo mới (theo use case)
+        const dataToSend = {
+            ...staffData,
+            isActive: true // Luôn true cho tài khoản mới
+        };
+        console.log('[User Service] createStaff - Sending data:', dataToSend);
+        const response = await apiClient.post(API_ENDPOINTS.USERS.CREATE_STAFF, dataToSend);
+        console.log('[User Service] createStaff - Response:', response);
+        return response;
     } catch (error) {
         console.error('[User Service] createStaff error:', error);
         throw error;

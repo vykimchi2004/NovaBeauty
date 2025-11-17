@@ -3,6 +3,11 @@ import { useParams } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from './ProductDetail.module.scss';
 import image1 from '~/assets/images/products/image1.jpg';
+import cartService from '~/services/cart';
+import { getProductById } from '~/services/product';
+import { storage } from '~/services/utils';
+import { STORAGE_KEYS } from '~/services/config';
+import notify from '~/utils/notification';
 
 const TABS = [
   { id: 'description', label: 'Mô tả sản phẩm' },
@@ -77,11 +82,15 @@ const cx = classNames.bind(styles);
 
 function ProductDetail() {
   const { id } = useParams();
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedColor, setSelectedColor] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [activeTab, setActiveTab] = useState('description');
   const [showFixedTabs, setShowFixedTabs] = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
   const tabsSectionRef = useRef(null);
   const tabsContainerRef = useRef(null);
   const contentRefs = {
@@ -92,8 +101,54 @@ function ProductDetail() {
     highlights: useRef(null),
   };
 
-  const productId = Number(id);
-  const product = useMemo(() => createMockProduct(productId), [productId]);
+  // Fetch product from API
+  useEffect(() => {
+    const loadProduct = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        console.log('[ProductDetail] Loading product with ID:', id);
+        const productData = await getProductById(id);
+        console.log('[ProductDetail] Product loaded:', productData);
+        if (!productData || !productData.id) {
+          throw new Error('Sản phẩm không tồn tại');
+        }
+        setProduct(productData);
+      } catch (err) {
+        console.error('[ProductDetail] Error loading product:', err);
+        console.log('[ProductDetail] API failed, using mock data for testing');
+        
+        // Fallback to mock data for testing
+        // Try to extract number from ID, or use 1 as default
+        let productId = 1;
+        const numericId = Number(id);
+        if (!isNaN(numericId) && numericId > 0) {
+          productId = numericId;
+        } else if (id && id.length > 0) {
+          // If ID is UUID or string, use hash to get a number between 1-10
+          let hash = 0;
+          for (let i = 0; i < id.length; i++) {
+            hash = ((hash << 5) - hash) + id.charCodeAt(i);
+            hash = hash & hash; // Convert to 32bit integer
+          }
+          productId = Math.abs(hash % 10) + 1; // Number between 1-10
+        }
+        
+        console.log('[ProductDetail] Using mock product with ID:', productId);
+        setProduct(createMockProduct(productId));
+        setError(null); // Clear error, use mock data silently
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      loadProduct();
+    } else {
+      setError('Không có ID sản phẩm');
+      setLoading(false);
+    }
+  }, [id]);
 
   const smoothScrollTo = (targetPosition, duration = 600) => {
     const startPosition = window.pageYOffset || document.documentElement.scrollTop;
@@ -158,6 +213,54 @@ function ProductDetail() {
     setQuantity((prev) => Math.max(1, prev + delta));
   };
 
+  const handleAddToCart = async () => {
+    // Kiểm tra đăng nhập trước
+    const token = storage.get(STORAGE_KEYS.TOKEN);
+    if (!token) {
+      notify.warning('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
+      return;
+    }
+
+    if (!product || !product.id) {
+      notify.error('Sản phẩm không tồn tại');
+      return;
+    }
+
+    // Kiểm tra xem product.id có phải UUID không (mock data có id là số)
+    // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 ký tự với dấu gạch ngang)
+    const isUUID = typeof product.id === 'string' && product.id.length === 36 && product.id.includes('-');
+    if (!isUUID) {
+      notify.warning('Sản phẩm này chỉ để xem thử. Vui lòng chọn sản phẩm thật từ danh sách để thêm vào giỏ hàng.');
+      return;
+    }
+
+    try {
+      setAddingToCart(true);
+      console.log('[ProductDetail] Adding to cart - productId:', product.id, 'quantity:', quantity);
+      // Sử dụng product.id thật từ API (UUID)
+      await cartService.addItem(product.id, quantity);
+      
+      // Dispatch event để cập nhật cart count trong header
+      window.dispatchEvent(new CustomEvent('cartUpdated'));
+      
+      notify.success('Đã thêm sản phẩm vào giỏ hàng!');
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      if (error.code === 401 || error.code === 403) {
+        notify.error('Bạn không có quyền thực hiện thao tác này. Vui lòng đăng nhập lại.');
+        storage.remove(STORAGE_KEYS.TOKEN);
+        storage.remove(STORAGE_KEYS.USER);
+        window.location.reload();
+      } else if (error.message && error.message.includes('Sản phẩm không tồn tại')) {
+        notify.error('Sản phẩm không tồn tại trong hệ thống. Vui lòng chọn sản phẩm khác.');
+      } else {
+        notify.error(error.message || 'Không thể thêm sản phẩm vào giỏ hàng. Vui lòng thử lại.');
+      }
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
   const handleTabClick = (tabId) => {
     setActiveTab(tabId);
     if (contentRefs[tabId]?.current) {
@@ -180,6 +283,67 @@ function ProductDetail() {
     }
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className={cx('wrapper')}>
+        <div className={cx('loading')}>Đang tải thông tin sản phẩm...</div>
+      </div>
+    );
+  }
+
+  // Error state (but still show product if available)
+  if (error && !product) {
+    return (
+      <div className={cx('wrapper')}>
+        <div className={cx('error')}>
+          <p>{error}</p>
+          <p style={{ fontSize: '14px', marginTop: '10px', color: '#999' }}>
+            Product ID: {id}
+          </p>
+          <p style={{ fontSize: '12px', marginTop: '5px', color: '#999' }}>
+            Vui lòng kiểm tra lại ID sản phẩm hoặc thử lại sau.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // No product
+  if (!product) {
+    return (
+      <div className={cx('wrapper')}>
+        <div className={cx('error')}>
+          <p>Sản phẩm không tồn tại</p>
+          <p style={{ fontSize: '14px', marginTop: '10px', color: '#999' }}>
+            Product ID: {id}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Map API product data to display format
+  const displayProduct = {
+    id: product.id,
+    brand: product.brand || 'NOVA BEAUTY',
+    name: product.name || 'Sản phẩm',
+    description: product.description || '',
+    price: product.price || 0,
+    oldPrice: product.discountValue ? (product.price + product.discountValue) : null,
+    rating: product.averageRating || 5,
+    reviews: product.reviewCount || 0,
+    sku: product.id ? String(product.id).substring(0, 8) : 'N/A',
+    origin: product.manufacturingLocation || product.brandOrigin || 'N/A',
+    images: product.mediaUrls && product.mediaUrls.length > 0 
+      ? product.mediaUrls 
+      : (product.defaultMediaUrl ? [product.defaultMediaUrl] : [image1]),
+    colors: product.colors || [
+      { id: 1, name: '02 Affection', value: '#FF69B4' },
+      { id: 2, name: '01 Natural', value: '#8B4513' },
+    ],
+  };
+
   return (
     <div className={cx('wrapper')}>
 
@@ -187,16 +351,16 @@ function ProductDetail() {
         {/* Left: Image Gallery */}
         <div className={cx('image-section')}>
           <div className={cx('main-image')}>
-            <img src={product.images[selectedImage]} alt={product.name} />
+            <img src={displayProduct.images[selectedImage] || image1} alt={displayProduct.name} />
           </div>
           <div className={cx('thumbnail-list')}>
-            {product.images.map((img, index) => (
+            {displayProduct.images.map((img, index) => (
               <div
                 key={index}
                 className={cx('thumbnail', { active: selectedImage === index })}
                 onClick={() => setSelectedImage(index)}
               >
-                <img src={img} alt={`${product.name} ${index + 1}`} />
+                <img src={img || image1} alt={`${displayProduct.name} ${index + 1}`} />
               </div>
             ))}
           </div>
@@ -204,38 +368,40 @@ function ProductDetail() {
 
         {/* Right: Product Information */}
         <div className={cx('info-section')}>
-          <div className={cx('brand')}>{product.brand}</div>
-          <h1 className={cx('product-name')}>{product.name}</h1>
+          <div className={cx('brand')}>{displayProduct.brand}</div>
+          <h1 className={cx('product-name')}>{displayProduct.name}</h1>
 
           <div className={cx('rating-section')}>
             <div className={cx('stars')}>
               {[...Array(5)].map((_, i) => (
-                <span key={i} className={cx('star', { filled: i < product.rating })}>
+                <span key={i} className={cx('star', { filled: i < Math.floor(displayProduct.rating) })}>
                   ★
                 </span>
               ))}
             </div>
-            <span className={cx('reviews')}>({product.reviews})</span>
-            <span className={cx('origin')}>Xuất xứ: {product.origin}</span>
-            <span className={cx('sku')}>SKU: {product.sku}</span>
+            <span className={cx('reviews')}>({displayProduct.reviews})</span>
+            <span className={cx('origin')}>Xuất xứ: {displayProduct.origin}</span>
+            <span className={cx('sku')}>SKU: {displayProduct.sku}</span>
           </div>
 
           <div className={cx('price-section')}>
-            <div className={cx('current-price')}>{parseInt(product.price).toLocaleString('vi-VN')}đ</div>
-            {product.oldPrice && (
+            <div className={cx('current-price')}>{Math.round(displayProduct.price).toLocaleString('vi-VN')}đ</div>
+            {displayProduct.oldPrice && (
               <div className={cx('old-price-wrapper')}>
-                <span className={cx('old-price')}>{parseInt(product.oldPrice).toLocaleString('vi-VN')}đ</span>
-                <span className={cx('discount-tag')}>-20%</span>
+                <span className={cx('old-price')}>{Math.round(displayProduct.oldPrice).toLocaleString('vi-VN')}đ</span>
+                <span className={cx('discount-tag')}>
+                  -{Math.round((displayProduct.oldPrice - displayProduct.price) / displayProduct.oldPrice * 100)}%
+                </span>
               </div>
             )}
           </div>
 
           <div className={cx('color-section')}>
             <label className={cx('color-label')}>
-              Color: <span className={cx('color-name')}>{product.colors[selectedColor].name}</span>
+              Color: <span className={cx('color-name')}>{displayProduct.colors[selectedColor]?.name || 'N/A'}</span>
             </label>
             <div className={cx('color-options')}>
-              {product.colors.map((color, index) => (
+              {displayProduct.colors.map((color, index) => (
                 <button
                   key={color.id}
                   className={cx('color-btn', { selected: selectedColor === index })}
@@ -261,8 +427,12 @@ function ProductDetail() {
           </div>
 
           <div className={cx('action-buttons')}>
-            <button className={cx('btn-cart')}>
-              <span>🛒</span> Thêm vào giỏ hàng
+            <button 
+              className={cx('btn-cart')} 
+              onClick={handleAddToCart}
+              disabled={addingToCart}
+            >
+              <span>🛒</span> {addingToCart ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
             </button>
             <button className={cx('btn-buy-now')}>MUA NGAY</button>
             <button className={cx('btn-favorite')}>❤️</button>
@@ -282,7 +452,7 @@ function ProductDetail() {
 
           <div className={cx('description-section')}>
             <h3>Mô tả sản phẩm</h3>
-            <p>{product.description}</p>
+            <p>{displayProduct.description || product.detailedDescription || 'Chưa có mô tả'}</p>
           </div>
         </div>
       </div>

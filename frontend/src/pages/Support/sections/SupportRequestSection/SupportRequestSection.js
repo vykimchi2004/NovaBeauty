@@ -1,5 +1,6 @@
 import classNames from 'classnames/bind';
 import styles from './SupportRequestSection.module.scss';
+import notify from '~/utils/notification';
 
 const cx = classNames.bind(styles);
 
@@ -7,7 +8,7 @@ function SupportRequestSection() {
   const handleSubmit = (event) => {
     event.preventDefault();
     // TODO: integrate API submission
-    alert('Cảm ơn bạn! Chúng tôi sẽ liên hệ trong thời gian sớm nhất.');
+    notify.success('Cảm ơn bạn! Chúng tôi sẽ liên hệ trong thời gian sớm nhất.');
   };
 
   return (

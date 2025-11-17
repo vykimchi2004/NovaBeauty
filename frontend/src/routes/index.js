@@ -7,15 +7,17 @@ import Perfume from '../pages/Categories/Perfume/Perfume';
 import Accessories from '../pages/Categories/Accessories/Accessories';
 import HairCare from '../pages/Categories/HairCare/HairCare';
 import Promo from '../pages/Promo/Promo';
-import Products from '../pages/Products';
-import BestSellersPage from '../pages/BestSellers';
+import Products from '../pages/Products/Products';
+import BestSellersPage from '../pages/BestSellers/BestSellers';
 import ProductDetail from '../pages/ProductDetail/ProductDetail';
-import Profile from '../pages/Profile';
+import Profile from '../pages/Profile/Profile';
 import AdminPage from '../pages/Admin/AdminPage';
+import StaffPage from '../pages/Staff/StaffPage';
 import Support from '../pages/Support/Support';
+import Cart from '../pages/Cart/Cart';
 
 // Layouts
-import DefaultLayout from '../layouts/DefaultLayout';
+import DefaultLayout from '../layouts/DefaultLayout/DefaultLayout';
 import { LoginModal } from '~/pages/Auth';
 
 // Public routes
@@ -33,8 +35,11 @@ const publicRoutes = [
   { path: '/product/:id', component: ProductDetail, layout: DefaultLayout },
   { path: '/profile', component: Profile, layout: DefaultLayout },
   { path: '/support', component: Support, layout: DefaultLayout },
+  { path: '/cart', component: Cart, layout: DefaultLayout },
   // Admin shell with nested routes
   { path: '/admin/*', component: AdminPage },
+  // Staff shell with nested routes
+  { path: '/staff/*', component: StaffPage },
 ];
 
 const privateRoutes = [];

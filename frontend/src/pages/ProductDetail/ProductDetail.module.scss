@@ -6,6 +6,18 @@
   scroll-behavior: smooth;
 }
 
+.loading,
+.error {
+  text-align: center;
+  padding: 60px 20px;
+  font-size: 18px;
+  color: #666;
+}
+
+.error {
+  color: #e03131;
+}
+
 .breadcrumb {
   margin-bottom: 24px;
   font-size: 14px;

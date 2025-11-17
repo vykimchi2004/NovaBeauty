@@ -7,6 +7,10 @@ class ApiClient {
         this.baseURL = baseURL;
     }
 
+    isFormData(payload) {
+        return typeof FormData !== 'undefined' && payload instanceof FormData;
+    }
+
     // Get auth token from storage
     getAuthToken() {
         return storage.get(STORAGE_KEYS.TOKEN);
@@ -46,9 +50,46 @@ class ApiClient {
 
         if (!response.ok) {
             // Backend trả về ApiResponse format: {code, message, result}
-            const message = data?.message || data || `HTTP error! status: ${response.status}`;
+            let message = data?.message || data || `HTTP error! status: ${response.status}`;
+            
+            // Xử lý trường hợp message là object hoặc array
+            if (typeof message === 'object') {
+                if (Array.isArray(message)) {
+                    message = message.join(', ');
+                } else if (message.message) {
+                    message = message.message;
+                } else {
+                    message = JSON.stringify(message);
+                }
+            }
+            
+            // Thay thế "Uncategorized error" bằng message rõ ràng hơn
+            if (message === 'Uncategorized error' || message.includes('Uncategorized error')) {
+                switch (response.status) {
+                    case 400:
+                        message = 'Dữ liệu đầu vào không hợp lệ. Vui lòng kiểm tra lại các trường bắt buộc.';
+                        break;
+                    case 401:
+                        message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+                        break;
+                    case 403:
+                        message = 'Bạn không có quyền thực hiện thao tác này.';
+                        break;
+                    case 404:
+                        message = 'Không tìm thấy tài nguyên.';
+                        break;
+                    case 500:
+                        message = 'Lỗi hệ thống. Vui lòng thử lại sau.';
+                        break;
+                    default:
+                        message = `Lỗi ${response.status}: ${response.statusText || 'Đã xảy ra lỗi'}`;
+                }
+            }
+            
             const error = new Error(message);
             error.code = data?.code || response.status;
+            error.status = response.status;
+            error.response = data;
             throw error;
         }
 
@@ -84,12 +125,20 @@ class ApiClient {
     async post(endpoint, data = {}, options = {}) {
         const url = this.buildURL(endpoint);
         const headers = this.buildHeaders(options.headers);
+        const isFormData = this.isFormData(data);
+        if (isFormData) {
+            delete headers['Content-Type'];
+        }
+
+        // Nếu endpoint đã có query params, không gửi body
+        const hasQueryParams = url.includes('?');
+        const body = hasQueryParams ? undefined : (isFormData ? data : JSON.stringify(data));
 
         try {
             const response = await fetch(url, {
                 method: 'POST',
                 headers,
-                body: JSON.stringify(data),
+                body,
                 ...options,
             });
 
@@ -104,12 +153,17 @@ class ApiClient {
     async put(endpoint, data = {}, options = {}) {
         const url = this.buildURL(endpoint);
         const headers = this.buildHeaders(options.headers);
+        const isFormData = this.isFormData(data);
+        if (isFormData) {
+            delete headers['Content-Type'];
+        }
+        const body = isFormData ? data : JSON.stringify(data);
 
         try {
             const response = await fetch(url, {
                 method: 'PUT',
                 headers,
-                body: JSON.stringify(data),
+                body,
                 ...options,
             });
 
@@ -124,12 +178,17 @@ class ApiClient {
     async patch(endpoint, data = {}, options = {}) {
         const url = this.buildURL(endpoint);
         const headers = this.buildHeaders(options.headers);
+        const isFormData = this.isFormData(data);
+        if (isFormData) {
+            delete headers['Content-Type'];
+        }
+        const body = isFormData ? data : JSON.stringify(data);
 
         try {
             const response = await fetch(url, {
                 method: 'PATCH',
                 headers,
-                body: JSON.stringify(data),
+                body,
                 ...options,
             });
 
