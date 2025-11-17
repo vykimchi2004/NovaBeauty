@@ -60,6 +60,7 @@ public class ProductService {
         product.setCreatedAt(LocalDateTime.now());
         product.setUpdatedAt(LocalDateTime.now());
         product.setQuantitySold(0);
+        normalizePrices(product);
 
         Product savedProduct = productRepository.save(product);
         log.info("Product created with ID: {} by user: {}", savedProduct.getId(), userId);
@@ -137,6 +138,7 @@ public class ProductService {
 
         // Update product using mapper
         productMapper.updateProduct(product, request);
+        normalizePrices(product);
         product.setUpdatedAt(LocalDateTime.now());
 
         // Update category if provided
@@ -162,5 +164,14 @@ public class ProductService {
 
         productRepository.delete(product);
         log.info("Product deleted: {}", productId);
+    }
+
+    private void normalizePrices(Product product) {
+        if (product.getUnitPrice() == null && product.getPrice() != null) {
+            product.setUnitPrice(product.getPrice());
+        }
+        if (product.getPrice() == null && product.getUnitPrice() != null) {
+            product.setPrice(product.getUnitPrice());
+        }
     }
 }

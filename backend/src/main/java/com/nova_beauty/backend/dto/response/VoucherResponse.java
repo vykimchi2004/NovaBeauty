@@ -7,7 +7,7 @@ import java.util.Set;
 
 import com.nova_beauty.backend.enums.DiscountApplyScope;
 import com.nova_beauty.backend.enums.DiscountValueType;
-import com.nova_beauty.backend.enums.PromotionStatus;
+import com.nova_beauty.backend.enums.VoucherStatus;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -17,15 +17,16 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class PromotionResponse {
+public class VoucherResponse {
 
     String id;
-    String code;
     String name;
+    String code;
     String imageUrl;
     String description;
     Double discountValue;
     Double minOrderValue;
+    Double maxOrderValue;
     Double maxDiscountValue;
     DiscountValueType discountValueType;
     DiscountApplyScope applyScope;
@@ -33,8 +34,9 @@ public class PromotionResponse {
     LocalDate expiryDate;
     Integer usageCount;
     Integer usageLimit;
+    Integer usagePerUser;
     Boolean isActive;
-    PromotionStatus status;
+    VoucherStatus status;
 
     // Approval workflow info
     String submittedBy;
@@ -51,3 +53,5 @@ public class PromotionResponse {
     Set<String> productIds;
     List<String> productNames;
 }
+
+

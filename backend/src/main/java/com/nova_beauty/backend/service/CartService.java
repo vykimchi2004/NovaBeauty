@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.nova_beauty.backend.entity.*;
+import com.nova_beauty.backend.enums.DiscountValueType;
 import com.nova_beauty.backend.exception.AppException;
 import com.nova_beauty.backend.exception.ErrorCode;
 import com.nova_beauty.backend.repository.CartItemRepository;
@@ -76,7 +77,7 @@ public class CartService {
     }
 
     private double calculateUnitPrice(Product product) {
-        double basePrice = product.getPrice();
+        double basePrice = product.getUnitPrice() != null ? product.getUnitPrice() : product.getPrice();
         double discounted = basePrice;
         LocalDate today = LocalDate.now();
         List<com.nova_beauty.backend.entity.Promotion> promosByProduct = promotionRepository.findByProductId(product.getId());
@@ -139,7 +140,7 @@ public class CartService {
 
         double discountValue = voucher.getDiscountValue() == null ? 0.0 : voucher.getDiscountValue();
         double discount;
-        if ("PERCENT".equalsIgnoreCase(voucher.getDiscountType())) {
+        if (voucher.getDiscountValueType() == DiscountValueType.PERCENTAGE) {
             discount = subtotal * (discountValue / 100.0);
         } else {
             discount = discountValue;

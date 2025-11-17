@@ -31,7 +31,11 @@ public class ProductResponse {
     String uses;
     String usageInstructions;
     Double weight;
+    Double length;
+    Double width;
+    Double height;
     Double price;
+    Double unitPrice;
     Double tax;
     Double discountValue;
     Integer quantitySold;

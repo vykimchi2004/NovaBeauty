@@ -5,6 +5,9 @@ import java.util.Set;
 
 import jakarta.validation.constraints.*;
 
+import com.nova_beauty.backend.enums.DiscountApplyScope;
+import com.nova_beauty.backend.enums.DiscountValueType;
+
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -35,6 +38,10 @@ public class PromotionUpdateRequest {
 
     @DecimalMin(value = "0.0", message = "Giá trị giảm tối đa phải lớn hơn hoặc bằng 0")
     Double maxDiscountValue;
+
+    DiscountValueType discountValueType;
+
+    DiscountApplyScope applyScope;
 
     @Future(message = "Ngày bắt đầu phải là ngày trong tương lai")
     LocalDate startDate;

@@ -58,8 +58,21 @@ public class ProductCreationRequest {
     @DecimalMin(value = "0.0", message = "Trọng lượng phải lớn hơn hoặc bằng 0")
     Double weight;
 
-    @NotNull(message = "Giá sản phẩm không được để trống")
-    @DecimalMin(value = "0.0", message = "Giá sản phẩm phải lớn hơn hoặc bằng 0")
+    @DecimalMin(value = "0.0", message = "Chiều dài phải lớn hơn hoặc bằng 0")
+    Double length;
+
+    @DecimalMin(value = "0.0", message = "Chiều rộng phải lớn hơn hoặc bằng 0")
+    Double width;
+
+    @DecimalMin(value = "0.0", message = "Chiều cao phải lớn hơn hoặc bằng 0")
+    Double height;
+
+    @NotNull(message = "Giá niêm yết không được để trống")
+    @DecimalMin(value = "0.0", message = "Giá niêm yết phải lớn hơn hoặc bằng 0")
+    Double unitPrice;
+
+    @NotNull(message = "Giá bán không được để trống")
+    @DecimalMin(value = "0.0", message = "Giá bán phải lớn hơn hoặc bằng 0")
     Double price;
 
     @DecimalMin(value = "0.0", message = "Thuế phải lớn hơn hoặc bằng 0")

@@ -7,9 +7,9 @@ import jakarta.validation.constraints.*;
 
 import com.nova_beauty.backend.enums.DiscountApplyScope;
 import com.nova_beauty.backend.enums.DiscountValueType;
-import com.nova_beauty.backend.validator.PromotionCodeConstraint;
-import com.nova_beauty.backend.validator.PromotionDateConstraint;
-import com.nova_beauty.backend.validator.PromotionScopeConstraint;
+import com.nova_beauty.backend.validator.VoucherCodeConstraint;
+import com.nova_beauty.backend.validator.VoucherDateConstraint;
+import com.nova_beauty.backend.validator.VoucherScopeConstraint;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -19,18 +19,18 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@PromotionDateConstraint // Validate ngày bắt đầu và kết thúc
-@PromotionScopeConstraint
-public class PromotionCreationRequest {
+@VoucherDateConstraint
+@VoucherScopeConstraint
+public class VoucherCreationRequest {
 
-    @NotBlank(message = "Tên khuyến mãi không được để trống")
-    @Size(max = 255, message = "Tên khuyến mãi không được vượt quá 255 ký tự")
+    @NotBlank(message = "Tên voucher không được để trống")
+    @Size(max = 255, message = "Tên voucher không được vượt quá 255 ký tự")
     String name;
 
-    @NotBlank(message = "Mã khuyến mãi không được để trống")
-    @Size(max = 50, message = "Mã khuyến mãi không được vượt quá 50 ký tự")
-    @Pattern(regexp = "^[A-Z0-9_-]+$", message = "Mã khuyến mãi chỉ được chứa chữ hoa, số, dấu gạch ngang và gạch dưới")
-    @PromotionCodeConstraint // Validate mã khuyến mãi unique
+    @NotBlank(message = "Mã voucher không được để trống")
+    @Size(max = 50, message = "Mã voucher không được vượt quá 50 ký tự")
+    @Pattern(regexp = "^[A-Z0-9_-]+$", message = "Mã voucher chỉ được chứa chữ hoa, số, dấu gạch ngang và gạch dưới")
+    @VoucherCodeConstraint
     String code;
 
     String imageUrl;
@@ -65,9 +65,14 @@ public class PromotionCreationRequest {
     @Min(value = 1, message = "Giới hạn sử dụng phải lớn hơn 0")
     Integer usageLimit;
 
+    @Min(value = 1, message = "Số lần mỗi user được dùng phải lớn hơn 0")
+    Integer usagePerUser;
+
     // Áp dụng theo danh mục
     Set<String> categoryIds;
 
     // Áp dụng theo sản phẩm cụ thể
     Set<String> productIds;
 }
+
+

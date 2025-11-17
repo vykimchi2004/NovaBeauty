@@ -29,6 +29,7 @@ public enum ErrorCode {
     PROMOTION_NOT_PENDING(2003, "Khuyến mãi không ở trạng thái chờ duyệt", HttpStatus.BAD_REQUEST),
     CATEGORY_NOT_EXISTED(2004, "Danh mục không tồn tại", HttpStatus.NOT_FOUND),
     PRODUCT_NOT_EXISTED(2005, "Sản phẩm không tồn tại", HttpStatus.NOT_FOUND),
+    INVALID_PROMOTION_SCOPE(2006, "Phạm vi áp dụng khuyến mãi không hợp lệ", HttpStatus.BAD_REQUEST),
 
     // Banner
     BANNER_NOT_EXISTED(3001, "Banner không tồn tại", HttpStatus.NOT_FOUND),
@@ -42,7 +43,10 @@ public enum ErrorCode {
     CART_ITEM_NOT_EXISTED(5003, "Giỏ hàng trống hoặc không tìm thấy mục", HttpStatus.NOT_FOUND),
     VOUCHER_NOT_EXISTED(5004, "Voucher không tồn tại hoặc không hợp lệ", HttpStatus.NOT_FOUND),
     INVALID_VOUCHER_MINIUM(5005, "Đơn hàng không đạt giá trị tối thiểu của voucher", HttpStatus.BAD_REQUEST),
-    TICKET_NOT_EXISTED(5006, "Ticket không tồn tại", HttpStatus.NOT_FOUND),
+    VOUCHER_CODE_ALREADY_EXISTS(5006, "Mã voucher đã tồn tại", HttpStatus.BAD_REQUEST),
+    VOUCHER_NOT_PENDING(5007, "Voucher không ở trạng thái chờ duyệt", HttpStatus.BAD_REQUEST),
+    INVALID_VOUCHER_SCOPE(5008, "Phạm vi áp dụng voucher không hợp lệ", HttpStatus.BAD_REQUEST),
+    TICKET_NOT_EXISTED(5009, "Ticket không tồn tại", HttpStatus.NOT_FOUND),
     ;
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {
