@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.enums;
+﻿package com.nova_beauty.backend.enums;
 
 public enum ServiceTypeId {
     LIGHT(2),
@@ -10,4 +10,3 @@ public enum ServiceTypeId {
         this.code = code;
     }
 }
-

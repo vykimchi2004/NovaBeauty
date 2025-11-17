@@ -1,5 +1,6 @@
-package com.nova_beauty.backend.entity;
+﻿package com.nova_beauty.backend.entity;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -36,14 +37,26 @@ public class Banner {
     @Column(name = "status", nullable = false)
     Boolean status;
 
+    @Column(name = "pending_review")
+    Boolean pendingReview;
+
     @Column(name = "order_index")
     Integer orderIndex;
+
+    @Column(name = "start_date")
+    LocalDate startDate;
+
+    @Column(name = "end_date")
+    LocalDate endDate;
 
     @Column(name = "created_at", nullable = false)
     LocalDateTime createdAt;
 
     @Column(name = "update_at", nullable = false)
     LocalDateTime updatedAt;
+
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    String rejectionReason;
 
     // Created by user
     @ManyToOne(fetch = FetchType.LAZY)

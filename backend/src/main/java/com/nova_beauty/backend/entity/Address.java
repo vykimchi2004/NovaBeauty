@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.entity;
+﻿package com.nova_beauty.backend.entity;
 
 import java.util.Set;
 
@@ -16,7 +16,7 @@ import lombok.experimental.FieldDefaults;
 @Entity
 public class Address {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID) // Tạo chuỗi ID ngẫu nhiên
+    @GeneratedValue(strategy = GenerationType.UUID) // Táº¡o chuá»—i ID ngáº«u nhiÃªn
     String addressId;
 
     String recipientName;

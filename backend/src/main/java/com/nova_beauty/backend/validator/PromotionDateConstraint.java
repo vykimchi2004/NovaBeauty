@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.validator;
+﻿package com.nova_beauty.backend.validator;
 
 import java.lang.annotation.*;
 
@@ -10,7 +10,7 @@ import jakarta.validation.Payload;
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface PromotionDateConstraint {
-    String message() default "Ngày khuyến mãi không hợp lệ";
+    String message() default "NgÃ y khuyáº¿n mÃ£i khÃ´ng há»£p lá»‡";
 
     Class<?>[] groups() default {};
 

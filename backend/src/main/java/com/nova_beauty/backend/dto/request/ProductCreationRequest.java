@@ -1,6 +1,7 @@
-package com.nova_beauty.backend.dto.request;
+﻿package com.nova_beauty.backend.dto.request;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import jakarta.validation.constraints.*;
 
@@ -13,77 +14,58 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ProductCreationRequest {
+    @NotBlank(message = "MÃ£ sáº£n pháº©m khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    String id;
 
-    @NotBlank(message = "Tên sản phẩm không được để trống")
-    @Size(max = 255, message = "Tên sản phẩm không được vượt quá 255 ký tự")
+    @NotBlank(message = "TÃªn sáº£n pháº©m khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    @Size(max = 255, message = "TÃªn sáº£n pháº©m khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 255 kÃ½ tá»±")
     String name;
 
-    @Size(max = 2000, message = "Mô tả không được vượt quá 2000 ký tự")
+    @Size(max = 2000, message = "MÃ´ táº£ khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 2000 kÃ½ tá»±")
     String description;
 
-    @Size(max = 5000, message = "Mô tả chi tiết không được vượt quá 5000 ký tự")
-    String detailedDescription;
-
-    String size;
-
-    @NotBlank(message = "Tác giả không được để trống")
-    @Size(max = 255, message = "Tên tác giả không được vượt quá 255 ký tự")
+    @NotBlank(message = "TÃ¡c giáº£ khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    @Size(max = 255, message = "TÃªn tÃ¡c giáº£ khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 255 kÃ½ tá»±")
     String author;
 
-    @NotBlank(message = "Nhà xuất bản không được để trống")
-    @Size(max = 255, message = "Tên nhà xuất bản không được vượt quá 255 ký tự")
+    @NotBlank(message = "NhÃ  xuáº¥t báº£n khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    @Size(max = 255, message = "TÃªn nhÃ  xuáº¥t báº£n khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 255 kÃ½ tá»±")
     String publisher;
 
-    @Size(max = 255, message = "Thương hiệu không được vượt quá 255 ký tự")
-    String brand;
-
-    @Size(max = 255, message = "Xuất xứ thương hiệu không được vượt quá 255 ký tự")
-    String brandOrigin;
-
-    @Size(max = 255, message = "Nơi sản xuất không được vượt quá 255 ký tự")
-    String manufacturingLocation;
-
-    @Size(max = 2000, message = "Đặc tính không được vượt quá 2000 ký tự")
-    String characteristics;
-
-    @Size(max = 5000, message = "Thành phần không được vượt quá 5000 ký tự")
-    String ingredients;
-
-    @Size(max = 2000, message = "Công dụng không được vượt quá 2000 ký tự")
-    String uses;
-
-    @Size(max = 2000, message = "Cách dùng không được vượt quá 2000 ký tự")
-    String usageInstructions;
-
-    @DecimalMin(value = "0.0", message = "Trọng lượng phải lớn hơn hoặc bằng 0")
+    // Optional fields - validation only applies if value is provided (not null)
+    @DecimalMin(value = "0.0", message = "Trá»ng lÆ°á»£ng pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0")
     Double weight;
 
-    @DecimalMin(value = "0.0", message = "Chiều dài phải lớn hơn hoặc bằng 0")
+    @DecimalMin(value = "0.0", message = "Chiá»u dÃ i pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0")
     Double length;
 
-    @DecimalMin(value = "0.0", message = "Chiều rộng phải lớn hơn hoặc bằng 0")
+    @DecimalMin(value = "0.0", message = "Chiá»u rá»™ng pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0")
     Double width;
 
-    @DecimalMin(value = "0.0", message = "Chiều cao phải lớn hơn hoặc bằng 0")
+    @DecimalMin(value = "0.0", message = "Chiá»u cao pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0")
     Double height;
 
-    @NotNull(message = "Giá niêm yết không được để trống")
-    @DecimalMin(value = "0.0", message = "Giá niêm yết phải lớn hơn hoặc bằng 0")
+    @NotNull(message = "GiÃ¡ niÃªm yáº¿t (giÃ¡ gá»‘c) khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    @DecimalMin(value = "0.0", message = "GiÃ¡ niÃªm yáº¿t pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0")
     Double unitPrice;
 
-    @NotNull(message = "Giá bán không được để trống")
-    @DecimalMin(value = "0.0", message = "Giá bán phải lớn hơn hoặc bằng 0")
-    Double price;
-
-    @DecimalMin(value = "0.0", message = "Thuế phải lớn hơn hoặc bằng 0")
+    @DecimalMin(value = "0.0", message = "Thuáº¿ pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0")
     Double tax;
 
-    @DecimalMin(value = "0.0", message = "Giá trị giảm giá phải lớn hơn hoặc bằng 0")
+    @DecimalMin(value = "0.0", message = "GiÃ¡ trá»‹ giáº£m giÃ¡ pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0")
     Double discountValue;
 
-    @NotNull(message = "Ngày xuất bản không được để trống")
+    @NotNull(message = "NgÃ y xuáº¥t báº£n khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
     LocalDate publicationDate;
 
-    @NotBlank(message = "Danh mục không được để trống")
+    @NotBlank(message = "Danh má»¥c khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
     String categoryId;
+
+    // Promotion (optional)
+    String promotionId;
+
+    // Media fields
+    List<String> imageUrls;
+    List<String> videoUrls;
+    String defaultMediaUrl;
 }

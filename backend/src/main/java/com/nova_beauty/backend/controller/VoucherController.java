@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.controller;
+﻿package com.nova_beauty.backend.controller;
 
 import java.util.List;
 
@@ -17,17 +17,21 @@ import com.nova_beauty.backend.service.VoucherService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/vouchers")
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@Slf4j
 public class VoucherController {
 
     VoucherService voucherService;
 
+    // Staff endpoints
     @PostMapping
     public ApiResponse<VoucherResponse> createVoucher(@RequestBody @Valid VoucherCreationRequest request) {
+        // log.info("Controller: create voucher");
         return ApiResponse.<VoucherResponse>builder()
                 .result(voucherService.createVoucher(request))
                 .build();
@@ -35,6 +39,7 @@ public class VoucherController {
 
     @GetMapping("/my")
     public ApiResponse<List<VoucherResponse>> getMyVouchers() {
+        // log.info("Controller: get my vouchers");
         return ApiResponse.<List<VoucherResponse>>builder()
                 .result(voucherService.getMyVouchers())
                 .build();
@@ -63,6 +68,7 @@ public class VoucherController {
                 .build();
     }
 
+    // Admin endpoints
     @GetMapping("/pending")
     public ApiResponse<List<VoucherResponse>> getPendingVouchers() {
         return ApiResponse.<List<VoucherResponse>>builder()
@@ -84,6 +90,7 @@ public class VoucherController {
                 .build();
     }
 
+    // Public endpoints
     @GetMapping("/active")
     public ApiResponse<List<VoucherResponse>> getActiveVouchers() {
         return ApiResponse.<List<VoucherResponse>>builder()
@@ -91,5 +98,3 @@ public class VoucherController {
                 .build();
     }
 }
-
-

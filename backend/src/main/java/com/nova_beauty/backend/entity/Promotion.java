@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.entity;
+﻿package com.nova_beauty.backend.entity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -7,9 +7,9 @@ import java.util.Set;
 
 import jakarta.persistence.*;
 
+import com.nova_beauty.backend.enums.PromotionStatus;
 import com.nova_beauty.backend.enums.DiscountApplyScope;
 import com.nova_beauty.backend.enums.DiscountValueType;
-import com.nova_beauty.backend.enums.PromotionStatus;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -27,11 +27,11 @@ public class Promotion {
     @GeneratedValue(strategy = GenerationType.UUID)
     String id;
 
+    @Column(unique = true, nullable = false)
+    String code;
+
     @Column(name = "name", nullable = false)
     String name;
-
-    @Column(name = "code", unique = true, nullable = false)
-    String code;
 
     String imageUrl;
     String description;
@@ -59,9 +59,6 @@ public class Promotion {
     @Builder.Default
     Integer usageCount = 0;
 
-    @Column(name = "usage_limit")
-    Integer usageLimit;
-
     @Column(name = "is_active")
     Boolean isActive;
 
@@ -69,9 +66,8 @@ public class Promotion {
     @Column(name = "apply_scope", nullable = false)
     DiscountApplyScope applyScope;
 
-    // Approval workflow fields
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Column(name = "status", nullable = false, length = 50)
     PromotionStatus status;
 
     @ManyToOne(fetch = FetchType.LAZY)

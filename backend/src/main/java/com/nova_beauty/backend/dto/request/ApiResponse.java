@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.dto.request;
+﻿package com.nova_beauty.backend.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
@@ -10,7 +10,7 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@JsonInclude(JsonInclude.Include.NON_NULL) // Những field nào null sẽ k kèm vào trong json
+@JsonInclude(JsonInclude.Include.NON_NULL) // Nhá»¯ng field nÃ o null sáº½ k kÃ¨m vÃ o trong json
 public class ApiResponse<T> {
     @Builder.Default
     int code = 1000;

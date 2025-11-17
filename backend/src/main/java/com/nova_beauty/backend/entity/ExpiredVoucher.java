@@ -1,9 +1,12 @@
-package com.nova_beauty.backend.entity;
+﻿package com.nova_beauty.backend.entity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
+
+import com.nova_beauty.backend.enums.DiscountApplyScope;
+import com.nova_beauty.backend.enums.DiscountValueType;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -24,7 +27,12 @@ public class ExpiredVoucher {
     String code;
 
     String name;
-    String discountType;
+
+    @Enumerated(EnumType.STRING)
+    DiscountValueType discountValueType;
+
+    @Enumerated(EnumType.STRING)
+    DiscountApplyScope applyScope;
 
     Double minOrderValue;
     Double maxOrderValue;
@@ -35,7 +43,7 @@ public class ExpiredVoucher {
     LocalDate expiryDate;
 
     String imageUrl;
-    String comment;
+    String description;
     Integer usageLimit;
     Integer usageCount;
 

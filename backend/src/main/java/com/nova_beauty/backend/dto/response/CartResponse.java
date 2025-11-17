@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.dto.response;
+﻿package com.nova_beauty.backend.dto.response;
 
 import java.util.List;
 
@@ -19,5 +19,3 @@ public class CartResponse {
     Double totalAmount;
     List<CartItemResponse> items;
 }
-
-

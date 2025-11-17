@@ -1,13 +1,13 @@
-package com.nova_beauty.backend.dto.response;
+﻿package com.nova_beauty.backend.dto.response;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
+import com.nova_beauty.backend.enums.PromotionStatus;
 import com.nova_beauty.backend.enums.DiscountApplyScope;
 import com.nova_beauty.backend.enums.DiscountValueType;
-import com.nova_beauty.backend.enums.PromotionStatus;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -38,7 +38,7 @@ public class PromotionResponse {
 
     // Approval workflow info
     String submittedBy;
-    String submittedByName;
+    String submittedByName; 
     String approvedBy;
     String approvedByName;
     LocalDateTime submittedAt;

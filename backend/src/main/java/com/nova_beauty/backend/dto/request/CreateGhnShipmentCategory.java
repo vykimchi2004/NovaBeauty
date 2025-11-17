@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.dto.request;
+﻿package com.nova_beauty.backend.dto.request;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -14,5 +14,3 @@ public class CreateGhnShipmentCategory {
     String level2;
     String level3;
 }
-
-

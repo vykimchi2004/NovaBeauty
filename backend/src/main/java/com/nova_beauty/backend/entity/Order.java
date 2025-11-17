@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.entity;
+﻿package com.nova_beauty.backend.entity;
 
 import java.time.LocalDate;
 
@@ -43,4 +43,3 @@ public class Order {
     @Enumerated(EnumType.STRING)
     OrderStatus status;
 }
-

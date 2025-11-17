@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.controller;
+﻿package com.nova_beauty.backend.controller;
 
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -22,5 +22,3 @@ public class ShipmentController {
         return ApiResponse.<Shipment>builder().result(shipment).build();
     }
 }
-
-

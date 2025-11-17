@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.controller;
+﻿package com.nova_beauty.backend.controller;
 
 import java.util.List;
 
@@ -7,13 +7,13 @@ import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import com.nova_beauty.backend.dto.request.ApiResponse;
+import com.nova_beauty.backend.dto.request.StaffCreationRequest;
 import com.nova_beauty.backend.dto.request.UserCreationRequest;
 import com.nova_beauty.backend.dto.request.UserUpdateRequest;
-import com.nova_beauty.backend.dto.request.StaffCreationRequest;
 import com.nova_beauty.backend.dto.response.UserResponse;
 import com.nova_beauty.backend.entity.Role;
-import com.nova_beauty.backend.service.UserService;
 import com.nova_beauty.backend.repository.RoleRepository;
+import com.nova_beauty.backend.service.UserService;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +47,7 @@ class UserController {
 
     @GetMapping
     ApiResponse<List<UserResponse>> getUsers() {
-        // SecurityContextHolder chứa thông tin về user đang đăng nhập
+        // SecurityContextHolder chá»©a thÃ´ng tin vá» user Ä‘ang Ä‘Äƒng nháº­p
         // var authentication = SecurityContextHolder.getContext().getAuthentication();
 
         // log.info("Username: {}", authentication.getName());
@@ -60,7 +60,7 @@ class UserController {
 
     @GetMapping("/my-info")
     ApiResponse<UserResponse> getMyInfo() {
-        // SecurityContextHolder chứa thông tin về user đang đăng nhập
+        // SecurityContextHolder chá»©a thÃ´ng tin vá» user Ä‘ang Ä‘Äƒng nháº­p
         // var authentication = SecurityContextHolder.getContext().getAuthentication();
 
         // log.info("Username: {}", authentication.getName());
@@ -86,9 +86,15 @@ class UserController {
 
     @PutMapping("{userId}")
     ApiResponse<UserResponse> updateUser(@PathVariable String userId, @RequestBody UserUpdateRequest request) {
-        return ApiResponse.<UserResponse>builder()
-                .result(userService.updateUser(userId, request))
-                .build();
+        try {
+            UserResponse result = userService.updateUser(userId, request);
+            return ApiResponse.<UserResponse>builder()
+                    .result(result)
+                    .build();
+        } catch (Exception e) {
+            log.error("Controller: updateUser failed - userId: {}, error: {}", userId, e.getMessage(), e);
+            throw e;
+        }
     }
 
     @GetMapping("/roles")

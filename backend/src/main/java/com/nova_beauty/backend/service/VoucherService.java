@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.service;
+﻿package com.nova_beauty.backend.service;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -6,10 +6,10 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.function.Function;
+import java.util.Optional;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -69,6 +69,7 @@ public class VoucherService {
         applyScopeTargets(request.getApplyScope(), request.getCategoryIds(), request.getProductIds(), voucher);
 
         Voucher savedVoucher = voucherRepository.save(voucher);
+        // log.info("Voucher created with ID: {} by staff: {}", savedVoucher.getId(), staff.getId());
 
         return voucherMapper.toResponse(savedVoucher);
     }
@@ -92,12 +93,14 @@ public class VoucherService {
             voucher.setApprovedBy(admin);
             voucher.setApprovedAt(LocalDateTime.now());
             voucher.setRejectionReason(null);
+            // log.info("Voucher approved: {} by admin: {}", voucher.getId(), admin.getId());
         } else if ("REJECT".equals(request.getAction())) {
             voucher.setStatus(VoucherStatus.REJECTED);
             voucher.setIsActive(false);
             voucher.setApprovedBy(admin);
             voucher.setApprovedAt(LocalDateTime.now());
             voucher.setRejectionReason(request.getReason());
+            // log.info("Voucher rejected: {} by admin: {}", voucher.getId(), admin.getId());
         }
 
         Voucher savedVoucher = voucherRepository.save(voucher);
@@ -153,25 +156,22 @@ public class VoucherService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        if (request.getCode() != null && !request.getCode().equals(voucher.getCode())
-                && voucherRepository.existsByCode(request.getCode())) {
+        if (request.getCode() != null && !request.getCode().equals(voucher.getCode()) && voucherRepository.existsByCode(request.getCode())) {
             throw new AppException(ErrorCode.VOUCHER_CODE_ALREADY_EXISTS);
         }
 
         voucherMapper.updateVoucher(voucher, request);
 
-        if (request.getApplyScope() != null
-                || (request.getCategoryIds() != null && !request.getCategoryIds().isEmpty())
-                || (request.getProductIds() != null && !request.getProductIds().isEmpty())) {
-            DiscountApplyScope scope =
-                    request.getApplyScope() != null ? request.getApplyScope() : voucher.getApplyScope();
+        if (request.getApplyScope() != null || request.getCategoryIds() != null || request.getProductIds() != null) {
+            DiscountApplyScope scope = request.getApplyScope() != null ? request.getApplyScope() : voucher.getApplyScope();
             applyScopeTargets(scope, request.getCategoryIds(), request.getProductIds(), voucher);
             voucher.setApplyScope(scope);
         }
 
+        // Náº¿u staff cáº­p nháº­t voucher bá»‹ tá»« chá»‘i, tá»± Ä‘á»™ng chuyá»ƒn vá» chá» duyá»‡t
         if (!isAdmin && voucher.getStatus() == VoucherStatus.REJECTED) {
             voucher.setStatus(VoucherStatus.PENDING_APPROVAL);
-            voucher.setRejectionReason(null);
+            voucher.setRejectionReason(null); // XÃ³a lÃ½ do tá»« chá»‘i khi gá»­i láº¡i
         }
 
         Voucher savedVoucher = voucherRepository.save(voucher);
@@ -196,25 +196,29 @@ public class VoucherService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
+        // 1. XÃ³a product khá»i voucher.productApply (báº£ng voucher_products)
+        // Clear quan há»‡ Many-to-Many trÆ°á»›c khi xÃ³a voucher
         voucher.getProductApply().clear();
         voucher.getCategoryApply().clear();
         voucherRepository.save(voucher);
 
+        // 2. XÃ³a file media váº­t lÃ½ trong thÆ° má»¥c vouchers (náº¿u cÃ³)
         deleteMediaFileIfExists(voucher);
 
+        // 3. XÃ³a voucher
         voucherRepository.delete(voucher);
+        // log.info("Voucher deleted: {} by user: {}", voucherId, currentUserId);
     }
 
     private User getCurrentUser() {
-        var context = SecurityContextHolder.getContext();
-        String userId = context.getAuthentication().getName();
-        return userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return userRepository.findByEmail(email).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
     }
 
     private void applyScopeTargets(
             DiscountApplyScope scope, Set<String> categoryIds, Set<String> productIds, Voucher voucher) {
         if (scope == null) {
-            throw new AppException(ErrorCode.INVALID_VOUCHER_SCOPE);
+            return;
         }
 
         voucher.getCategoryApply().clear();
@@ -244,32 +248,28 @@ public class VoucherService {
             if (productIds != null && !productIds.isEmpty()) {
                 throw new AppException(ErrorCode.INVALID_VOUCHER_SCOPE);
             }
-            if (categoryIds == null || categoryIds.isEmpty()) {
-                throw new AppException(ErrorCode.INVALID_VOUCHER_SCOPE);
-            }
         } else {
             if (categoryIds != null && !categoryIds.isEmpty()) {
-                throw new AppException(ErrorCode.INVALID_VOUCHER_SCOPE);
-            }
-            if (productIds == null || productIds.isEmpty()) {
                 throw new AppException(ErrorCode.INVALID_VOUCHER_SCOPE);
             }
         }
     }
 
     private Set<Category> resolveCategories(Set<String> categoryIds) {
+        if (categoryIds == null || categoryIds.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_VOUCHER_SCOPE);
+        }
         return resolveEntities(categoryIds, categoryRepository::findById, ErrorCode.CATEGORY_NOT_EXISTED);
     }
 
     private Set<Product> resolveProducts(Set<String> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_VOUCHER_SCOPE);
+        }
         return resolveEntities(productIds, productRepository::findById, ErrorCode.PRODUCT_NOT_EXISTED);
     }
 
     private <T, ID> Set<T> resolveEntities(Set<ID> ids, Function<ID, Optional<T>> finder, ErrorCode notFoundError) {
-        if (ids == null || ids.isEmpty()) {
-            throw new AppException(ErrorCode.INVALID_VOUCHER_SCOPE);
-        }
-
         return ids.stream()
                 .map(id -> finder.apply(id).orElseThrow(() -> new AppException(notFoundError)))
                 .collect(Collectors.toSet());
@@ -299,9 +299,11 @@ public class VoucherService {
                 java.net.URI uri = java.net.URI.create(url);
                 String path = uri.getPath();
                 if (path != null && !path.isBlank()) {
-                    if (path.startsWith("/nova_beauty")) {
-                        path = path.substring("/nova_beauty".length());
+                    // Loáº¡i bá» context path náº¿u cÃ³ (vÃ­ dá»¥: /lumina_book)
+                    if (path.startsWith("/lumina_book")) {
+                        path = path.substring("/lumina_book".length());
                     }
+                    // TÃ¬m pháº§n path sau /voucher_media/ hoáº·c legacy /vouchers/
                     if (path.contains("/voucher_media/")) {
                         int vouchersIndex = path.indexOf("/voucher_media/");
                         filename = path.substring(vouchersIndex + "/voucher_media/".length());
@@ -309,26 +311,27 @@ public class VoucherService {
                         int vouchersIndex = path.indexOf("/vouchers/");
                         filename = path.substring(vouchersIndex + "/vouchers/".length());
                     } else {
+                        // Náº¿u khÃ´ng cÃ³ /vouchers/, láº¥y filename tá»« cuá»‘i path
                         int lastSlash = path.lastIndexOf('/');
                         if (lastSlash >= 0 && lastSlash < path.length() - 1) {
                             filename = path.substring(lastSlash + 1);
                         }
                     }
                 }
-            } catch (IllegalArgumentException ignored) {
-            }
+            } catch (IllegalArgumentException ignored) { }
 
             if (filename == null) {
                 String path = url;
+                // Loáº¡i bá» protocol vÃ  domain náº¿u cÃ³
                 if (path.startsWith("http://") || path.startsWith("https://")) {
                     try {
                         java.net.URI uri = java.net.URI.create(path);
                         path = uri.getPath();
-                    } catch (Exception ignored) {
-                    }
+                    } catch (Exception ignored) { }
                 }
-                if (path.startsWith("/nova_beauty")) {
-                    path = path.substring("/nova_beauty".length());
+                // Loáº¡i bá» context path náº¿u cÃ³
+                if (path.startsWith("/lumina_book")) {
+                    path = path.substring("/lumina_book".length());
                 }
                 if (path.startsWith("/")) path = path.substring(1);
                 if (path.startsWith("uploads/vouchers/")) {
@@ -346,6 +349,7 @@ public class VoucherService {
 
             if (filename == null || filename.isBlank()) return;
 
+            // XÃ¡c Ä‘á»‹nh thÆ° má»¥c dá»±a trÃªn URL (máº·c Ä‘á»‹nh lÃ  uploads/vouchers)
             Path targetDir = Paths.get("uploads", "vouchers");
             Path filePath = targetDir.resolve(filename);
             boolean deleted = Files.deleteIfExists(filePath);
@@ -354,9 +358,9 @@ public class VoucherService {
                 Path legacyDir = Paths.get("vouchers");
                 Path legacyPath = legacyDir.resolve(filename);
                 deleted = Files.deleteIfExists(legacyPath);
-                if (deleted) {
-                    log.info("Deleted media file from legacy folder: {}", legacyPath.toAbsolutePath());
-                }
+                // if (deleted) {
+                //     log.info("Deleted media file from legacy folder: {}", legacyPath.toAbsolutePath());
+                // }
             } else {
                 log.info("Deleted media file: {}", filePath.toAbsolutePath());
             }

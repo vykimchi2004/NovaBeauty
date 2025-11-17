@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.service;
+﻿package com.nova_beauty.backend.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -43,16 +43,18 @@ public class BannerService {
     public BannerResponse createBanner(BannerCreationRequest request) {
         // Get current user from security context
         var context = SecurityContextHolder.getContext();
-        String userId = context.getAuthentication().getName();
+        String userEmail = context.getAuthentication().getName();
 
-        // Get user
-        User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        // Get user by email (getName() returns email, not ID)
+        User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
         // Create banner entity using mapper
         Banner banner = bannerMapper.toBanner(request);
         banner.setCreatedBy(user);
         banner.setCreatedAt(LocalDateTime.now());
         banner.setUpdatedAt(LocalDateTime.now());
+        banner.setStatus(Boolean.FALSE);
+        banner.setPendingReview(Boolean.TRUE);
 
         // Set order index if not provided
         if (banner.getOrderIndex() == null) {
@@ -71,7 +73,7 @@ public class BannerService {
         }
 
         Banner savedBanner = bannerRepository.save(banner);
-        log.info("Banner created with ID: {} by user: {}", savedBanner.getId(), userId);
+        log.info("Banner created with ID: {} by user: {}", savedBanner.getId(), userEmail);
 
         return bannerMapper.toResponse(savedBanner);
     }
@@ -96,13 +98,66 @@ public class BannerService {
     }
 
     @Transactional
-    @PreAuthorize("hasRole('ADMIN')")
     public BannerResponse updateBanner(String bannerId, BannerUpdateRequest request) {
+        var context = SecurityContextHolder.getContext();
+        String userEmail = context.getAuthentication().getName();
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
         Banner banner =
                 bannerRepository.findById(bannerId).orElseThrow(() -> new AppException(ErrorCode.BANNER_NOT_EXISTED));
 
-        // Update banner using mapper
-        bannerMapper.updateBanner(banner, request);
+        // Kiá»ƒm tra quyá»n: Admin hoáº·c chá»§ sá»Ÿ há»¯u banner
+        boolean isAdmin = context.getAuthentication().getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+
+        if (!isAdmin && (banner.getCreatedBy() == null || !banner.getCreatedBy().getId().equals(user.getId()))) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // Update only non-null fields to preserve existing values
+        if (request.getTitle() != null) {
+            banner.setTitle(request.getTitle());
+        }
+        if (request.getDescription() != null) {
+            banner.setDescription(request.getDescription());
+        }
+        if (request.getImageUrl() != null) {
+            banner.setImageUrl(request.getImageUrl());
+        }
+        if (request.getLinkUrl() != null) {
+            banner.setLinkUrl(request.getLinkUrl());
+        }
+        // Náº¿u lÃ  staff (khÃ´ng pháº£i admin), luÃ´n set status vá» false (chá» duyá»‡t) khi gá»­i láº¡i
+        // vÃ  giá»¯ nguyÃªn rejectionReason
+        if (!isAdmin) {
+            // Staff gá»­i láº¡i banner -> luÃ´n set vá» chá» duyá»‡t
+            banner.setStatus(false);
+            banner.setPendingReview(true);
+            // Giá»¯ nguyÃªn rejectionReason (khÃ´ng xÃ³a)
+        } else {
+            // Admin cÃ³ thá»ƒ thay Ä‘á»•i status
+            if (request.getStatus() != null) {
+                banner.setStatus(request.getStatus());
+                banner.setPendingReview(Boolean.FALSE);
+            }
+        }
+        // Staff khÃ´ng Ä‘Æ°á»£c phÃ©p thay Ä‘á»•i rejectionReason, chá»‰ ADMIN má»›i cÃ³ quyá»n nÃ y
+        if (request.getRejectionReason() != null && isAdmin) {
+            banner.setRejectionReason(request.getRejectionReason());
+            banner.setPendingReview(Boolean.FALSE);
+        }
+        // Staff khÃ´ng Ä‘Æ°á»£c phÃ©p thay Ä‘á»•i orderIndex, chá»‰ ADMIN má»›i cÃ³ quyá»n nÃ y
+        if (request.getOrderIndex() != null && isAdmin) {
+            banner.setOrderIndex(request.getOrderIndex());
+        }
+        if (request.getStartDate() != null) {
+            banner.setStartDate(request.getStartDate());
+        }
+        if (request.getEndDate() != null) {
+            banner.setEndDate(request.getEndDate());
+        }
+
         banner.setUpdatedAt(LocalDateTime.now());
 
         // Update products if provided
@@ -123,7 +178,7 @@ public class BannerService {
         log.info(
                 "Banner updated: {} by user: {}",
                 bannerId,
-                SecurityContextHolder.getContext().getAuthentication().getName());
+                userEmail);
 
         return bannerMapper.toResponse(savedBanner);
     }

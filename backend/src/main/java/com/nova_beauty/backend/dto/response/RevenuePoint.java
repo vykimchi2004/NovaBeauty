@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.dto.response;
+﻿package com.nova_beauty.backend.dto.response;
 
 import java.time.LocalDate;
 
@@ -14,5 +14,3 @@ public class RevenuePoint {
     LocalDate date;
     Double total;
 }
-
-

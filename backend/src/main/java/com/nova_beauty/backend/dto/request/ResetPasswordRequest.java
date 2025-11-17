@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.dto.request;
+﻿package com.nova_beauty.backend.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -16,8 +16,8 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ResetPasswordRequest {
-    @NotBlank(message = "Email không được để trống")
-    @Email(message = "Email sai định dạng")
+    @NotBlank(message = "Email khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    @Email(message = "Email sai Ä‘á»‹nh dáº¡ng")
     String email;
 
     @NotBlank

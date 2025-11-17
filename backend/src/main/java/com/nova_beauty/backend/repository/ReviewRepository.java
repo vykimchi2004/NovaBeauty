@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.repository;
+﻿package com.nova_beauty.backend.repository;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,18 +23,18 @@ public interface ReviewRepository extends JpaRepository<Review, String> {
 
     boolean existsByUserAndProduct(User user, Product product);
 
-    // Tìm review của user cho product cụ thể
+    // TÃ¬m review cá»§a user cho product cá»¥ thá»ƒ
     Optional<Review> findByUserIdAndProductId(String userId, String productId);
 
-    // Tính rating trung bình của product
+    // TÃ­nh rating trung bÃ¬nh cá»§a product
     @Query("SELECT AVG(r.rating) FROM Review r WHERE r.product.id = :productId")
     Double getAverageRatingByProductId(@Param("productId") String productId);
 
-    // Tìm reviews theo keyword trong comment
+    // TÃ¬m reviews theo keyword trong comment
     @Query("SELECT r FROM Review r WHERE r.comment LIKE %:keyword%")
     Page<Review> findByCommentContaining(@Param("keyword") String keyword, Pageable pageable);
 
-    // Tìm reviews theo rating range
+    // TÃ¬m reviews theo rating range
     @Query("SELECT r FROM Review r WHERE r.product.id = :productId AND r.rating BETWEEN :minRating AND :maxRating")
     Page<Review> findByProductIdAndRatingRange(
             @Param("productId") String productId,

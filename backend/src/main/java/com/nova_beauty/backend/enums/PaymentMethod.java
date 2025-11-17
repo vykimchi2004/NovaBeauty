@@ -1,9 +1,6 @@
-package com.nova_beauty.backend.enums;
+﻿package com.nova_beauty.backend.enums;
 
 public enum PaymentMethod {
-    COD,
-    BANKING,
-    CASH
+    MOMO,
+    COD
 }
-
-

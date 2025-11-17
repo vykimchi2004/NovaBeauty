@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.mapper;
+﻿package com.nova_beauty.backend.mapper;
 
 import java.util.List;
 
@@ -27,5 +27,3 @@ public interface CartMapper {
         return items.stream().map(this::toItemResponse).toList();
     }
 }
-
-

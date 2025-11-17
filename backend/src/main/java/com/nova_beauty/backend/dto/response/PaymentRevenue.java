@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.dto.response;
+﻿package com.nova_beauty.backend.dto.response;
 
 import com.nova_beauty.backend.enums.PaymentMethod;
 
@@ -14,5 +14,3 @@ public class PaymentRevenue {
     PaymentMethod paymentMethod;
     Double total;
 }
-
-

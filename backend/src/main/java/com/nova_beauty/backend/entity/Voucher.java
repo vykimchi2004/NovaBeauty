@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.entity;
+﻿package com.nova_beauty.backend.entity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -7,9 +7,9 @@ import java.util.Set;
 
 import jakarta.persistence.*;
 
+import com.nova_beauty.backend.enums.VoucherStatus;
 import com.nova_beauty.backend.enums.DiscountApplyScope;
 import com.nova_beauty.backend.enums.DiscountValueType;
-import com.nova_beauty.backend.enums.VoucherStatus;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -31,7 +31,6 @@ public class Voucher {
     String code;
 
     String name;
-
     @Enumerated(EnumType.STRING)
     @Column(name = "discount_value_type", nullable = false)
     DiscountValueType discountValueType;
@@ -52,14 +51,13 @@ public class Voucher {
 
     @Column(name = "comment", columnDefinition = "TEXT")
     String description;
-
     Integer usageLimit;
-
+    
     @Builder.Default
     Integer usageCount = 0;
-
+    
     @Column(name = "usage_per_user")
-    Integer usagePerUser;
+    Integer usagePerUser; // Sá»‘ láº§n má»—i user Ä‘Æ°á»£c dÃ¹ng voucher nÃ y
 
     Boolean isActive;
 
@@ -86,17 +84,17 @@ public class Voucher {
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-            name = "voucher_categories",
-            joinColumns = @JoinColumn(name = "voucher_id"),
-            inverseJoinColumns = @JoinColumn(name = "category_id"))
+        name = "voucher_categories",
+        joinColumns = @JoinColumn(name = "voucher_id"),
+        inverseJoinColumns = @JoinColumn(name = "category_id"))
     @Builder.Default
     Set<Category> categoryApply = new HashSet<>();
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-            name = "voucher_products",
-            joinColumns = @JoinColumn(name = "voucher_id"),
-            inverseJoinColumns = @JoinColumn(name = "product_id"))
+        name = "voucher_products",
+        joinColumns = @JoinColumn(name = "voucher_id"),
+        inverseJoinColumns = @JoinColumn(name = "product_id"))
     @Builder.Default
     Set<Product> productApply = new HashSet<>();
 }

@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.entity;
+﻿package com.nova_beauty.backend.entity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,11 +20,10 @@ public class ExpiredPromotion {
     @Id
     String id;
 
+    String code;
+
     @Column(name = "name", nullable = false)
     String name;
-
-    @Column(name = "code", unique = true, nullable = false)
-    String code;
 
     String imageUrl;
     String description;
@@ -47,9 +46,6 @@ public class ExpiredPromotion {
     @Column(name = "usage_count")
     Integer usageCount;
 
-    @Column(name = "usage_limit")
-    Integer usageLimit;
-
     @Column(name = "is_active")
     Boolean isActive;
 
@@ -66,7 +62,7 @@ public class ExpiredPromotion {
     LocalDateTime approvedAt;
 
     @Column(name = "expired_at")
-    LocalDateTime expiredAt; // Thời điểm chuyển vào bảng hết hạn
+    LocalDateTime expiredAt; // Thá»i Ä‘iá»ƒm chuyá»ƒn vÃ o báº£ng háº¿t háº¡n
 
     @Column(name = "rejection_reason")
     String rejectionReason;

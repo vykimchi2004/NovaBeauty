@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.validator;
+﻿package com.nova_beauty.backend.validator;
 
 import java.lang.annotation.*;
 
@@ -10,7 +10,7 @@ import jakarta.validation.Payload;
 @Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface EmailConstraint {
-    String message() default "Email không hợp lệ";
+    String message() default "Email khÃ´ng há»£p lá»‡";
 
     Class<?>[] groups() default {};
 

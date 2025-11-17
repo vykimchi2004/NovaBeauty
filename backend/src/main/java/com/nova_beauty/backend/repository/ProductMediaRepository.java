@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.repository;
+﻿package com.nova_beauty.backend.repository;
 
 import java.util.List;
 import java.util.Optional;
@@ -14,17 +14,15 @@ import com.nova_beauty.backend.entity.ProductMedia;
 @Repository
 public interface ProductMediaRepository extends JpaRepository<ProductMedia, String> {
 
-    // Tìm media mặc định của product
+    // TÃ¬m media máº·c Ä‘á»‹nh cá»§a product
     Optional<ProductMedia> findByProductIdAndIsDefaultTrue(String productId);
 
-    // Lấy tất cả media của product, sắp xếp theo displayOrder
+    // Láº¥y táº¥t cáº£ media cá»§a product, sáº¯p xáº¿p theo displayOrder
     List<ProductMedia> findByProductIdOrderByDisplayOrderAsc(String productId);
 
-    // Bỏ isDefault của tất cả media của product
-    @Modifying
-    @Query("UPDATE ProductMedia pm SET pm.isDefault = false WHERE pm.product.id = :productId")
-    void clearDefaultForProduct(@Param("productId") String productId);
+    // TÃ¬m media theo productId vÃ  mediaUrl
+    Optional<ProductMedia> findByProductIdAndMediaUrl(String productId, String mediaUrl);
 
-    // Đếm số media của product
+    // Äáº¿m sá»‘ media cá»§a product
     long countByProductId(String productId);
 }

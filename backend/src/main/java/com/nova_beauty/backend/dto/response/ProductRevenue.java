@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.dto.response;
+﻿package com.nova_beauty.backend.dto.response;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -13,5 +13,3 @@ public class ProductRevenue {
     String productName;
     Double total;
 }
-
-

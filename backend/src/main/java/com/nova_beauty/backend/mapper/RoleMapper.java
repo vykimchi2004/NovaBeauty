@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.mapper;
+﻿package com.nova_beauty.backend.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -11,7 +11,7 @@ import com.nova_beauty.backend.entity.Role;
 public interface RoleMapper {
     @Mapping(
             target = "permissions",
-            ignore = true) // ignore vì kiểu dữ liệu của permissions trong request khác permission và response
+            ignore = true) // ignore vÃ¬ kiá»ƒu dá»¯ liá»‡u cá»§a permissions trong request khÃ¡c permission vÃ  response
     Role toRole(RoleRequest request);
 
     RoleResponse toRoleResponse(Role role);

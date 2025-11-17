@@ -1,10 +1,10 @@
-package com.nova_beauty.backend.enums;
+﻿package com.nova_beauty.backend.enums;
 
 public enum ShipmentStatus {
     CREATED,
-    SHIPPED,
+    PICKED_UP,
+    IN_TRANSIT,
     DELIVERED,
+    FAILED,
     CANCELLED
 }
-
-

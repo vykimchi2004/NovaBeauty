@@ -1,5 +1,6 @@
-package com.nova_beauty.backend.dto.response;
+﻿package com.nova_beauty.backend.dto.response;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -19,9 +20,12 @@ public class BannerResponse {
     String imageUrl;
     String linkUrl;
     Boolean status;
+    Boolean pendingReview;
     Integer orderIndex;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
+    LocalDate startDate;
+    LocalDate endDate;
 
     // Created by user info
     String createdBy;
@@ -30,4 +34,7 @@ public class BannerResponse {
     // Products info
     List<String> productIds;
     List<String> productNames;
+
+    // Rejection reason
+    String rejectionReason;
 }

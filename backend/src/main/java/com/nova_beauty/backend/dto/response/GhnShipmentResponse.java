@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.dto.response;
+﻿package com.nova_beauty.backend.dto.response;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -15,5 +15,3 @@ public class GhnShipmentResponse {
     String message_display;
     GhnShipmentData data;
 }
-
-

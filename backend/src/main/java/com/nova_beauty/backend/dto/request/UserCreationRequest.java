@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.dto.request;
+﻿package com.nova_beauty.backend.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -15,7 +15,7 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-// 1 số annotation khác: @Email, @NotNull, @NotBlack, @NotEmpty
+// 1 sá»‘ annotation khÃ¡c: @Email, @NotNull, @NotBlack, @NotEmpty
 public class UserCreationRequest {
     String phoneNumber;
     String fullName;

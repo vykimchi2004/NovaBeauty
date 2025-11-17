@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.entity;
+﻿package com.nova_beauty.backend.entity;
 
 import jakarta.persistence.*;
 
@@ -29,5 +29,3 @@ public class CartItem {
     @JoinColumn(name = "cart_id")
     Cart cart;
 }
-
-

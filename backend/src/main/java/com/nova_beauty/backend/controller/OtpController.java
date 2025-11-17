@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.controller;
+﻿package com.nova_beauty.backend.controller;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -28,7 +28,7 @@ public class OtpController {
 
     @PostMapping("/send-otp")
     public ApiResponse<String> sendOtp(
-            @RequestParam @NotBlank(message = "Email không được để trống") @Email(message = "Email sai định dạng")
+            @RequestParam @NotBlank(message = "Email khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng") @Email(message = "Email sai Ä‘á»‹nh dáº¡ng")
                     String email,
             @RequestParam(required = false) String mode) {
         try {
@@ -37,7 +37,7 @@ public class OtpController {
                     && userRepository.findByEmail(email).isPresent()) {
                 return ApiResponse.<String>builder()
                         .code(400)
-                        .message("Email đã được sử dụng")
+                        .message("Email Ä‘Ã£ Ä‘Æ°á»£c sá»­ dá»¥ng")
                         .result(null)
                         .build();
             }
@@ -47,7 +47,7 @@ public class OtpController {
                     && !userRepository.findByEmail(email).isPresent()) {
                 return ApiResponse.<String>builder()
                         .code(400)
-                        .message("Email không tồn tại trong hệ thống")
+                        .message("Email khÃ´ng tá»“n táº¡i trong há»‡ thá»‘ng")
                         .result(null)
                         .build();
             }

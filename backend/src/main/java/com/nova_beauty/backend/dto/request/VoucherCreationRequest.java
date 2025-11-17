@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.dto.request;
+﻿package com.nova_beauty.backend.dto.request;
 
 import java.time.LocalDate;
 import java.util.Set;
@@ -23,56 +23,54 @@ import lombok.experimental.FieldDefaults;
 @VoucherScopeConstraint
 public class VoucherCreationRequest {
 
-    @NotBlank(message = "Tên voucher không được để trống")
-    @Size(max = 255, message = "Tên voucher không được vượt quá 255 ký tự")
+    @NotBlank(message = "TÃªn voucher khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    @Size(max = 255, message = "TÃªn voucher khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 255 kÃ½ tá»±")
     String name;
 
-    @NotBlank(message = "Mã voucher không được để trống")
-    @Size(max = 50, message = "Mã voucher không được vượt quá 50 ký tự")
-    @Pattern(regexp = "^[A-Z0-9_-]+$", message = "Mã voucher chỉ được chứa chữ hoa, số, dấu gạch ngang và gạch dưới")
-    @VoucherCodeConstraint
+    @NotBlank(message = "MÃ£ voucher khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    @Size(max = 50, message = "MÃ£ voucher khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 50 kÃ½ tá»±")
+    @Pattern(regexp = "^[A-Z0-9_-]+$", message = "MÃ£ voucher chá»‰ Ä‘Æ°á»£c chá»©a chá»¯ hoa, sá»‘, dáº¥u gáº¡ch ngang vÃ  gáº¡ch dÆ°á»›i")
+    @VoucherCodeConstraint // Validate mÃ£ voucher unique
     String code;
 
     String imageUrl;
 
-    @Size(max = 1000, message = "Mô tả không được vượt quá 1000 ký tự")
+    @Size(max = 1000, message = "MÃ´ táº£ khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 1000 kÃ½ tá»±")
     String description;
 
-    @NotNull(message = "Giá trị giảm giá không được để trống")
-    @DecimalMin(value = "0.0", message = "Giá trị giảm giá phải lớn hơn hoặc bằng 0")
+    @NotNull(message = "GiÃ¡ trá»‹ giáº£m giÃ¡ khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    @DecimalMin(value = "0.0", message = "GiÃ¡ trá»‹ giáº£m giÃ¡ pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0")
     Double discountValue;
 
-    @DecimalMin(value = "0.0", message = "Giá trị đơn hàng tối thiểu phải lớn hơn hoặc bằng 0")
+    @DecimalMin(value = "0.0", message = "GiÃ¡ trá»‹ Ä‘Æ¡n hÃ ng tá»‘i thiá»ƒu pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0")
     Double minOrderValue;
 
-    @DecimalMin(value = "0.0", message = "Giá trị giảm tối đa phải lớn hơn hoặc bằng 0")
+    @DecimalMin(value = "0.0", message = "GiÃ¡ trá»‹ giáº£m tá»‘i Ä‘a pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0")
     Double maxDiscountValue;
 
-    @NotNull(message = "Loại giá trị giảm không được để trống")
+    @NotNull(message = "Loáº¡i giÃ¡ trá»‹ giáº£m khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
     DiscountValueType discountValueType;
 
-    @NotNull(message = "Phạm vi áp dụng không được để trống")
+    @NotNull(message = "Pháº¡m vi Ã¡p dá»¥ng khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
     DiscountApplyScope applyScope;
 
-    @NotNull(message = "Ngày bắt đầu không được để trống")
-    @Future(message = "Ngày bắt đầu phải là ngày trong tương lai")
+    @NotNull(message = "NgÃ y báº¯t Ä‘áº§u khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    @Future(message = "NgÃ y báº¯t Ä‘áº§u pháº£i lÃ  ngÃ y trong tÆ°Æ¡ng lai")
     LocalDate startDate;
 
-    @NotNull(message = "Ngày kết thúc không được để trống")
-    @Future(message = "Ngày kết thúc phải là ngày trong tương lai")
+    @NotNull(message = "NgÃ y káº¿t thÃºc khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    @Future(message = "NgÃ y káº¿t thÃºc pháº£i lÃ  ngÃ y trong tÆ°Æ¡ng lai")
     LocalDate expiryDate;
 
-    @Min(value = 1, message = "Giới hạn sử dụng phải lớn hơn 0")
+    @Min(value = 1, message = "Giá»›i háº¡n sá»­ dá»¥ng pháº£i lá»›n hÆ¡n 0")
     Integer usageLimit;
+    
+    @Min(value = 1, message = "Sá»‘ láº§n má»—i user Ä‘Æ°á»£c dÃ¹ng pháº£i lá»›n hÆ¡n 0")
+    Integer usagePerUser; // Sá»‘ láº§n má»—i user Ä‘Æ°á»£c dÃ¹ng voucher nÃ y
 
-    @Min(value = 1, message = "Số lần mỗi user được dùng phải lớn hơn 0")
-    Integer usagePerUser;
-
-    // Áp dụng theo danh mục
+    // Ãp dá»¥ng theo danh má»¥c
     Set<String> categoryIds;
 
-    // Áp dụng theo sản phẩm cụ thể
+    // Ãp dá»¥ng theo sáº£n pháº©m cá»¥ thá»ƒ
     Set<String> productIds;
 }
-
-

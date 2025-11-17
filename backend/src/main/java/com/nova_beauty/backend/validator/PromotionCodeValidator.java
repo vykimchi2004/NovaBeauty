@@ -1,7 +1,7 @@
-package com.nova_beauty.backend.validator;
+﻿package com.nova_beauty.backend.validator;
 
-import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
+import jakarta.validation.ConstraintValidator;
 
 import org.springframework.stereotype.Component;
 
@@ -21,10 +21,10 @@ public class PromotionCodeValidator implements ConstraintValidator<PromotionCode
             return true;
         }
 
-        // Check exists
+        // check exists
         if (promotionRepository.findByCode(code).isPresent()) {
             context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate("Mã khuyến mãi đã tồn tại")
+            context.buildConstraintViolationWithTemplate("MÃ£ khuyáº¿n mÃ£i Ä‘Ã£ tá»“n táº¡i")
                     .addConstraintViolation();
             return false;
         }
@@ -32,3 +32,4 @@ public class PromotionCodeValidator implements ConstraintValidator<PromotionCode
         return true;
     }
 }
+

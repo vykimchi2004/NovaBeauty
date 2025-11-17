@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.entity;
+﻿package com.nova_beauty.backend.entity;
 
 import java.time.LocalDateTime;
 
@@ -23,8 +23,9 @@ public class FinancialRecord {
     @GeneratedValue(strategy = GenerationType.UUID)
     String id;
 
-    @Column(name = "order_code")
-    String orderCode;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id")
+    Order order;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
@@ -44,5 +45,3 @@ public class FinancialRecord {
     @Column(name = "occurred_at", nullable = false)
     LocalDateTime occurredAt;
 }
-
-

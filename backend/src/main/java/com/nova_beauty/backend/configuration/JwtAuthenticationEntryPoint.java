@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.configuration;
+﻿package com.nova_beauty.backend.configuration;
 
 import java.io.IOException;
 
@@ -14,13 +14,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nova_beauty.backend.dto.request.ApiResponse;
 import com.nova_beauty.backend.exception.ErrorCode;
 
-// Gọi API mà không có JWT token, hoặc token sau/hết hạn -> Spring tự động nhảy vào đây AuthenticationEntryPoint
-// -> Class này giúp API trả về lỗi 401 dưới dạng JSON chuẩn, thay vì response HTML mặc định.
+// Gá»i API mÃ  khÃ´ng cÃ³ JWT token, hoáº·c token sau/háº¿t háº¡n -> Spring tá»± Ä‘á»™ng nháº£y vÃ o Ä‘Ã¢y AuthenticationEntryPoint
+// -> Class nÃ y giÃºp API tráº£ vá» lá»—i 401 dÆ°á»›i dáº¡ng JSON chuáº©n, thay vÃ¬ response HTML máº·c Ä‘á»‹nh.
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
     @Override
     public void commence(
             HttpServletRequest request, HttpServletResponse response, AuthenticationException authException)
             throws IOException, ServletException {
+        log.error("ðŸš« JWT Authentication failed: method={}, uri={}, error={}", 
+                request.getMethod(), request.getRequestURI(), authException.getMessage());
         ErrorCode errorCode = ErrorCode.UNAUTHENTICATED;
 
         response.setStatus(errorCode.getStatusCode().value());
@@ -34,6 +39,6 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         ObjectMapper objectMapper = new ObjectMapper();
 
         response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
-        response.flushBuffer(); // Đảm bảo dữ liệu dược gửi ngay về client
+        response.flushBuffer(); // Äáº£m báº£o dá»¯ liá»‡u dÆ°á»£c gá»­i ngay vá» client
     }
 }

@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.mapper;
+﻿package com.nova_beauty.backend.mapper;
 
 import java.util.List;
 
@@ -37,6 +37,8 @@ public interface BannerMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "products", ignore = true)
+    @Mapping(target = "rejectionReason", ignore = true) // Giá»¯ nguyÃªn rejectionReason, chá»‰ admin má»›i cÃ³ thá»ƒ thay Ä‘á»•i qua service
+    @Mapping(target = "pendingReview", ignore = true)
     void updateBanner(@MappingTarget Banner banner, BannerUpdateRequest request);
 
     @Named("mapProductIds")

@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.mapper;
+﻿package com.nova_beauty.backend.mapper;
 
 import java.util.List;
 
@@ -23,13 +23,11 @@ public interface CategoryMapper {
     CategoryResponse toResponse(Category category);
 
     // Request to Entity
-    @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "parentCategory", ignore = true)
     @Mapping(target = "subCategories", ignore = true)
     @Mapping(target = "products", ignore = true)
-    @Mapping(target = "promotionApply", ignore = true)
     Category toCategory(CategoryCreationRequest request);
 
     // Update Entity
@@ -39,7 +37,6 @@ public interface CategoryMapper {
     @Mapping(target = "parentCategory", ignore = true)
     @Mapping(target = "subCategories", ignore = true)
     @Mapping(target = "products", ignore = true)
-    @Mapping(target = "promotionApply", ignore = true)
     void updateCategory(@MappingTarget Category category, CategoryUpdateRequest request);
 
     @Named("mapSubCategories")

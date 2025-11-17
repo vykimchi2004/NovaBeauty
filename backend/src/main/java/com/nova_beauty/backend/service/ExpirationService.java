@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.service;
+﻿package com.nova_beauty.backend.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -31,36 +31,61 @@ public class ExpirationService {
     private final PromotionRepository promotionRepository;
     private final ExpiredVoucherRepository expiredVoucherRepository;
     private final ExpiredPromotionRepository expiredPromotionRepository;
+    private final PromotionService promotionService;
 
-    // Chạy mỗi giờ để kiểm tra và chuyển voucher/promotion hết hạn vào bảng hết hạn
-    // Cron expression: giây phút giờ ngày tháng thứ (0 0 * * * * = mỗi giờ)
+    // Cháº¡y má»—i giá» Ä‘á»ƒ kiá»ƒm tra vÃ  chuyá»ƒn voucher/promotion háº¿t háº¡n vÃ o báº£ng háº¿t háº¡n
+    // Cron expression: giÃ¢y phÃºt giá» ngÃ y thÃ¡ng thá»© (0 0 * * * * = má»—i giá»)
     @Scheduled(cron = "0 0 * * * *")
     @Transactional
     public void moveExpiredItems() {
-        log.info("Bắt đầu kiểm tra và chuyển voucher/promotion hết hạn...");
+        // log.info("Báº¯t Ä‘áº§u kiá»ƒm tra vÃ  chuyá»ƒn voucher/promotion háº¿t háº¡n...");
         LocalDate today = LocalDate.now();
         LocalDateTime now = LocalDateTime.now();
 
-        // Xử lý vouchers hết hạn
+        // Xá»­ lÃ½ promotions cáº§n activate (Ä‘Ã£ Ä‘áº¿n startDate)
+        processPromotionsToActivate(today);
+
+        // Xá»­ lÃ½ vouchers háº¿t háº¡n
         processExpiredVouchers(today, now);
 
-        // Xử lý promotions hết hạn
+        // Xá»­ lÃ½ promotions háº¿t háº¡n
         processExpiredPromotions(today, now);
 
-        log.info("Hoàn tất kiểm tra voucher/promotion hết hạn");
+        // log.info("HoÃ n táº¥t kiá»ƒm tra voucher/promotion háº¿t háº¡n");
+    }
+
+    // Xá»­ lÃ½ cÃ¡c promotion Ä‘Ã£ Ä‘áº¿n startDate - tá»± Ä‘á»™ng activate vÃ  apply vÃ o sáº£n pháº©m
+    private void processPromotionsToActivate(LocalDate today) {
+        List<Promotion> promotionsToActivate = promotionRepository.findPromotionsToActivate(today);
+
+        for (Promotion promotion : promotionsToActivate) {
+            try {
+                // Activate promotion
+                promotion.setIsActive(true);
+                promotionRepository.save(promotion);
+
+                // Apply promotion vÃ o cÃ¡c sáº£n pháº©m target
+                promotionService.applyPromotionToTargets(promotion);
+
+                log.info("ÄÃ£ tá»± Ä‘á»™ng kÃ­ch hoáº¡t vÃ  Ã¡p dá»¥ng promotion {} ({}) cho sáº£n pháº©m", promotion.getName(), promotion.getId());
+            } catch (Exception e) {
+                log.error("Lá»—i khi kÃ­ch hoáº¡t promotion {} ({}): {}", promotion.getName(), promotion.getId(), e.getMessage(), e);
+            }
+        }
     }
 
     private void processExpiredVouchers(LocalDate today, LocalDateTime now) {
         List<Voucher> expiredVouchers = voucherRepository.findExpiredVouchers(today, VoucherStatus.EXPIRED);
 
         for (Voucher voucher : expiredVouchers) {
-            // Kiểm tra xem đã được lưu vào bảng hết hạn chưa
+            // Kiá»ƒm tra xem Ä‘Ã£ Ä‘Æ°á»£c lÆ°u vÃ o báº£ng háº¿t háº¡n chÆ°a
             if (!expiredVoucherRepository.existsById(voucher.getId())) {
                 ExpiredVoucher expiredVoucher = ExpiredVoucher.builder()
                         .id(voucher.getId())
                         .code(voucher.getCode())
                         .name(voucher.getName())
-                        .discountType(voucher.getDiscountValueType() != null ? voucher.getDiscountValueType().name() : null)
+                        .discountValueType(voucher.getDiscountValueType())
+                        .applyScope(voucher.getApplyScope())
                         .minOrderValue(voucher.getMinOrderValue())
                         .maxOrderValue(voucher.getMaxOrderValue())
                         .discountValue(voucher.getDiscountValue())
@@ -68,7 +93,7 @@ public class ExpirationService {
                         .startDate(voucher.getStartDate())
                         .expiryDate(voucher.getExpiryDate())
                         .imageUrl(voucher.getImageUrl())
-                        .comment(voucher.getDescription())
+                        .description(voucher.getDescription())
                         .usageLimit(voucher.getUsageLimit())
                         .usageCount(voucher.getUsageCount())
                         .isActive(voucher.getIsActive())
@@ -83,11 +108,11 @@ public class ExpirationService {
 
                 expiredVoucherRepository.save(expiredVoucher);
                 
-                // Cập nhật status của voucher gốc thành EXPIRED
+                // Cáº­p nháº­t status cá»§a voucher gá»‘c thÃ nh EXPIRED
                 voucher.setStatus(VoucherStatus.EXPIRED);
                 voucherRepository.save(voucher);
                 
-                log.info("Đã chuyển voucher {} vào bảng hết hạn", voucher.getCode());
+                log.info("ÄÃ£ chuyá»ƒn voucher {} vÃ o báº£ng háº¿t háº¡n", voucher.getCode());
             }
         }
     }
@@ -96,7 +121,7 @@ public class ExpirationService {
         List<Promotion> expiredPromotions = promotionRepository.findExpiredPromotions(today, PromotionStatus.EXPIRED);
 
         for (Promotion promotion : expiredPromotions) {
-            // Kiểm tra xem đã được lưu vào bảng hết hạn chưa
+            // Kiá»ƒm tra xem Ä‘Ã£ Ä‘Æ°á»£c lÆ°u vÃ o báº£ng háº¿t háº¡n chÆ°a
             if (!expiredPromotionRepository.existsById(promotion.getId())) {
                 ExpiredPromotion expiredPromotion = ExpiredPromotion.builder()
                         .id(promotion.getId())
@@ -110,7 +135,6 @@ public class ExpirationService {
                         .startDate(promotion.getStartDate())
                         .expiryDate(promotion.getExpiryDate())
                         .usageCount(promotion.getUsageCount())
-                        .usageLimit(promotion.getUsageLimit())
                         .isActive(promotion.getIsActive())
                         .status(promotion.getStatus().name())
                         .submittedBy(promotion.getSubmittedBy() != null ? promotion.getSubmittedBy().getId() : null)
@@ -122,12 +146,13 @@ public class ExpirationService {
                         .build();
 
                 expiredPromotionRepository.save(expiredPromotion);
+                promotionService.detachPromotionFromProducts(promotion);
                 
-                // Cập nhật status của promotion gốc thành EXPIRED
+                // Cáº­p nháº­t status cá»§a promotion gá»‘c thÃ nh EXPIRED
                 promotion.setStatus(PromotionStatus.EXPIRED);
                 promotionRepository.save(promotion);
                 
-                log.info("Đã chuyển promotion {} vào bảng hết hạn", promotion.getCode());
+                log.info("ÄÃ£ chuyá»ƒn promotion {} ({}) vÃ o báº£ng háº¿t háº¡n", promotion.getName(), promotion.getId());
             }
         }
     }

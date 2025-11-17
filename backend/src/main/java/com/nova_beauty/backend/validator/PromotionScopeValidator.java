@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.validator;
+﻿package com.nova_beauty.backend.validator;
 
 import java.util.Set;
 
@@ -35,7 +35,7 @@ public class PromotionScopeValidator implements ConstraintValidator<PromotionSco
                         && (productIds == null || productIds.isEmpty());
                 if (!orderValid) {
                     context.buildConstraintViolationWithTemplate(
-                                    "Khuyến mãi áp dụng toàn bộ đơn hàng không được chọn danh mục hoặc sản phẩm cụ thể")
+                                    "Khuyáº¿n mÃ£i Ã¡p dá»¥ng toÃ n bá»™ Ä‘Æ¡n hÃ ng khÃ´ng Ä‘Æ°á»£c chá»n danh má»¥c hoáº·c sáº£n pháº©m cá»¥ thá»ƒ")
                             .addConstraintViolation();
                 }
                 return orderValid;
@@ -43,13 +43,13 @@ public class PromotionScopeValidator implements ConstraintValidator<PromotionSco
                 boolean categoryValid = categoryIds != null && !categoryIds.isEmpty();
                 if (!categoryValid) {
                     context.buildConstraintViolationWithTemplate(
-                                    "Vui lòng chọn ít nhất một danh mục khi áp dụng theo danh mục")
+                                    "Vui lÃ²ng chá»n Ã­t nháº¥t má»™t danh má»¥c khi Ã¡p dá»¥ng theo danh má»¥c")
                             .addConstraintViolation();
                     return false;
                 }
                 if (productIds != null && !productIds.isEmpty()) {
                     context.buildConstraintViolationWithTemplate(
-                                    "Không được chọn sản phẩm cụ thể khi khuyến mãi áp dụng theo danh mục")
+                                    "KhÃ´ng Ä‘Æ°á»£c chá»n sáº£n pháº©m cá»¥ thá»ƒ khi khuyáº¿n mÃ£i Ã¡p dá»¥ng theo danh má»¥c")
                             .addConstraintViolation();
                     return false;
                 }
@@ -58,13 +58,13 @@ public class PromotionScopeValidator implements ConstraintValidator<PromotionSco
                 boolean productValid = productIds != null && !productIds.isEmpty();
                 if (!productValid) {
                     context.buildConstraintViolationWithTemplate(
-                                    "Vui lòng chọn ít nhất một sản phẩm khi áp dụng theo sản phẩm")
+                                    "Vui lÃ²ng chá»n Ã­t nháº¥t má»™t sáº£n pháº©m khi Ã¡p dá»¥ng theo sáº£n pháº©m")
                             .addConstraintViolation();
                     return false;
                 }
                 if (categoryIds != null && !categoryIds.isEmpty()) {
                     context.buildConstraintViolationWithTemplate(
-                                    "Không được chọn danh mục khi khuyến mãi áp dụng theo sản phẩm cụ thể")
+                                    "KhÃ´ng Ä‘Æ°á»£c chá»n danh má»¥c khi khuyáº¿n mÃ£i Ã¡p dá»¥ng theo sáº£n pháº©m cá»¥ thá»ƒ")
                             .addConstraintViolation();
                     return false;
                 }

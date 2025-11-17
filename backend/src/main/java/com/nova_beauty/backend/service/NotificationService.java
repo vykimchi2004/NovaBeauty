@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.service;
+﻿package com.nova_beauty.backend.service;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -51,4 +51,3 @@ public class NotificationService {
         return sendToUsers(title, message, type, ids);
     }
 }
-

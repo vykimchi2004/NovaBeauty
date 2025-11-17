@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.dto.request;
+﻿package com.nova_beauty.backend.dto.request;
 
 import jakarta.validation.constraints.*;
 
@@ -12,7 +12,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ReviewReplyRequest {
 
-    @NotBlank(message = "Phản hồi không được để trống")
-    @Size(max = 1000, message = "Phản hồi không được vượt quá 1000 ký tự")
+    @NotBlank(message = "Pháº£n há»“i khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    @Size(max = 1000, message = "Pháº£n há»“i khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 1000 kÃ½ tá»±")
     String reply;
 }

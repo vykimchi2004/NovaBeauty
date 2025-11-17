@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.mapper;
+﻿package com.nova_beauty.backend.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -20,5 +20,3 @@ public interface TicketMapper {
 
     TicketResponse toResponse(SupportTicket ticket);
 }
-
-

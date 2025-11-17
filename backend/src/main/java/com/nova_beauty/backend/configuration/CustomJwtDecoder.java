@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.configuration;
+﻿package com.nova_beauty.backend.configuration;
 
 import java.text.ParseException;
 import java.util.Objects;
@@ -17,6 +17,9 @@ import com.nova_beauty.backend.dto.request.IntrospectRequest;
 import com.nova_beauty.backend.service.AuthenticationService;
 import com.nimbusds.jose.JOSEException;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Component
 public class CustomJwtDecoder implements JwtDecoder {
     @Value("${jwt.signerKey}")
@@ -29,25 +32,47 @@ public class CustomJwtDecoder implements JwtDecoder {
 
     @Override
     public Jwt decode(String token) throws JwtException {
+        if (token == null || token.trim().isEmpty()) {
+            log.warn("Attempted to decode null or empty token");
+            throw new JwtException("Token is null or empty");
+        }
 
         try {
-            // Check token còn hiệu lực không, nếu không -> Exception
+            // Check token cÃ²n hiá»‡u lá»±c khÃ´ng, náº¿u khÃ´ng -> Exception
             var response = authenticationService.introspect(
                     IntrospectRequest.builder().token(token).build());
 
-            if (!response.isValid()) throw new JwtException("Token invalid");
+            if (!response.isValid()) {
+                log.warn("Token validation failed: token is invalid");
+                throw new JwtException("Token invalid");
+            }
         } catch (JOSEException | ParseException e) {
-            throw new JwtException(e.getMessage());
+            log.warn("Token parsing/verification failed: {}", e.getMessage());
+            throw new JwtException("Token invalid: " + e.getMessage());
+        } catch (Exception e) {
+            // Catch any other unexpected exceptions
+            log.error("Unexpected error during token introspection: {}", e.getMessage(), e);
+            throw new JwtException("Token validation failed: " + e.getMessage());
         }
 
-        // Nếu token còn hiệu lực
-        if (Objects.isNull(nimbusJwtDecoder)) {
-            SecretKeySpec secretKeySpec = new SecretKeySpec(signerKey.getBytes(), "HS512");
-            nimbusJwtDecoder = NimbusJwtDecoder.withSecretKey(secretKeySpec)
-                    .macAlgorithm(MacAlgorithm.HS512)
-                    .build();
-        }
+        // Náº¿u token cÃ²n hiá»‡u lá»±c
+        try {
+            if (Objects.isNull(nimbusJwtDecoder)) {
+                SecretKeySpec secretKeySpec = new SecretKeySpec(getSignerKeyBytes(), "HS512");
+                nimbusJwtDecoder = NimbusJwtDecoder.withSecretKey(secretKeySpec)
+                        .macAlgorithm(MacAlgorithm.HS512)
+                        .build();
+            }
 
-        return nimbusJwtDecoder.decode(token);
+            return nimbusJwtDecoder.decode(token);
+        } catch (Exception e) {
+            log.error("Error decoding JWT token: {}", e.getMessage(), e);
+            throw new JwtException("Token decode failed: " + e.getMessage());
+        }
+    }
+
+    private byte[] getSignerKeyBytes() {
+        String sanitized = (signerKey == null) ? "" : signerKey.replaceAll("\\s", "");  // xÃ³a khoáº£ng tráº¯ng
+        return sanitized.getBytes();
     }
 }

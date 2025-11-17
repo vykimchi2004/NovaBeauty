@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.mapper;
+﻿package com.nova_beauty.backend.mapper;
 
 import java.util.List;
 
@@ -6,12 +6,14 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.nova_beauty.backend.dto.request.ProductCreationRequest;
 import com.nova_beauty.backend.dto.request.ProductUpdateRequest;
 import com.nova_beauty.backend.dto.response.ProductResponse;
 import com.nova_beauty.backend.entity.Product;
 import com.nova_beauty.backend.entity.ProductMedia;
+import com.nova_beauty.backend.entity.Promotion;
 import com.nova_beauty.backend.entity.Review;
 
 @Mapper(componentModel = "spring")
@@ -24,8 +26,12 @@ public interface ProductMapper {
     @Mapping(target = "approvedByName", source = "approvedBy.fullName")
     @Mapping(target = "categoryId", source = "category.id")
     @Mapping(target = "categoryName", source = "category.name")
+    @Mapping(target = "promotionId", source = "promotion", qualifiedByName = "mapPromotionId")
+    @Mapping(target = "promotionName", source = "promotion", qualifiedByName = "mapPromotionName")
+    @Mapping(target = "promotionStartDate", source = "promotion", qualifiedByName = "mapPromotionStartDate")
+    @Mapping(target = "promotionExpiryDate", source = "promotion", qualifiedByName = "mapPromotionExpiryDate")
     @Mapping(target = "mediaUrls", source = "mediaList", qualifiedByName = "mapMediaUrls")
-    @Mapping(target = "defaultMediaUrl", source = "defaultMedia.mediaUrl")
+    @Mapping(target = "defaultMediaUrl", source = "defaultMedia.mediaUrl", qualifiedByName = "normalizeUrl")
     @Mapping(target = "reviewCount", source = "reviews", qualifiedByName = "mapReviewCount")
     @Mapping(target = "averageRating", source = "reviews", qualifiedByName = "mapAverageRating")
     @Mapping(target = "availableQuantity", source = "inventory.stockQuantity")
@@ -37,17 +43,13 @@ public interface ProductMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "submittedBy", ignore = true)
     @Mapping(target = "category", ignore = true)
+    @Mapping(target = "promotion", ignore = true)
     @Mapping(target = "mediaList", ignore = true)
     @Mapping(target = "defaultMedia", ignore = true)
     @Mapping(target = "reviews", ignore = true)
     @Mapping(target = "inventory", ignore = true)
     @Mapping(target = "banners", ignore = true)
     @Mapping(target = "quantitySold", ignore = true)
-    @Mapping(target = "approvedBy", ignore = true)
-    @Mapping(target = "approvedAt", ignore = true)
-    @Mapping(target = "rejectionReason", ignore = true)
-    @Mapping(target = "promotionApply", ignore = true)
-    @Mapping(target = "status", ignore = true)
     Product toProduct(ProductCreationRequest request);
 
     // Update Entity
@@ -56,23 +58,38 @@ public interface ProductMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "submittedBy", ignore = true)
     @Mapping(target = "category", ignore = true)
+    @Mapping(target = "promotion", ignore = true)
     @Mapping(target = "mediaList", ignore = true)
     @Mapping(target = "defaultMedia", ignore = true)
     @Mapping(target = "reviews", ignore = true)
     @Mapping(target = "inventory", ignore = true)
     @Mapping(target = "banners", ignore = true)
     @Mapping(target = "quantitySold", ignore = true)
-    @Mapping(target = "approvedBy", ignore = true)
-    @Mapping(target = "approvedAt", ignore = true)
-    @Mapping(target = "rejectionReason", ignore = true)
-    @Mapping(target = "promotionApply", ignore = true)
-    @Mapping(target = "status", ignore = true)
     void updateProduct(@MappingTarget Product product, ProductUpdateRequest request);
 
     @Named("mapMediaUrls")
     default List<String> mapMediaUrls(List<ProductMedia> mediaList) {
         if (mediaList == null) return null;
-        return mediaList.stream().map(ProductMedia::getMediaUrl).toList();
+        return mediaList.stream().map(pm -> normalizeUrl(pm.getMediaUrl())).toList();
+    }
+
+    @Named("normalizeUrl")
+    default String normalizeUrl(String url) {
+        if (url == null || url.isBlank()) return url;
+        // Náº¿u URL Ä‘Ã£ lÃ  absolute, thÃ¬ khÃ´ng cáº§n thiáº¿t pháº£i thÃªm thÃ´ng tin context path.
+        String lower = url.toLowerCase();
+        if (lower.startsWith("http://") || lower.startsWith("https://")) {
+            return url;
+        }
+        // Náº¿u URL báº¯t Ä‘áº§u vá»›i /product_media, thÃ¬ thÃªm thÃ´ng tin context path (vÃ­ dá»¥: /lumina_book)
+        if (url.startsWith("/product_media")) {
+            String base = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+            return base + url;
+        }
+        // Náº¿u URL khÃ´ng pháº£i lÃ  absolute vÃ  khÃ´ng báº¯t Ä‘áº§u vá»›i /product_media, thÃ¬ coi nhÆ° lÃ  tÃªn file hoáº·c relative vÃ  mount dÆ°á»›i /product_media/
+        String base = ServletUriComponentsBuilder.fromCurrentContextPath().path("/product_media/").build().toUriString();
+        if (base.endsWith("/")) return base + url;
+        return base + "/" + url;
     }
 
     @Named("mapReviewCount")
@@ -84,5 +101,25 @@ public interface ProductMapper {
     default Double mapAverageRating(List<Review> reviews) {
         if (reviews == null || reviews.isEmpty()) return 0.0;
         return reviews.stream().mapToDouble(Review::getRating).average().orElse(0.0);
+    }
+
+    @Named("mapPromotionId")
+    default String mapPromotionId(Promotion promotion) {
+        return promotion != null ? promotion.getId() : null;
+    }
+
+    @Named("mapPromotionName")
+    default String mapPromotionName(Promotion promotion) {
+        return promotion != null ? promotion.getName() : null;
+    }
+
+    @Named("mapPromotionStartDate")
+    default java.time.LocalDate mapPromotionStartDate(Promotion promotion) {
+        return promotion != null ? promotion.getStartDate() : null;
+    }
+
+    @Named("mapPromotionExpiryDate")
+    default java.time.LocalDate mapPromotionExpiryDate(Promotion promotion) {
+        return promotion != null ? promotion.getExpiryDate() : null;
     }
 }

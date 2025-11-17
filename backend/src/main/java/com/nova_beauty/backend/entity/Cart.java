@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.entity;
+﻿package com.nova_beauty.backend.entity;
 
 import java.util.List;
 
@@ -29,7 +29,5 @@ public class Cart {
     Double subtotal;
     String appliedVoucherCode;
     Double voucherDiscount;
-    Double totalAmount;
+    Double totalAmount; // subtotal - voucherDiscount
 }
-
-

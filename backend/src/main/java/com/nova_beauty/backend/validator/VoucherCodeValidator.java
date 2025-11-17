@@ -1,7 +1,7 @@
-package com.nova_beauty.backend.validator;
+﻿package com.nova_beauty.backend.validator;
 
-import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
+import jakarta.validation.ConstraintValidator;
 
 import org.springframework.stereotype.Component;
 
@@ -21,9 +21,10 @@ public class VoucherCodeValidator implements ConstraintValidator<VoucherCodeCons
             return true;
         }
 
+        // check exists
         if (voucherRepository.findByCode(code).isPresent()) {
             context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate("Mã voucher đã tồn tại")
+            context.buildConstraintViolationWithTemplate("MÃ£ voucher Ä‘Ã£ tá»“n táº¡i")
                     .addConstraintViolation();
             return false;
         }
@@ -31,5 +32,3 @@ public class VoucherCodeValidator implements ConstraintValidator<VoucherCodeCons
         return true;
     }
 }
-
-

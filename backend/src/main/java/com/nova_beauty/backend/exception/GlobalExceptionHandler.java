@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.exception;
+﻿package com.nova_beauty.backend.exception;
 
 import java.util.Map;
 import java.util.Objects;
@@ -22,32 +22,27 @@ public class GlobalExceptionHandler {
     private static final String MIN_ATTRIBUTE = "min";
 
     @ExceptionHandler(value = Exception.class)
-    // Spring tự động inject exception vào parameter của hàm
-    ResponseEntity<ApiResponse> handlingRuntimeException(RuntimeException exception) {
+    ResponseEntity<ApiResponse<?>> handleException(Exception exception) {
         log.error("Exception", exception);
-        ApiResponse apiResponse = new ApiResponse();
-
-        apiResponse.setCode(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode());
-        apiResponse.setMessage(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage());
-
-        // Khi trả về thường kèm với 1 http code, thường lỗi từ người dùng sẽ trả về lỗi 400(badRequest)
+        ApiResponse<?> apiResponse = ApiResponse.builder()
+                .code(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode())
+                .message(ErrorCode.UNCATEGORIZED_EXCEPTION.getMessage())
+                .build();
         return ResponseEntity.badRequest().body(apiResponse);
     }
 
     @ExceptionHandler(value = AppException.class)
-    ResponseEntity<ApiResponse> handlingAppException(AppException exception) {
+    ResponseEntity<ApiResponse<?>> handlingAppException(AppException exception) {
         ErrorCode errorCode = exception.getErrorCode();
-        ApiResponse apiResponse = new ApiResponse();
-
-        apiResponse.setCode(errorCode.getCode());
-        apiResponse.setMessage(errorCode.getMessage());
-
-        // Khi trả về thường kèm với 1 http code, thường lỗi từ người dùng sẽ trả về lỗi 400(badRequest)
+        ApiResponse<?> apiResponse = ApiResponse.builder()
+                .code(errorCode.getCode())
+                .message(errorCode.getMessage())
+                .build();
         return ResponseEntity.status(errorCode.getStatusCode()).body(apiResponse);
     }
 
     @ExceptionHandler(value = AccessDeniedException.class)
-    ResponseEntity<ApiResponse> handlingAccessDeniedException(AccessDeniedException exception) {
+    ResponseEntity<ApiResponse<?>> handlingAccessDeniedException(AccessDeniedException exception) {
         ErrorCode errorCode = ErrorCode.UNAUTHORIZED;
 
         return ResponseEntity.status(errorCode.getStatusCode())
@@ -58,9 +53,9 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
-    ResponseEntity<ApiResponse> handlingValidation(MethodArgumentNotValidException exception) {
+    ResponseEntity<ApiResponse<?>> handlingValidation(MethodArgumentNotValidException exception) {
         String enumKey = (exception.getFieldError() != null)
-                ? exception.getFieldError().getDefaultMessage() // trả về thông báo lỗi gắn trong annotation(message)
+                ? exception.getFieldError().getDefaultMessage() // tráº£ vá» thÃ´ng bÃ¡o lá»—i gáº¯n trong annotation(message)
                 : ErrorCode.INVALID_KEY.name();
 
         ErrorCode errorCode = ErrorCode.INVALID_KEY;
@@ -70,29 +65,38 @@ public class GlobalExceptionHandler {
         try {
             errorCode = ErrorCode.valueOf(enumKey);
 
-            // getBindingResult là những error mà method MethodArgumentNotValidException wrap lại
+            // getBindingResult lÃ  nhá»¯ng error mÃ  method MethodArgumentNotValidException wrap láº¡i
             var constraintViolation = exception
                     .getBindingResult()
                     .getAllErrors()
-                    .get(0) // Lấy lỗi dầu tiên
+                    .get(0) // Láº¥y lá»—i dáº§u tiÃªn
                     .unwrap(ConstraintViolation.class);
 
-            // getConstraintDescriptor: get nội dung những annotation
-            // getAttributes: lấy Map các tham số trong annotation. VD: {min=3, message="USERNAME_TOO_SHORT", ...}
+            // getConstraintDescriptor: get ná»™i dung nhá»¯ng annotation
+            // getAttributes: láº¥y Map cÃ¡c tham sá»‘ trong annotation. VD: {min=3, message="USERNAME_TOO_SHORT", ...}
             attributes = constraintViolation.getConstraintDescriptor().getAttributes();
 
             log.info(attributes.toString());
 
         } catch (IllegalArgumentException ex) {
-
+            // Náº¿u khÃ´ng tÃ¬m tháº¥y ErrorCode enum, sá»­ dá»¥ng message tá»« validation annotation
+            if (exception.getFieldError() != null) {
+                String validationMessage = exception.getFieldError().getDefaultMessage();
+                log.warn("Validation error - field: {}, message: {}", 
+                    exception.getFieldError().getField(), validationMessage);
+                ApiResponse<?> apiResponse = new ApiResponse();
+                apiResponse.setCode(ErrorCode.INVALID_KEY.getCode());
+                apiResponse.setMessage(validationMessage);
+                return ResponseEntity.badRequest().body(apiResponse);
+            }
         }
 
-        ApiResponse apiResponse = new ApiResponse();
+        ApiResponse<?> apiResponse = new ApiResponse();
 
         apiResponse.setCode(errorCode.getCode());
         String message = errorCode.getMessage();
         if (Objects.nonNull(attributes) && message != null && message.contains("{")) {
-            message = mapAttribute(message, attributes); // thay {min} nếu có
+            message = mapAttribute(message, attributes); // thay {min} náº¿u cÃ³
         }
         apiResponse.setMessage(message);
 
@@ -103,8 +107,8 @@ public class GlobalExceptionHandler {
         String minValue = String.valueOf(attributes.get(MIN_ATTRIBUTE));
 
         return message.replace("{" + MIN_ATTRIBUTE + "}", minValue);
-        // cặp {} để
-        // 1. Tránh nhầm lẫn với message thông thường;
-        // 2. Đây là 1 chuẩn của java khi replay 1 chuỗi
+        // cáº·p {} Ä‘á»ƒ
+        // 1. TrÃ¡nh nháº§m láº«n vá»›i message thÃ´ng thÆ°á»ng;
+        // 2. ÄÃ¢y lÃ  1 chuáº©n cá»§a java khi replay 1 chuá»—i
     }
 }

@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.service;
+﻿package com.nova_beauty.backend.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -12,6 +12,7 @@ import com.nova_beauty.backend.dto.response.PaymentRevenue;
 import com.nova_beauty.backend.dto.response.ProductRevenue;
 import com.nova_beauty.backend.dto.response.RevenuePoint;
 import com.nova_beauty.backend.entity.FinancialRecord;
+import com.nova_beauty.backend.entity.Order;
 import com.nova_beauty.backend.entity.Product;
 import com.nova_beauty.backend.enums.FinancialRecordType;
 import com.nova_beauty.backend.enums.PaymentMethod;
@@ -29,9 +30,9 @@ public class FinancialService {
     FinancialRecordRepository financialRecordRepository;
 
     @Transactional
-    public void recordRevenue(String orderCode, Product product, double amount, PaymentMethod method) {
+    public void recordRevenue(Order order, Product product, double amount, PaymentMethod method) {
         FinancialRecord rec = FinancialRecord.builder()
-                .orderCode(orderCode)
+                .order(order)
                 .product(product)
                 .amount(amount)
                 .paymentMethod(method)
@@ -65,5 +66,3 @@ public class FinancialService {
                 .toList();
     }
 }
-
-

@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.enums;
+﻿package com.nova_beauty.backend.enums;
 
 public enum PaymentStatus {
     INIT,
@@ -7,4 +7,3 @@ public enum PaymentStatus {
     FAILED,
     CANCELLED
 }
-

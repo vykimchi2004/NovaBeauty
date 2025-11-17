@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.entity;
+﻿package com.nova_beauty.backend.entity;
 
 import java.time.LocalDate;
 
@@ -35,4 +35,3 @@ public class Payment {
     @Enumerated(EnumType.STRING)
     PaymentStatus status;
 }
-

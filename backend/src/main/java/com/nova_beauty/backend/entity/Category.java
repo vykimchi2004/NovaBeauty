@@ -1,7 +1,9 @@
-package com.nova_beauty.backend.entity;
+﻿package com.nova_beauty.backend.entity;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import jakarta.persistence.*;
 
@@ -36,7 +38,7 @@ public class Category {
     @Column(name = "updated_at")
     LocalDateTime updatedAt;
 
-    // Self-referencing: Category parent-child
+    // Categories
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
     Category parentCategory;
@@ -44,12 +46,16 @@ public class Category {
     @OneToMany(mappedBy = "parentCategory", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     List<Category> subCategories;
 
-    // Products in this category
+    // Products
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     List<Product> products;
 
-    // Promotions
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "promotion")
-    Promotion promotionApply;
+    // Promotions/Vouchers scope
+    @ManyToMany(mappedBy = "categoryApply", fetch = FetchType.LAZY)
+    @Builder.Default
+    Set<Promotion> promotions = new HashSet<>();
+
+    @ManyToMany(mappedBy = "categoryApply", fetch = FetchType.LAZY)
+    @Builder.Default
+    Set<Voucher> vouchers = new HashSet<>();
 }

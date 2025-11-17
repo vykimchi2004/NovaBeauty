@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.mapper;
+﻿package com.nova_beauty.backend.mapper;
 
 import java.util.List;
 import java.util.Set;
@@ -36,6 +36,7 @@ public interface PromotionMapper {
 
     // Request to Entity
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "code", source = "code")
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "submittedBy", ignore = true)
     @Mapping(target = "approvedBy", ignore = true)
@@ -72,10 +73,7 @@ public interface PromotionMapper {
     @Named("mapCategoryListToNames")
     default List<String> mapCategoryListToNames(Set<Category> categories) {
         if (categories == null) return null;
-        return categories.stream()
-                .map(Category::getName)
-                .filter(name -> name != null && !name.isBlank())
-                .collect(Collectors.toList());
+        return categories.stream().map(Category::getName).filter(name -> name != null && !name.isBlank()).collect(Collectors.toList());
     }
 
     @Named("mapProductListToIds")
@@ -87,28 +85,29 @@ public interface PromotionMapper {
     @Named("mapProductListToNames")
     default List<String> mapProductListToNames(Set<Product> products) {
         if (products == null) return null;
-        return products.stream()
-                .map(Product::getName)
-                .filter(name -> name != null && !name.isBlank())
-                .collect(Collectors.toList());
+        return products.stream().map(Product::getName).filter(name -> name != null && !name.isBlank()).collect(Collectors.toList());
     }
 
     @Named("normalizeImageUrl")
     default String normalizeImageUrl(String url) {
         if (url == null || url.isBlank()) return url;
+        // Náº¿u URL Ä‘Ã£ lÃ  absolute, giá»¯ nguyÃªn nhÆ°ng Ä‘áº£m báº£o sá»­ dá»¥ng prefix má»›i
         String lower = url.toLowerCase();
         if (lower.startsWith("http://") || lower.startsWith("https://")) {
             return replaceLegacyPromotionPath(url);
         }
+        // Náº¿u URL báº¯t Ä‘áº§u vá»›i /promotion_media, thÃªm context path
         if (url.startsWith("/promotion_media")) {
             String base = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
             return base + url;
         }
+        // Legacy path support: /promotions
         if (url.startsWith("/promotions")) {
             String base = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
             String converted = url.replaceFirst("/promotions", "/promotion_media");
             return base + converted;
         }
+        // Náº¿u URL khÃ´ng pháº£i lÃ  absolute vÃ  khÃ´ng báº¯t Ä‘áº§u vá»›i /promotions, mount dÆ°á»›i /promotions/
         String base = ServletUriComponentsBuilder.fromCurrentContextPath().path("/promotion_media/").build().toUriString();
         if (base.endsWith("/")) return base + url;
         return base + "/" + url;
@@ -118,9 +117,6 @@ public interface PromotionMapper {
         if (url == null) return null;
         if (url.contains("/promotions/") && !url.contains("/promotion_media/")) {
             return url.replace("/promotions/", "/promotion_media/");
-        }
-        if (url.contains("/nova_beauty/")) {
-            return url.replace("/nova_beauty/", "/nova_beauty/promotion_media/");
         }
         return url;
     }

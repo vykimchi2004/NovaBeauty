@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.dto.response;
+﻿package com.nova_beauty.backend.dto.response;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -19,23 +19,15 @@ public class ProductResponse {
     String id;
     String name;
     String description;
-    String detailedDescription;
     String size;
     String author;
     String publisher;
-    String brand;
-    String brandOrigin;
-    String manufacturingLocation;
-    String characteristics;
-    String ingredients;
-    String uses;
-    String usageInstructions;
     Double weight;
     Double length;
     Double width;
     Double height;
-    Double price;
     Double unitPrice;
+    Double price;
     Double tax;
     Double discountValue;
     Integer quantitySold;
@@ -57,6 +49,12 @@ public class ProductResponse {
     // Category info
     String categoryId;
     String categoryName;
+
+    // Promotion info
+    String promotionId;
+    String promotionName;
+    LocalDate promotionStartDate; // NgÃ y báº¯t Ä‘áº§u Ã¡p dá»¥ng promotion
+    LocalDate promotionExpiryDate; // NgÃ y káº¿t thÃºc Ã¡p dá»¥ng promotion
 
     // Media info
     List<String> mediaUrls;

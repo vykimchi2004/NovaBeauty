@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.dto.request;
+﻿package com.nova_beauty.backend.dto.request;
 
 import java.util.List;
 
@@ -12,12 +12,14 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
 public class CreateGhnShipmentRequest {
-    String orderCode;
+    String orderId;
 
-    Integer payment_type_id;
-    String required_note;
-    Integer service_type_id;
+    // GHN required fields
+    Integer payment_type_id; // 1: sender, 2: receiver
+    String required_note; // CHOTHUHANG, CHOXEMHANGKHONGTHU, KHONGCHOXEMHANG
+    Integer service_type_id; // 2 or 5
 
+    // Sender info
     String from_name;
     String from_phone;
     String from_address;
@@ -25,6 +27,7 @@ public class CreateGhnShipmentRequest {
     String from_district_name;
     String from_province_name;
 
+    // Receiver info
     String to_name;
     String to_phone;
     String to_address;
@@ -32,14 +35,14 @@ public class CreateGhnShipmentRequest {
     String to_district_name;
     String to_province_name;
 
+    // Parcel info
     Integer length;
     Integer width;
     Integer height;
     Integer weight;
-    Long cod_amount;
+    Long cod_amount; // VND
     String note;
 
+    // Items (for heavy service)
     List<CreateGhnShipmentItem> items;
 }
-
-

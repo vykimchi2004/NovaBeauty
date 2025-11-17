@@ -1,13 +1,13 @@
-package com.nova_beauty.backend.enums;
+﻿package com.nova_beauty.backend.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum ProductStatus {
-    PENDING("Chờ duyệt"),
-    APPROVED("Đã duyệt"),
-    REJECTED("Từ chối"),
-    DISABLED("Vô hiệu hóa");
+    PENDING("Chá» duyá»‡t"),
+    APPROVED("ÄÃ£ duyá»‡t"),
+    REJECTED("Tá»« chá»‘i"),
+    DISABLED("VÃ´ hiá»‡u hÃ³a");
 
     private final String displayName;
 
@@ -25,13 +25,13 @@ public enum ProductStatus {
         if (value == null) {
             return null;
         }
-        // Tìm theo displayName (tiếng Việt)
+        // TÃ¬m theo displayName (tiáº¿ng Viá»‡t)
         for (ProductStatus status : ProductStatus.values()) {
             if (status.displayName.equals(value)) {
                 return status;
             }
         }
-        // Fallback: tìm theo enum name (tiếng Anh) để tương thích ngược
+        // Fallback: tÃ¬m theo enum name (tiáº¿ng Anh) Ä‘á»ƒ tÆ°Æ¡ng thÃ­ch ngÆ°á»£c
         try {
             return ProductStatus.valueOf(value.toUpperCase());
         } catch (IllegalArgumentException e) {

@@ -1,9 +1,9 @@
-package com.nova_beauty.backend.controller;
+﻿package com.nova_beauty.backend.controller;
 
 import jakarta.validation.Valid;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import com.nova_beauty.backend.dto.request.ApiResponse;
@@ -48,10 +48,18 @@ public class PasswordController {
     // Change password for logged-in user (requires authentication)
     @PostMapping("/change-password")
     public ApiResponse<String> changePassword(
-            @AuthenticationPrincipal UserDetails principal, @RequestBody @Valid ChangePasswordRequest request) {
+            @AuthenticationPrincipal Jwt jwt, @RequestBody @Valid ChangePasswordRequest request) {
         try {
+            if (jwt == null) {
+                return ApiResponse.<String>builder()
+                        .code(401)
+                        .message("Unauthenticated")
+                        .result(null)
+                        .build();
+            }
+            String email = jwt.getSubject();
             passwordService.changePasswordByEmail(
-                    principal.getUsername(), request.getCurrentPassword(), request.getNewPassword());
+                    email, request.getCurrentPassword(), request.getNewPassword());
             return ApiResponse.<String>builder()
                     .code(200)
                     .message("Password changed successfully")
@@ -59,7 +67,7 @@ public class PasswordController {
                     .build();
         } catch (Exception e) {
             log.error(
-                    "Error changing password for user: {}", principal != null ? principal.getUsername() : "unknown", e);
+                    "Error changing password for user: {}", jwt != null ? jwt.getSubject() : "unknown", e);
             return ApiResponse.<String>builder()
                     .code(400)
                     .message(e.getMessage())

@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.service;
+﻿package com.nova_beauty.backend.service;
 
 import java.text.ParseException;
 import java.time.Instant;
@@ -58,7 +58,7 @@ public class AuthenticationService {
     @Value("${jwt.refreshable-duration}")
     protected long REFRESHABLE_DURATION;
 
-    // Kiểm tra token
+    // Kiá»ƒm tra token
     public IntrospectResponse introspect(IntrospectRequest request) throws JOSEException, ParseException {
         var token = request.getToken();
 
@@ -98,7 +98,7 @@ public class AuthenticationService {
             var signToken = verifyToken(request.getToken(), true);
 
             String jit = signToken.getJWTClaimsSet().getJWTID();
-            Date expiryTime = signToken.getJWTClaimsSet().getExpirationTime(); // Thời điểm hết hạn để refresh token
+            Date expiryTime = signToken.getJWTClaimsSet().getExpirationTime(); // Thá»i Ä‘iá»ƒm háº¿t háº¡n Ä‘á»ƒ refresh token
 
             InvalidatedToken invalidatedToken =
                     InvalidatedToken.builder().id(jit).expiryTime(expiryTime).build();
@@ -110,44 +110,44 @@ public class AuthenticationService {
     }
 
     private SignedJWT verifyToken(String token, boolean isRefresh) throws JOSEException, ParseException {
-        JWSVerifier verifier = new MACVerifier(SIGNER_KEY.getBytes()); // Create format verify token by signer_key
+        JWSVerifier verifier = new MACVerifier(getSignerKeyBytes()); // Create format verify token by signer_key
 
         SignedJWT signedJWT = SignedJWT.parse(token); // token: String -> SignedJWT
 
         var verified = signedJWT.verify(verifier); // verify token
 
-        // Thời điểm hết hạn
+        // Thá»i Ä‘iá»ƒm háº¿t háº¡n
         Date expiryTime = (isRefresh)
                 ? new Date(signedJWT
-                .getJWTClaimsSet()
-                .getIssueTime()
-                .toInstant()
-                .plus(REFRESHABLE_DURATION, ChronoUnit.SECONDS)
-                .toEpochMilli()) // thời điểm cần login lại
-                : signedJWT.getJWTClaimsSet().getExpirationTime(); // Thời điểm refresh tiếp theo
+                        .getJWTClaimsSet()
+                        .getIssueTime()
+                        .toInstant()
+                        .plus(REFRESHABLE_DURATION, ChronoUnit.SECONDS)
+                        .toEpochMilli()) // thá»i Ä‘iá»ƒm cáº§n login láº¡i
+                : signedJWT.getJWTClaimsSet().getExpirationTime(); // Thá»i Ä‘iá»ƒm refresh tiáº¿p theo
 
-        // Kiểm tra hết hạn token
+        // Kiá»ƒm tra háº¿t háº¡n token
         if (!(verified && expiryTime.after(new Date()))) throw new AppException(ErrorCode.UNAUTHENTICATED);
 
-        // Kiểm tra token tồn tại trong trong invalidatedRepository
+        // Kiá»ƒm tra token tá»“n táº¡i trong trong invalidatedRepository
         if (invalidatedRepository.existsById(signedJWT.getJWTClaimsSet().getJWTID()))
             throw new AppException(ErrorCode.UNAUTHENTICATED);
 
         return signedJWT;
     }
 
-    // Đảm bảo token không được quá 4 KB
+    // Äáº£m báº£o token khÃ´ng Ä‘Æ°á»£c quÃ¡ 4 KB
     private String generateToken(User user) {
         // header
-        JWSHeader header = new JWSHeader(JWSAlgorithm.HS512); // Sử dụng thuật toán HS512
+        JWSHeader header = new JWSHeader(JWSAlgorithm.HS512); // Sá»­ dá»¥ng thuáº­t toÃ¡n HS512
 
         // payload = nhieu claim
         JWTClaimsSet jwtClaimSet = new JWTClaimsSet.Builder()
-                .subject(user.getEmail()) // user đăng nhập là ai
-                .issuer("lumina_book.com") // Định danh ai là người issuer này được issuer từ ai, thường là issue
-                .issueTime(new Date()) // Thời điểm lần đầu login
+                .subject(user.getEmail()) // user Ä‘Äƒng nháº­p lÃ  ai
+                .issuer("lumina_book.com") // Äá»‹nh danh ai lÃ  ngÆ°á»i issuer nÃ y Ä‘Æ°á»£c issuer tá»« ai, thÆ°á»ng lÃ  issue
+                .issueTime(new Date()) // Thá»i Ä‘iá»ƒm láº§n Ä‘áº§u login
                 .expirationTime(
-                        new Date( // Thời điểm hết hạn token
+                        new Date( // Thá»i Ä‘iá»ƒm háº¿t háº¡n token
                                 Instant.now()
                                         .plus(VALID_DURATION, ChronoUnit.SECONDS)
                                         .toEpochMilli()))
@@ -159,12 +159,12 @@ public class AuthenticationService {
 
         JWSObject jwsObject = new JWSObject(header, payload);
 
-        // Ký token
-        // Dùng 1 key 32 bit làm khóa (key random trên mạng)
+        // KÃ½ token
+        // DÃ¹ng 1 key 32 bit lÃ m khÃ³a (key random trÃªn máº¡ng)
         try {
             jwsObject.sign(new MACSigner(
-                    SIGNER_KEY.getBytes())); // symmetric signer: khóa bí mật để ký và khóa giải mãi cùng 1 khóa
-            return jwsObject.serialize(); // Biến đối tượng JWSObject thành chuỗi String token (thường ở dạng
+                    getSignerKeyBytes())); // symmetric signer: khÃ³a bÃ­ máº­t Ä‘á»ƒ kÃ½ vÃ  khÃ³a giáº£i mÃ£i cÃ¹ng 1 khÃ³a
+            return jwsObject.serialize(); // Biáº¿n Ä‘á»‘i tÆ°á»£ng JWSObject thÃ nh chuá»—i String token (thÆ°á»ng á»Ÿ dáº¡ng
             // header.payload.signature, base64-encoded).
         } catch (JOSEException e) {
             log.error("Cannot create token", e);
@@ -172,8 +172,13 @@ public class AuthenticationService {
         }
     }
 
+    private byte[] getSignerKeyBytes() {
+        String sanitized = (SIGNER_KEY == null) ? "" : SIGNER_KEY.replaceAll("\\s", "");  // xÃ³a khoáº£ng tráº¯ng
+        return sanitized.getBytes();
+    }
+
     public AuthenticationResponse refreshToken(RefreshRequest request) throws ParseException, JOSEException {
-        // Kiểm tra hiệu lực token
+        // Kiá»ƒm tra hiá»‡u lá»±c token
         var signJWT = verifyToken(request.getToken(), true);
 
         var jit = signJWT.getJWTClaimsSet().getJWTID();

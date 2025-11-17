@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.repository;
+﻿package com.nova_beauty.backend.repository;
 
 import java.util.List;
 import java.util.Optional;
@@ -13,7 +13,7 @@ import com.nova_beauty.backend.entity.Category;
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, String> {
 
-    // Category gốc (không có parent)
+    // Category gá»‘c (khÃ´ng cÃ³ parent)
     List<Category> findByParentCategoryIsNull();
 
     // Sub-categories of category

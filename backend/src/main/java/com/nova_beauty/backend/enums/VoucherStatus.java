@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.enums;
+﻿package com.nova_beauty.backend.enums;
 
 public enum VoucherStatus {
     PENDING_APPROVAL,
@@ -7,5 +7,3 @@ public enum VoucherStatus {
     EXPIRED,
     DISABLED
 }
-
-

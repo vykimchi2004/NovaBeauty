@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.validator;
+﻿package com.nova_beauty.backend.validator;
 
 import java.time.LocalDate;
 
@@ -23,7 +23,7 @@ public class PromotionDateValidator implements ConstraintValidator<PromotionDate
 
         if (startDate != null && expiryDate != null && expiryDate.isBefore(startDate)) {
             context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate("Ngày kết thúc phải sau ngày bắt đầu")
+            context.buildConstraintViolationWithTemplate("NgÃ y káº¿t thÃºc pháº£i sau ngÃ y báº¯t Ä‘áº§u")
                     .addPropertyNode("expiryDate")
                     .addConstraintViolation();
             return false;

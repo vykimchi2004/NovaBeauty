@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.entity;
+﻿package com.nova_beauty.backend.entity;
 
 import jakarta.persistence.*;
 
@@ -19,6 +19,6 @@ public class Permission {
     String description;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "role_name")
+    @JoinColumn(name = "permissions")
     Role role;
 }

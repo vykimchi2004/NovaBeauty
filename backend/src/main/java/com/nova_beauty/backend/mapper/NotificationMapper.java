@@ -1,6 +1,7 @@
-package com.nova_beauty.backend.mapper;
+﻿package com.nova_beauty.backend.mapper;
 
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -30,12 +31,12 @@ public interface NotificationMapper {
     @Named("mapUserIds")
     default Set<String> mapUserIds(Set<User> users) {
         if (users == null) return null;
-        return users.stream().map(User::getId).collect(java.util.stream.Collectors.toSet());
+        return users.stream().map(User::getId).collect(Collectors.toSet());
     }
 
     @Named("mapUserNames")
     default Set<String> mapUserNames(Set<User> users) {
         if (users == null) return null;
-        return users.stream().map(User::getFullName).collect(java.util.stream.Collectors.toSet());
+        return users.stream().map(User::getFullName).collect(Collectors.toSet());
     }
 }

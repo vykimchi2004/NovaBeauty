@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.service;
+﻿package com.nova_beauty.backend.service;
 
 import java.time.LocalDateTime;
 import java.util.Random;
@@ -30,7 +30,7 @@ public class OtpService {
 
     @Transactional
     public String generateAndSendOtp(String email) {
-        // Xóa các OTP cũ của email này
+        // XÃ³a cÃ¡c OTP cÅ© cá»§a email nÃ y
         otpRepository.deleteAllByEmail(email);
 
         String otpCode = generateOtpCode();

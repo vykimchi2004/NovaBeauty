@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.mapper;
+﻿package com.nova_beauty.backend.mapper;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -11,7 +11,7 @@ import com.nova_beauty.backend.entity.User;
 
 @Mapper(componentModel = "spring")
 public interface UserMapper {
-    
+
     // Request to Entity
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "password", ignore = true)
@@ -29,6 +29,7 @@ public interface UserMapper {
 
     // Entity to Response
     @Mapping(target = "role", source = "role")
+    @Mapping(target = "active", expression = "java(user.isActive())") // Map from User.isActive() to UserResponse.active
     UserResponse toUserResponse(User user);
 
     // Update Entity

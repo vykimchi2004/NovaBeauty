@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.constant;
+﻿package com.nova_beauty.backend.constant;
 
 import com.nova_beauty.backend.entity.Role;
 

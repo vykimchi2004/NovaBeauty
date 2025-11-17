@@ -1,9 +1,9 @@
-package com.nova_beauty.backend.enums;
+﻿package com.nova_beauty.backend.enums;
 
 public enum PromotionStatus {
-    PENDING, // Chờ duyệt
-    APPROVED, // Đã duyệt
-    REJECTED, // Từ chối
-    EXPIRED, // Hết hạn
-    CANCELLED // Hủy bỏ
+    PENDING_APPROVAL, // Chá» duyá»‡t
+    APPROVED, // ÄÃ£ duyá»‡t
+    REJECTED, // Tá»« chá»‘i
+    EXPIRED, // Háº¿t háº¡n
+    DISABLED // Táº¡m dá»«ng
 }

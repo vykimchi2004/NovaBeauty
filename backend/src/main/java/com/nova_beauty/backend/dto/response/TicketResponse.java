@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.dto.response;
+﻿package com.nova_beauty.backend.dto.response;
 
 import java.time.LocalDateTime;
 
@@ -21,10 +21,10 @@ public class TicketResponse {
     String phone;
     String content;
     String handlerNote;
+    String handlerId;
+    String handlerName;
     TicketStatus status;
     TicketAssignee assignedTo;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
 }
-
-

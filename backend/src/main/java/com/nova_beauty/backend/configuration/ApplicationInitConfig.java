@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.configuration;
+﻿package com.nova_beauty.backend.configuration;
 
 import java.time.LocalDate;
 
@@ -29,7 +29,7 @@ public class ApplicationInitConfig {
     PasswordEncoder passwordEncoder;
 
     @NonFinal
-    static final String ADMIN_EMAIL = "admin@novabeauty.com";
+    static final String ADMIN_EMAIL = "admin@luminabook.com";
 
     @NonFinal
     static final String ADMIN_PASSWORD = "admin";

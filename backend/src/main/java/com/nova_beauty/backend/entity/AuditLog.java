@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.entity;
+﻿package com.nova_beauty.backend.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -20,4 +20,3 @@ public class AuditLog {
     @GeneratedValue(strategy = GenerationType.UUID)
     String id;
 }
-

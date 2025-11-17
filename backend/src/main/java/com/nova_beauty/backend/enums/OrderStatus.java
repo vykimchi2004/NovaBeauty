@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.enums;
+﻿package com.nova_beauty.backend.enums;
 
 public enum OrderStatus {
     CREATED,
@@ -8,4 +8,3 @@ public enum OrderStatus {
     DELIVERED,
     CANCELLED
 }
-

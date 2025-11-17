@@ -1,4 +1,4 @@
-package com.nova_beauty.backend.service;
+﻿package com.nova_beauty.backend.service;
 
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
@@ -15,11 +15,13 @@ import com.nova_beauty.backend.configuration.GhnProperties;
 import com.nova_beauty.backend.dto.request.CreateGhnShipmentRequest;
 import com.nova_beauty.backend.dto.response.GhnShipmentFee;
 import com.nova_beauty.backend.dto.response.GhnShipmentResponse;
+import com.nova_beauty.backend.entity.Order;
 import com.nova_beauty.backend.entity.Shipment;
 import com.nova_beauty.backend.enums.ShipmentProvider;
 import com.nova_beauty.backend.enums.ShipmentStatus;
 import com.nova_beauty.backend.exception.AppException;
 import com.nova_beauty.backend.exception.ErrorCode;
+import com.nova_beauty.backend.repository.OrderRepository;
 import com.nova_beauty.backend.repository.ShipmentRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -28,16 +30,23 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ShipmentService {
     private final ShipmentRepository shipmentRepository;
+    private final OrderRepository orderRepository;
     private final GhnProperties ghnProperties;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public Shipment createGhnOrder(CreateGhnShipmentRequest req) {
+        Order order = orderRepository
+                .findById(req.getOrderId())
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXISTED));
+
+        // Prepare GHN request payload
         Map<String, Object> payload = new HashMap<>();
         payload.put("payment_type_id", req.getPayment_type_id());
         payload.put("required_note", req.getRequired_note());
         payload.put("service_type_id", req.getService_type_id());
         payload.put("note", req.getNote());
 
+        // sender
         if (req.getFrom_name() != null) payload.put("from_name", req.getFrom_name());
         if (req.getFrom_phone() != null) payload.put("from_phone", req.getFrom_phone());
         if (req.getFrom_address() != null) payload.put("from_address", req.getFrom_address());
@@ -45,6 +54,7 @@ public class ShipmentService {
         if (req.getFrom_district_name() != null) payload.put("from_district_name", req.getFrom_district_name());
         if (req.getFrom_province_name() != null) payload.put("from_province_name", req.getFrom_province_name());
 
+        // receiver
         payload.put("to_name", req.getTo_name());
         payload.put("to_phone", req.getTo_phone());
         payload.put("to_address", req.getTo_address());
@@ -52,6 +62,7 @@ public class ShipmentService {
         payload.put("to_district_name", req.getTo_district_name());
         payload.put("to_province_name", req.getTo_province_name());
 
+        // parcel
         payload.put("length", req.getLength());
         payload.put("width", req.getWidth());
         payload.put("height", req.getHeight());
@@ -62,6 +73,7 @@ public class ShipmentService {
             payload.put("items", req.getItems());
         }
 
+        // Call GHN API
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -79,7 +91,9 @@ public class ShipmentService {
             throw new AppException(ErrorCode.EXTERNAL_SERVICE_ERROR);
         }
 
+        // Persist shipment
         Shipment shipment = Shipment.builder()
+                .order(order)
                 .provider(ShipmentProvider.GHN)
                 .status(ShipmentStatus.CREATED)
                 .orderCode(body.getData().getOrder_code())
@@ -118,5 +132,3 @@ public class ShipmentService {
         }
     }
 }
-
-
