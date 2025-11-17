@@ -2,10 +2,13 @@ package com.nova_beauty.backend.entity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 
 import jakarta.persistence.*;
 
+import com.nova_beauty.backend.enums.DiscountApplyScope;
+import com.nova_beauty.backend.enums.DiscountValueType;
 import com.nova_beauty.backend.enums.PromotionStatus;
 
 import lombok.*;
@@ -33,6 +36,10 @@ public class Promotion {
     String imageUrl;
     String description;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "discount_value_type", nullable = false)
+    DiscountValueType discountValueType;
+
     @Column(name = "discount_value", nullable = false)
     Double discountValue;
 
@@ -49,13 +56,18 @@ public class Promotion {
     LocalDate expiryDate;
 
     @Column(name = "usage_count")
-    Integer usageCount;
+    @Builder.Default
+    Integer usageCount = 0;
 
     @Column(name = "usage_limit")
     Integer usageLimit;
 
     @Column(name = "is_active")
     Boolean isActive;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "apply_scope", nullable = false)
+    DiscountApplyScope applyScope;
 
     // Approval workflow fields
     @Enumerated(EnumType.STRING)
@@ -85,12 +97,14 @@ public class Promotion {
             name = "promotion_categories",
             joinColumns = @JoinColumn(name = "promotion_id"),
             inverseJoinColumns = @JoinColumn(name = "category_id"))
-    Set<Category> categoryApply;
+    @Builder.Default
+    Set<Category> categoryApply = new HashSet<>();
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "promotion_products",
             joinColumns = @JoinColumn(name = "promotion_id"),
             inverseJoinColumns = @JoinColumn(name = "product_id"))
-    Set<Product> productApply;
+    @Builder.Default
+    Set<Product> productApply = new HashSet<>();
 }

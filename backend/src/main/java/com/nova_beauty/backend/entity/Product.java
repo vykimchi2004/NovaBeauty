@@ -66,6 +66,21 @@ public class Product {
     @Column(name = "weight")
     Double weight;
 
+    @Column(name = "length")
+    Double length;
+
+    @Column(name = "width")
+    Double width;
+
+    @Column(name = "height")
+    Double height;
+
+    @Column(name = "publication_date")
+    LocalDate publicationDate;
+
+    @Column(name = "unit_price")
+    Double unitPrice;
+
     @Column(name = "price", nullable = false)
     Double price;
 
@@ -81,9 +96,6 @@ public class Product {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     ProductStatus status;
-
-    @Column(name = "publication_date")
-    LocalDate publicationDate;
 
     @Column(name = "created_at")
     LocalDateTime createdAt;

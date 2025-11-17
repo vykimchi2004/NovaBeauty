@@ -5,8 +5,11 @@ import java.util.Set;
 
 import jakarta.validation.constraints.*;
 
+import com.nova_beauty.backend.enums.DiscountApplyScope;
+import com.nova_beauty.backend.enums.DiscountValueType;
 import com.nova_beauty.backend.validator.PromotionCodeConstraint;
 import com.nova_beauty.backend.validator.PromotionDateConstraint;
+import com.nova_beauty.backend.validator.PromotionScopeConstraint;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -17,6 +20,7 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @PromotionDateConstraint // Validate ngày bắt đầu và kết thúc
+@PromotionScopeConstraint
 public class PromotionCreationRequest {
 
     @NotBlank(message = "Tên khuyến mãi không được để trống")
@@ -43,6 +47,12 @@ public class PromotionCreationRequest {
 
     @DecimalMin(value = "0.0", message = "Giá trị giảm tối đa phải lớn hơn hoặc bằng 0")
     Double maxDiscountValue;
+
+    @NotNull(message = "Loại giá trị giảm không được để trống")
+    DiscountValueType discountValueType;
+
+    @NotNull(message = "Phạm vi áp dụng không được để trống")
+    DiscountApplyScope applyScope;
 
     @NotNull(message = "Ngày bắt đầu không được để trống")
     @Future(message = "Ngày bắt đầu phải là ngày trong tương lai")

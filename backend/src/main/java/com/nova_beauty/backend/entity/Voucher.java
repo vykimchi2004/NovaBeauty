@@ -2,10 +2,13 @@ package com.nova_beauty.backend.entity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 import jakarta.persistence.*;
 
+import com.nova_beauty.backend.enums.DiscountApplyScope;
+import com.nova_beauty.backend.enums.DiscountValueType;
 import com.nova_beauty.backend.enums.VoucherStatus;
 
 import lombok.*;
@@ -18,6 +21,7 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Entity
+@Table(name = "vouchers")
 public class Voucher {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -27,7 +31,14 @@ public class Voucher {
     String code;
 
     String name;
-    String discountType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "discount_value_type", nullable = false)
+    DiscountValueType discountValueType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "apply_scope", nullable = false)
+    DiscountApplyScope applyScope;
 
     Double minOrderValue;
     Double maxOrderValue;
@@ -38,9 +49,17 @@ public class Voucher {
     LocalDate expiryDate;
 
     String imageUrl;
-    String comment;
+
+    @Column(name = "comment", columnDefinition = "TEXT")
+    String description;
+
     Integer usageLimit;
-    Integer usageCount;
+
+    @Builder.Default
+    Integer usageCount = 0;
+
+    @Column(name = "usage_per_user")
+    Integer usagePerUser;
 
     Boolean isActive;
 
@@ -70,14 +89,14 @@ public class Voucher {
             name = "voucher_categories",
             joinColumns = @JoinColumn(name = "voucher_id"),
             inverseJoinColumns = @JoinColumn(name = "category_id"))
-    List<Category> categoryApply;
+    @Builder.Default
+    Set<Category> categoryApply = new HashSet<>();
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "voucher_products",
             joinColumns = @JoinColumn(name = "voucher_id"),
             inverseJoinColumns = @JoinColumn(name = "product_id"))
-    List<Product> productApply;
+    @Builder.Default
+    Set<Product> productApply = new HashSet<>();
 }
-
-

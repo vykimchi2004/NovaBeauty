@@ -2,7 +2,9 @@ package com.nova_beauty.backend.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,6 +20,7 @@ import com.nova_beauty.backend.entity.Category;
 import com.nova_beauty.backend.entity.Product;
 import com.nova_beauty.backend.entity.Promotion;
 import com.nova_beauty.backend.entity.User;
+import com.nova_beauty.backend.enums.DiscountApplyScope;
 import com.nova_beauty.backend.enums.PromotionStatus;
 import com.nova_beauty.backend.exception.AppException;
 import com.nova_beauty.backend.exception.ErrorCode;
@@ -53,6 +56,10 @@ public class PromotionService {
         // Get staff user
         User staff = userRepository.findById(staffId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
+        if (promotionRepository.existsByCode(request.getCode())) {
+            throw new AppException(ErrorCode.PROMOTION_CODE_ALREADY_EXISTS);
+        }
+
         // Create promotion entity using mapper
         Promotion promotion = promotionMapper.toPromotion(request);
 
@@ -63,25 +70,7 @@ public class PromotionService {
         promotion.setSubmittedBy(staff);
         promotion.setSubmittedAt(LocalDateTime.now());
 
-        // Validate and set categories if provided
-        if (request.getCategoryIds() != null && !request.getCategoryIds().isEmpty()) {
-            Set<Category> categories = request.getCategoryIds().stream()
-                    .map(categoryId -> categoryRepository
-                            .findById(categoryId)
-                            .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED)))
-                    .collect(Collectors.toSet());
-            promotion.setCategoryApply(categories);
-        }
-
-        // Validate and set products if provided
-        if (request.getProductIds() != null && !request.getProductIds().isEmpty()) {
-            Set<Product> products = request.getProductIds().stream()
-                    .map(productId -> productRepository
-                            .findById(productId)
-                            .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED)))
-                    .collect(Collectors.toSet());
-            promotion.setProductApply(products);
-        }
+        applyScopeTargets(request.getApplyScope(), request.getCategoryIds(), request.getProductIds(), promotion);
 
         Promotion savedPromotion = promotionRepository.save(promotion);
         log.info("Promotion created with ID: {} by staff: {}", savedPromotion.getId(), staffId);
@@ -181,26 +170,22 @@ public class PromotionService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
+        if (request.getCode() != null && !request.getCode().equals(promotion.getCode())) {
+            if (promotionRepository.existsByCode(request.getCode())) {
+                throw new AppException(ErrorCode.PROMOTION_CODE_ALREADY_EXISTS);
+            }
+        }
+
         // Update promotion using mapper
         promotionMapper.updatePromotion(promotion, request);
 
-        // Update categories and products if provided
-        if (request.getCategoryIds() != null && !request.getCategoryIds().isEmpty()) {
-            Set<Category> categories = request.getCategoryIds().stream()
-                    .map(categoryId -> categoryRepository
-                            .findById(categoryId)
-                            .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED)))
-                    .collect(Collectors.toSet());
-            promotion.setCategoryApply(categories);
-        }
-
-        if (request.getProductIds() != null && !request.getProductIds().isEmpty()) {
-            Set<Product> products = request.getProductIds().stream()
-                    .map(productId -> productRepository
-                            .findById(productId)
-                            .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED)))
-                    .collect(Collectors.toSet());
-            promotion.setProductApply(products);
+        if (request.getApplyScope() != null
+                || (request.getCategoryIds() != null && !request.getCategoryIds().isEmpty())
+                || (request.getProductIds() != null && !request.getProductIds().isEmpty())) {
+            DiscountApplyScope scope =
+                    request.getApplyScope() != null ? request.getApplyScope() : promotion.getApplyScope();
+            applyScopeTargets(scope, request.getCategoryIds(), request.getProductIds(), promotion);
+            promotion.setApplyScope(scope);
         }
 
         Promotion savedPromotion = promotionRepository.save(promotion);
@@ -229,5 +214,70 @@ public class PromotionService {
 
         promotionRepository.delete(promotion);
         log.info("Promotion deleted: {} by user: {}", promotionId, staffId);
+    }
+
+    private void applyScopeTargets(
+            DiscountApplyScope scope, Set<String> categoryIds, Set<String> productIds, Promotion promotion) {
+        if (scope == null) {
+            throw new AppException(ErrorCode.INVALID_PROMOTION_SCOPE);
+        }
+
+        promotion.getCategoryApply().clear();
+        promotion.getProductApply().clear();
+
+        switch (scope) {
+            case CATEGORY -> {
+                validateScopeInputs(categoryIds, productIds, true);
+                promotion.getCategoryApply().addAll(resolveCategories(categoryIds));
+            }
+            case PRODUCT -> {
+                validateScopeInputs(categoryIds, productIds, false);
+                promotion.getProductApply().addAll(resolveProducts(productIds));
+            }
+            case ORDER -> {
+                if ((categoryIds != null && !categoryIds.isEmpty()) || (productIds != null && !productIds.isEmpty())) {
+                    throw new AppException(ErrorCode.INVALID_PROMOTION_SCOPE);
+                }
+            }
+            default -> throw new AppException(ErrorCode.INVALID_PROMOTION_SCOPE);
+        }
+
+        promotion.setApplyScope(scope);
+    }
+
+    private void validateScopeInputs(Set<String> categoryIds, Set<String> productIds, boolean isCategoryScope) {
+        if (isCategoryScope) {
+            if (productIds != null && !productIds.isEmpty()) {
+                throw new AppException(ErrorCode.INVALID_PROMOTION_SCOPE);
+            }
+            if (categoryIds == null || categoryIds.isEmpty()) {
+                throw new AppException(ErrorCode.INVALID_PROMOTION_SCOPE);
+            }
+        } else {
+            if (categoryIds != null && !categoryIds.isEmpty()) {
+                throw new AppException(ErrorCode.INVALID_PROMOTION_SCOPE);
+            }
+            if (productIds == null || productIds.isEmpty()) {
+                throw new AppException(ErrorCode.INVALID_PROMOTION_SCOPE);
+            }
+        }
+    }
+
+    private Set<Category> resolveCategories(Set<String> categoryIds) {
+        return resolveEntities(categoryIds, categoryRepository::findById, ErrorCode.CATEGORY_NOT_EXISTED);
+    }
+
+    private Set<Product> resolveProducts(Set<String> productIds) {
+        return resolveEntities(productIds, productRepository::findById, ErrorCode.PRODUCT_NOT_EXISTED);
+    }
+
+    private <T, ID> Set<T> resolveEntities(Set<ID> ids, Function<ID, Optional<T>> finder, ErrorCode notFoundError) {
+        if (ids == null || ids.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_PROMOTION_SCOPE);
+        }
+
+        return ids.stream()
+                .map(id -> finder.apply(id).orElseThrow(() -> new AppException(notFoundError)))
+                .collect(Collectors.toSet());
     }
 }
