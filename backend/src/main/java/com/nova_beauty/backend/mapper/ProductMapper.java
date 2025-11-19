@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.mapper;
+package com.nova_beauty.backend.mapper;
 
 import java.util.List;
 
@@ -26,15 +26,15 @@ public interface ProductMapper {
     @Mapping(target = "approvedByName", source = "approvedBy.fullName")
     @Mapping(target = "categoryId", source = "category.id")
     @Mapping(target = "categoryName", source = "category.name")
-    @Mapping(target = "promotionId", source = "promotion", qualifiedByName = "mapPromotionId")
-    @Mapping(target = "promotionName", source = "promotion", qualifiedByName = "mapPromotionName")
-    @Mapping(target = "promotionStartDate", source = "promotion", qualifiedByName = "mapPromotionStartDate")
-    @Mapping(target = "promotionExpiryDate", source = "promotion", qualifiedByName = "mapPromotionExpiryDate")
+    @Mapping(target = "promotionId", source = "promotionApply", qualifiedByName = "mapPromotionId")
+    @Mapping(target = "promotionName", source = "promotionApply", qualifiedByName = "mapPromotionName")
+    @Mapping(target = "promotionStartDate", source = "promotionApply", qualifiedByName = "mapPromotionStartDate")
+    @Mapping(target = "promotionExpiryDate", source = "promotionApply", qualifiedByName = "mapPromotionExpiryDate")
     @Mapping(target = "mediaUrls", source = "mediaList", qualifiedByName = "mapMediaUrls")
     @Mapping(target = "defaultMediaUrl", source = "defaultMedia.mediaUrl", qualifiedByName = "normalizeUrl")
     @Mapping(target = "reviewCount", source = "reviews", qualifiedByName = "mapReviewCount")
     @Mapping(target = "averageRating", source = "reviews", qualifiedByName = "mapAverageRating")
-    @Mapping(target = "availableQuantity", source = "inventory.stockQuantity")
+    @Mapping(target = "stockQuantity", source = "inventory.stockQuantity")
     ProductResponse toResponse(Product product);
 
     // Request to Entity
@@ -43,7 +43,7 @@ public interface ProductMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "submittedBy", ignore = true)
     @Mapping(target = "category", ignore = true)
-    @Mapping(target = "promotion", ignore = true)
+    @Mapping(target = "promotionApply", ignore = true)
     @Mapping(target = "mediaList", ignore = true)
     @Mapping(target = "defaultMedia", ignore = true)
     @Mapping(target = "reviews", ignore = true)
@@ -58,7 +58,7 @@ public interface ProductMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "submittedBy", ignore = true)
     @Mapping(target = "category", ignore = true)
-    @Mapping(target = "promotion", ignore = true)
+    @Mapping(target = "promotionApply", ignore = true)
     @Mapping(target = "mediaList", ignore = true)
     @Mapping(target = "defaultMedia", ignore = true)
     @Mapping(target = "reviews", ignore = true)

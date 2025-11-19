@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.entity;
+package com.nova_beauty.backend.entity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -149,4 +149,13 @@ public class Product {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "promotion")
     Promotion promotionApply;
+
+    // Bridge getters/setters to keep compatibility with LuminaBook code using 'promotion'
+    public Promotion getPromotion() {
+        return promotionApply;
+    }
+
+    public void setPromotion(Promotion promotion) {
+        this.promotionApply = promotion;
+    }
 }

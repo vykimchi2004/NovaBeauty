@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.configuration;
+package com.nova_beauty.backend.configuration;
 
 import java.time.LocalDate;
 

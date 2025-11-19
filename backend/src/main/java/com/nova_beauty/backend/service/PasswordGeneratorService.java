@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.service;
+package com.nova_beauty.backend.service;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;

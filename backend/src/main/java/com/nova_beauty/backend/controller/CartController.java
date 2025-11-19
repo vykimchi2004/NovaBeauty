@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.controller;
+package com.nova_beauty.backend.controller;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;

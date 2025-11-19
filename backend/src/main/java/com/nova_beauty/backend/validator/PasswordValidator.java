@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.validator;
+package com.nova_beauty.backend.validator;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;

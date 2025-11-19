@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.dto.response;
+package com.nova_beauty.backend.dto.response;
 
 import java.time.LocalDateTime;
 

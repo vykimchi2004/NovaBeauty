@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.dto.request;
+package com.nova_beauty.backend.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

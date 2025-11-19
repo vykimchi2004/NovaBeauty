@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.validator;
+package com.nova_beauty.backend.validator;
 
 import java.time.LocalDate;
 

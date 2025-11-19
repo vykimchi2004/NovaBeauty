@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.dto.request;
+package com.nova_beauty.backend.dto.request;
 
 import com.nova_beauty.backend.validator.EmailConstraint;
 import com.nova_beauty.backend.validator.PasswordConstraint;

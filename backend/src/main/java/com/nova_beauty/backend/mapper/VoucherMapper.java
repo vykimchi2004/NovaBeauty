@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.mapper;
+package com.nova_beauty.backend.mapper;
 
 import java.util.List;
 import java.util.Set;

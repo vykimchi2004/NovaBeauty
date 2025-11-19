@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.configuration;
+package com.nova_beauty.backend.configuration;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;

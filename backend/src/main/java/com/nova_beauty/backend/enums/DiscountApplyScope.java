@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.enums;
+package com.nova_beauty.backend.enums;
 
 public enum DiscountApplyScope {
     ORDER,       // Ãp dá»¥ng cho toÃ n bá»™ Ä‘Æ¡n hÃ ng

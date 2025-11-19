@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.repository;
+package com.nova_beauty.backend.repository;
 
 import java.util.List;
 
@@ -82,15 +82,17 @@ public interface ProductRepository extends JpaRepository<Product, String> {
     // TÃ­nh sá»‘ lÆ°á»£ng products submitted bá»Ÿi user cá»¥ thá»ƒ
     long countBySubmittedBy(User submittedBy);
 
-    // TÃ¬m products theo promotion
-    List<Product> findByPromotionId(String promotionId);
+    // TÃ¬m products theo promotion (Nova dùng field promotionApply nên cần @Query tường minh)
+    @Query("SELECT p FROM Product p WHERE p.promotionApply.id = :promotionId")
+    List<Product> findByPromotionId(@Param("promotionId") String promotionId);
 
     // Find product by ID with promotion, category, and other relationships loaded
     @Query("SELECT p FROM Product p " +
-           "LEFT JOIN FETCH p.promotion " +
+           "LEFT JOIN FETCH p.promotionApply " +
            "LEFT JOIN FETCH p.category " +
            "LEFT JOIN FETCH p.submittedBy " +
            "LEFT JOIN FETCH p.approvedBy " +
+           "LEFT JOIN FETCH p.inventory " +
            "WHERE p.id = :productId")
     java.util.Optional<Product> findByIdWithRelations(@Param("productId") String productId);
 }

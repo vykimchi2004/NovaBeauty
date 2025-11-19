@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.dto.response;
+package com.nova_beauty.backend.dto.response;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -65,5 +65,5 @@ public class ProductResponse {
     Double averageRating;
 
     // Inventory info
-    Integer availableQuantity;
+    Integer stockQuantity;
 }

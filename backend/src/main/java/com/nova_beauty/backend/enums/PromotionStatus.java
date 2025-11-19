@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.enums;
+package com.nova_beauty.backend.enums;
 
 public enum PromotionStatus {
     PENDING_APPROVAL, // Chá» duyá»‡t

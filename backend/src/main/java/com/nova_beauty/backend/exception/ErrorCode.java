@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.exception;
+package com.nova_beauty.backend.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;

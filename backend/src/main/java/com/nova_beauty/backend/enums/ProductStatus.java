@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.enums;
+package com.nova_beauty.backend.enums;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;

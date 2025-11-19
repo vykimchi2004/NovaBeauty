@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.service;
+package com.nova_beauty.backend.service;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;

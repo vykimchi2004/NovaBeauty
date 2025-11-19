@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.exception;
+package com.nova_beauty.backend.exception;
 
 import java.util.Map;
 import java.util.Objects;

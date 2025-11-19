@@ -1,4 +1,4 @@
-﻿package com.nova_beauty.backend.validator;
+package com.nova_beauty.backend.validator;
 
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
