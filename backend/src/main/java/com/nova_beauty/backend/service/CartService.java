@@ -68,7 +68,7 @@ public class CartService {
 
     @Transactional
     @PreAuthorize("hasRole('CUSTOMER')")
-    public Cart addItem(String productId, int quantity) {
+    public Cart addItem(String productId, int quantity, String colorCode) {
         if (quantity <= 0) {
             throw new AppException(ErrorCode.OUT_OF_STOCK);
         }

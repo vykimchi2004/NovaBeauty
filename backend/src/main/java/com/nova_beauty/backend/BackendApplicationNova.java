@@ -8,8 +8,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @EnableScheduling
 @EnableFeignClients(basePackages = "com.nova_beauty.backend.client")
-public class BackendApplication {
+public class BackendApplicationNova {
     public static void main(String[] args) {
-        SpringApplication.run(BackendApplication.class, args);
+        SpringApplication.run(BackendApplicationNova.class, args);
     }
 }

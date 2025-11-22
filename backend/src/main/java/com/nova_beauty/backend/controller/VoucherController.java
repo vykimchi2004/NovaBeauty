@@ -69,6 +69,13 @@ public class VoucherController {
     }
 
     // Admin endpoints
+    @GetMapping
+    public ApiResponse<List<VoucherResponse>> getAllVouchers() {
+        return ApiResponse.<List<VoucherResponse>>builder()
+                .result(voucherService.getAllVouchers())
+                .build();
+    }
+
     @GetMapping("/pending")
     public ApiResponse<List<VoucherResponse>> getPendingVouchers() {
         return ApiResponse.<List<VoucherResponse>>builder()

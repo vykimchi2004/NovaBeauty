@@ -134,6 +134,12 @@ public class VoucherService {
                 .collect(Collectors.toList());
     }
 
+    public List<VoucherResponse> getAllVouchers() {
+        return voucherRepository.findAll().stream()
+                .map(voucherMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
     public List<VoucherResponse> getActiveVouchers() {
         return voucherRepository.findActiveVouchers(LocalDate.now()).stream()
                 .map(voucherMapper::toResponse)

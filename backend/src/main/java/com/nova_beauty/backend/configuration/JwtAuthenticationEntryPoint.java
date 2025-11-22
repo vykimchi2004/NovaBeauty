@@ -24,8 +24,19 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
     public void commence(
             HttpServletRequest request, HttpServletResponse response, AuthenticationException authException)
             throws IOException, ServletException {
-        log.error("ðŸš« JWT Authentication failed: method={}, uri={}, error={}", 
-                request.getMethod(), request.getRequestURI(), authException.getMessage());
+        String requestURI = request.getRequestURI();
+        // Cart endpoints thường được gọi khi user chưa đăng nhập (để hiển thị cart count)
+        // Nên không log ERROR cho các request này, chỉ log ở mức DEBUG
+        boolean isCartEndpoint = requestURI != null && requestURI.contains("/cart");
+        
+        if (isCartEndpoint) {
+            log.debug("JWT Authentication failed (expected for cart): method={}, uri={}, error={}", 
+                    request.getMethod(), requestURI, authException.getMessage());
+        } else {
+            log.error("🚫 JWT Authentication failed: method={}, uri={}, error={}", 
+                    request.getMethod(), requestURI, authException.getMessage());
+        }
+        
         ErrorCode errorCode = ErrorCode.UNAUTHENTICATED;
 
         response.setStatus(errorCode.getStatusCode().value());
