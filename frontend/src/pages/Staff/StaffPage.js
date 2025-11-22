@@ -9,9 +9,10 @@ import classNames from 'classnames/bind';
 
 // Sections
 import StaffProducts from './StaffProducts/StaffProducts';
-// import StaffVouchers from './StaffVouchers/StaffVouchers';
+import StaffVouchers from './StaffVouchers';
+import StaffBanners from './StaffBanners';
 // import StaffOrders from './StaffOrders/StaffOrders';
-// import StaffProfile from './StaffProfile/StaffProfile';
+import StaffProfile from './StaffProfile/StaffProfile';
 
 const cx = classNames.bind(styles);
 
@@ -127,10 +128,10 @@ function StaffPage() {
           <Routes>
             <Route index element={<StaffDashboard />} />
             <Route path="products" element={<StaffProducts />} />
-            <Route path="content" element={<StaffContentPlaceholder />} />
-            <Route path="vouchers" element={<StaffVouchersPlaceholder />} />
+            <Route path="content" element={<StaffBanners />} />
+            <Route path="vouchers" element={<StaffVouchers />} />
             <Route path="orders" element={<StaffOrdersPlaceholder />} />
-            <Route path="profile" element={<StaffProfilePlaceholder />} />
+            <Route path="profile" element={<StaffProfile />} />
           </Routes>
         </section>
       </div>
@@ -231,15 +232,7 @@ function StaffContentPlaceholder() {
   return <div className={cx('placeholder')}></div>;
 }
 
-function StaffVouchersPlaceholder() {
-  return <div className={cx('placeholder')}></div>;
-}
-
 function StaffOrdersPlaceholder() {
-  return <div className={cx('placeholder')}></div>;
-}
-
-function StaffProfilePlaceholder() {
   return <div className={cx('placeholder')}></div>;
 }
 

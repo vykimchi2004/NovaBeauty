@@ -1,0 +1,219 @@
+@import '../StaffVouchers/StaffVouchers.module.scss';
+
+.thumbnail {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e0e3eb;
+}
+
+.noImage {
+  color: #8f8a9b;
+  font-size: 12px;
+}
+
+.titleCell {
+  font-weight: 600;
+  color: #2b1b3d;
+  max-width: 200px;
+}
+
+.descriptionCell {
+  max-width: 250px;
+  color: #666;
+  font-size: 13px;
+}
+
+// Dropdown for product selection
+.dropdownSelect {
+  position: relative;
+  margin-top: 8px;
+
+  &.open .dropdownToggle {
+    border-color: #f25f7c;
+    box-shadow: 0 0 0 2px rgba(242, 95, 124, 0.15);
+  }
+}
+
+.dropdownToggle {
+  width: 100%;
+  border: 1px solid #e5e7f1;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.dropdownLabel {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #30374b;
+}
+
+.chevron {
+  transition: transform 0.2s;
+
+  &.open {
+    transform: rotate(180deg);
+  }
+}
+
+.dropdownMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #e5e7f1;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.15);
+  max-height: 260px;
+  overflow-y: auto;
+  z-index: 5;
+  padding: 12px;
+  text-align: left;
+
+  label {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 14px;
+    color: #30374b;
+    text-align: left;
+    justify-content: flex-start;
+
+    span {
+      text-align: left;
+    }
+  }
+}
+
+.helperText {
+  font-size: 12px;
+  color: #7a8091;
+  padding: 12px;
+  text-align: center;
+}
+
+// Add button styling
+.addBtn {
+  background: #e5677d;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  box-shadow: 0 6px 14px rgba(229, 103, 125, 0.35);
+
+  &:hover {
+    background: #d4556b;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(229, 103, 125, 0.4);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.detailModal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.detailHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e3eb;
+
+  h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #2b1b3d;
+  }
+}
+
+.detailBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detailImage {
+  img {
+    width: 100%;
+    max-height: 300px;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 1px solid #e0e3eb;
+  }
+}
+
+.detailInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detailRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  strong {
+    font-size: 14px;
+    color: #666;
+    font-weight: 600;
+  }
+
+  span {
+    font-size: 14px;
+    color: #2b1b3d;
+  }
+}
+
+.rejectionReason {
+  color: #c9372c !important;
+  font-style: italic;
+}
+
+// Action button disabled state (inherited from StaffVouchers but ensure it works)
+.actionBtn {
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #e0e0e0 !important;
+    color: #999 !important;
+    
+    &:hover {
+      transform: none;
+      background: #e0e0e0 !important;
+    }
+  }
+}
+
