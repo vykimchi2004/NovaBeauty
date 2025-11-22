@@ -20,13 +20,17 @@ spring:
     database-platform: org.hibernate.dialect.MySQLDialect
   # validate: Hibernate chi kiem tra cac bang, cot, kieu du lieu trong DB co phu hop voi entity trong code hay không. Neu khong khop → bao loi, khong tu sua.
   # update : Hibernate so sanh entity va DB → tu dong them hoac chinh sua bang/cot de khop. Tuy nhien, no khong xoa cac cot cu.
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 40MB
 
 #  Brevo Email Configuration
 brevo:
   api:
-    key: ${BREVO_API_KEY_NOVA}
+    key: ${BREVO_API_KEY_NOVA:change-me}
   sender:
-    email: ${BREVO_EMAIL} # Email ?� verify trong Brevo
+    email: ${BREVO_EMAIL:no-reply@example.com} # Email ?� verify trong Brevo
 
 #  Secret Key
 jwt:

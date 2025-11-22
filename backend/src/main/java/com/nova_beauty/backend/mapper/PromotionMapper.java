@@ -62,6 +62,7 @@ public interface PromotionMapper {
     @Mapping(target = "isActive", ignore = true)
     @Mapping(target = "categoryApply", ignore = true)
     @Mapping(target = "productApply", ignore = true)
+    @Mapping(target = "usageLimit", source = "usageLimit")
     void updatePromotion(@MappingTarget Promotion promotion, PromotionUpdateRequest request);
 
     @Named("mapCategoryListToIds")

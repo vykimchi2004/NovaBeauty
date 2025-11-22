@@ -40,6 +40,7 @@ public class SecurityConfig {
         "/vouchers/**",
         "/promotions/**",
         "/products/**",
+        "/categories/**",
         "/uploads/**",
         "/banners/active",
         "/error"  // Allow error endpoint to be accessed without authentication
@@ -96,7 +97,9 @@ public class SecurityConfig {
     @Bean
     JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        jwtGrantedAuthoritiesConverter.setAuthorityPrefix("");
+        jwtGrantedAuthoritiesConverter.setAuthorityPrefix("ROLE_"); // Thêm prefix "ROLE_" để hasRole() hoạt động
+        // Extract authorities từ claim "scope" thay vì "scp"
+        jwtGrantedAuthoritiesConverter.setAuthoritiesClaimName("scope");
 
         JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwtGrantedAuthoritiesConverter);

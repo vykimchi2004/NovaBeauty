@@ -20,8 +20,15 @@ public class ProductResponse {
     String name;
     String description;
     String size;
-    String author;
-    String publisher;
+    String brand;
+    String brandOrigin;
+    String manufacturingLocation;
+    String texture; // Kết cấu
+    String skinType; // Loại da
+    String characteristics;
+    String ingredients;
+    String uses;
+    String usageInstructions;
     Double weight;
     Double length;
     Double width;

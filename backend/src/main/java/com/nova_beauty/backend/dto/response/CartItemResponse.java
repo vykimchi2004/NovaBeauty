@@ -16,4 +16,5 @@ public class CartItemResponse {
     Double unitPrice;
     Integer quantity;
     Double finalPrice;
+    String colorCode; // Mã màu đã chọn
 }

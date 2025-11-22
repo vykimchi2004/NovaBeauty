@@ -19,6 +19,7 @@ import com.nova_beauty.backend.repository.VoucherRepository;
 import com.nova_beauty.backend.repository.OrderRepository;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -38,19 +39,19 @@ public class CartService {
     OrderRepository orderRepository;
 
     @Transactional
-    @PreAuthorize("hasAuthority('CUSTOMER')")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public Cart getOrCreateCartForCurrentCustomer() {
-        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(userEmail).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
         return cartRepository
                 .findByUserId(user.getId())
                 .orElseGet(() -> cartRepository.save(Cart.builder().user(user).build()));
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('CUSTOMER')")
-    public Cart addItem(String productId, int quantity) {
-        if (quantity <= 0) {
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public Cart addItem(String productId, int quantity, String colorCode) {
+        if (quantity == 0) {
             throw new AppException(ErrorCode.OUT_OF_STOCK);
         }
 
@@ -60,21 +61,57 @@ public class CartService {
                 .findById(productId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
 
-        CartItem cartItem = cartItemRepository
-                .findByCartIdAndProductId(cart.getId(), productId)
-                .orElse(CartItem.builder()
-                        .cart(cart)
-                        .product(product)
-                        .unitPrice(calculateUnitPrice(product))
-                        .quantity(0)
-                        .build());
+        // Tìm cartItem theo productId và colorCode (nếu có)
+        CartItem cartItem = null;
+        String normalizedColorCode = (colorCode != null && !colorCode.trim().isEmpty())
+                ? colorCode.trim()
+                : null;
 
-        cartItem.setQuantity(cartItem.getQuantity() + quantity);
-        double finalPrice = cartItem.getQuantity() * cartItem.getUnitPrice();
-        cartItem.setFinalPrice(finalPrice);
+        if (normalizedColorCode != null) {
+            cartItem = cartItemRepository
+                    .findByCartIdAndProductIdAndColorCode(cart.getId(), productId, normalizedColorCode)
+                    .orElse(null);
+        } else {
+            // Nếu không có colorCode, tìm cartItem không có colorCode
+            cartItem = cartItemRepository
+                    .findByCartIdAndProductId(cart.getId(), productId)
+                    .orElse(null);
+        }
 
-        cartItemRepository.save(cartItem);
+        // Nếu quantity âm và không có item, không làm gì
+        if (quantity < 0 && cartItem == null) {
+            return cart;
+        }
+
+        // Nếu chưa có item và quantity dương, tạo mới
+        if (cartItem == null) {
+            cartItem = CartItem.builder()
+                    .cart(cart)
+                    .product(product)
+                    .unitPrice(calculateUnitPrice(product))
+                    .quantity(0)
+                    .colorCode(normalizedColorCode)
+                    .build();
+        }
+
+        int newQuantity = cartItem.getQuantity() + quantity;
+        
+        // Nếu quantity mới <= 0, xóa item
+        if (newQuantity <= 0) {
+            cartItemRepository.delete(cartItem);
+            // Refresh cart để cập nhật cartItems collection
+            cartRepository.flush();
+            cart = cartRepository.findById(cart.getId()).orElse(cart);
+        } else {
+            cartItem.setQuantity(newQuantity);
+            double finalPrice = cartItem.getQuantity() * cartItem.getUnitPrice();
+            cartItem.setFinalPrice(finalPrice);
+            cartItemRepository.save(cartItem);
+        }
+        
         recalcCartTotals(cart);
+        // Refresh cart một lần nữa để đảm bảo cartItems được cập nhật
+        cart = cartRepository.findById(cart.getId()).orElse(cart);
         return cart;
     }
 
@@ -107,20 +144,22 @@ public class CartService {
     }
 
     private void recalcCartTotals(Cart cart) {
-        double subtotal = cart.getCartItems() == null
+        // Query lại cartItems từ database để đảm bảo tính toán chính xác
+        List<CartItem> cartItems = cartItemRepository.findByCartId(cart.getId());
+        double subtotal = cartItems == null || cartItems.isEmpty()
                 ? 0.0
-                : cart.getCartItems().stream()
+                : cartItems.stream()
                         .mapToDouble(CartItem::getFinalPrice)
                         .sum();
         cart.setSubtotal(subtotal);
-        double voucherDiscount = cart.getVoucherDiscount();
-        double total = Math.max(0.0, subtotal - (voucherDiscount == 0 ? 0.0 : voucherDiscount));
+        double voucherDiscount = cart.getVoucherDiscount() != null ? cart.getVoucherDiscount() : 0.0;
+        double total = Math.max(0.0, subtotal - voucherDiscount);
         cart.setTotalAmount(total);
         cartRepository.save(cart);
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('CUSTOMER')")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public Cart applyVoucher(String code) {
         Cart cart = getOrCreateCartForCurrentCustomer();
         if (cart.getCartItems() == null || cart.getCartItems().isEmpty()) {

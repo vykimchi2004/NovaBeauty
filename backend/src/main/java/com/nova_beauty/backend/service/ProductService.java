@@ -33,6 +33,7 @@ import com.nova_beauty.backend.repository.ProductRepository;
 import com.nova_beauty.backend.repository.PromotionRepository;
 import com.nova_beauty.backend.repository.VoucherRepository;
 import com.nova_beauty.backend.repository.UserRepository;
+import com.nova_beauty.backend.repository.CartItemRepository;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -51,6 +52,7 @@ public class ProductService {
     ProductMediaRepository productMediaRepository;
     PromotionRepository promotionRepository;
     VoucherRepository voucherRepository;
+    CartItemRepository cartItemRepository;
     ProductMapper productMapper;
 
     // ========== CREATE OPERATIONS ==========
@@ -134,7 +136,16 @@ public class ProductService {
         }
 
         // Cáº­p nháº­t thÃ´ng tin sáº£n pháº©m
+        ProductStatus originalStatus = product.getStatus(); // Lưu status hiện tại
         productMapper.updateProduct(product, request);
+        // Đảm bảo status không bị null (giữ nguyên status hiện tại nếu request không có status)
+        if (product.getStatus() == null) {
+            product.setStatus(originalStatus);
+        }
+        // Chỉ cho phép admin thay đổi status
+        if (request.getStatus() != null && isAdmin) {
+            product.setStatus(request.getStatus());
+        }
         product.setUpdatedAt(LocalDateTime.now());
 
         // TÃ­nh láº¡i giÃ¡ náº¿u unitPrice, tax, hoáº·c discountValue Ä‘Æ°á»£c cáº­p nháº­t
@@ -185,19 +196,9 @@ public class ProductService {
             }
         }
 
-        // Cáº­p nháº­t media náº¿u cÃ³
+        // Cáº­p nháº­t media náº¿u cÃ³ - chá»‰ xÃ³a media khÃ´ng cÃ²n trong danh sÃ¡ch má»›i, thÃªm media má»›i
         if (request.getImageUrls() != null || request.getVideoUrls() != null) {
-            // XÃ³a media cÅ© vÃ  file váº­t lÃ½
-            if (product.getMediaList() != null && !product.getMediaList().isEmpty()) {
-                // XÃ³a file váº­t lÃ½
-                for (ProductMedia oldMedia : product.getMediaList()) {
-                    deletePhysicalFileByUrl(oldMedia.getMediaUrl());
-                }
-                // XÃ³a media khá»i database
-                productMediaRepository.deleteAll(product.getMediaList());
-            }
-            // Gáº¯n media má»›i tá»« request
-            attachMediaFromUpdateRequest(product, request);
+            updateMediaList(product, request);
         }
 
         Product savedProduct = productRepository.save(product);
@@ -233,16 +234,23 @@ public class ProductService {
             voucherRepository.save(voucher);
         }
 
-        // 3. Set product.promotion = null (náº¿u cÃ³ promotion trá»±c tiáº¿p)
+        // 3. Xóa tất cả CartItem liên quan đến product này
+        List<CartItem> cartItems = cartItemRepository.findByProductId(productId);
+        if (!cartItems.isEmpty()) {
+            cartItemRepository.deleteAll(cartItems);
+            log.info("Deleted {} cart items for product: {}", cartItems.size(), productId);
+        }
+
+        // 4. Set product.promotion = null (náº¿u cÃ³ promotion trá»±c tiáº¿p)
         if (product.getPromotion() != null) {
             product.setPromotion(null);
             productRepository.save(product);
         }
 
-        // 4. XÃ³a file media váº­t lÃ½ trong thÆ° má»¥c product_media (náº¿u cÃ³)
+        // 5. XÃ³a file media váº­t lÃ½ trong thÆ° má»¥c product_media (náº¿u cÃ³)
         deleteMediaFilesIfExists(product);
 
-        // 5. XÃ³a product
+        // 6. XÃ³a product
         productRepository.delete(product);
         log.info("Product deleted: {} by user: {}", productId, user.getEmail());
     }
@@ -365,6 +373,12 @@ public class ProductService {
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
         List<Product> products = productRepository.findBySubmittedBy(user);
+        // Fetch inventory để đảm bảo stockQuantity được load
+        products.forEach(product -> {
+            if (product.getInventory() != null) {
+                product.getInventory().getStockQuantity(); // Trigger lazy loading
+            }
+        });
         return products.stream().map(productMapper::toResponse).toList();
     }
 
@@ -508,6 +522,117 @@ public class ProductService {
                 defaultMedia.setDefault(true);
             }
             product.setDefaultMedia(defaultMedia);
+        }
+    }
+
+    private void updateMediaList(Product product, ProductUpdateRequest request) {
+        // Lấy danh sách URL từ request
+        List<String> requestedUrls = new ArrayList<>();
+        if (request.getImageUrls() != null) {
+            requestedUrls.addAll(request.getImageUrls());
+        }
+        if (request.getVideoUrls() != null) {
+            requestedUrls.addAll(request.getVideoUrls());
+        }
+
+        // Đảm bảo collection tồn tại
+        if (product.getMediaList() == null) {
+            product.setMediaList(new ArrayList<>());
+        }
+
+        // Tạo map để tra cứu media hiện tại theo URL (trước khi remove)
+        java.util.Map<String, ProductMedia> existingMediaMap = new java.util.HashMap<>();
+        for (ProductMedia media : product.getMediaList()) {
+            if (media.getMediaUrl() != null) {
+                existingMediaMap.put(media.getMediaUrl(), media);
+            }
+        }
+
+        // Xóa những media không còn trong danh sách mới và xóa file vật lý
+        List<ProductMedia> mediaToRemove = new ArrayList<>();
+        for (ProductMedia existingMedia : product.getMediaList()) {
+            if (!requestedUrls.contains(existingMedia.getMediaUrl())) {
+                mediaToRemove.add(existingMedia);
+                // Xóa file vật lý
+                deletePhysicalFileByUrl(existingMedia.getMediaUrl());
+                // Xóa khỏi map để tránh sử dụng media đã bị remove
+                existingMediaMap.remove(existingMedia.getMediaUrl());
+            }
+        }
+        // Remove từ collection (orphanRemoval sẽ tự động xóa khỏi database)
+        product.getMediaList().removeAll(mediaToRemove);
+
+        // Thêm media mới và cập nhật displayOrder, isDefault cho tất cả media
+        int displayOrder = 0;
+        ProductMedia defaultMedia = null;
+        String defaultMediaUrl = request.getDefaultMediaUrl();
+
+        // Xử lý imageUrls
+        if (request.getImageUrls() != null) {
+            for (String url : request.getImageUrls()) {
+                if (url == null || url.isBlank()) continue;
+                
+                ProductMedia media = existingMediaMap.get(url);
+                if (media == null) {
+                    // Media mới - tạo mới
+                    media = ProductMedia.builder()
+                            .mediaUrl(url)
+                            .mediaType("IMAGE")
+                            .isDefault(url.equals(defaultMediaUrl))
+                            .displayOrder(displayOrder++)
+                            .product(product)
+                            .build();
+                    product.getMediaList().add(media);
+                } else {
+                    // Media đã tồn tại - chỉ cập nhật displayOrder và isDefault
+                    media.setDisplayOrder(displayOrder++);
+                    media.setDefault(url.equals(defaultMediaUrl));
+                }
+                
+                if (media.isDefault()) {
+                    defaultMedia = media;
+                }
+            }
+        }
+
+        // Xử lý videoUrls
+        if (request.getVideoUrls() != null) {
+            for (String url : request.getVideoUrls()) {
+                if (url == null || url.isBlank()) continue;
+                
+                ProductMedia media = existingMediaMap.get(url);
+                if (media == null) {
+                    // Media mới - tạo mới
+                    media = ProductMedia.builder()
+                            .mediaUrl(url)
+                            .mediaType("VIDEO")
+                            .isDefault(url.equals(defaultMediaUrl))
+                            .displayOrder(displayOrder++)
+                            .product(product)
+                            .build();
+                    product.getMediaList().add(media);
+                } else {
+                    // Media đã tồn tại - chỉ cập nhật displayOrder và isDefault
+                    media.setDisplayOrder(displayOrder++);
+                    media.setDefault(url.equals(defaultMediaUrl));
+                }
+                
+                if (media.isDefault()) {
+                    defaultMedia = media;
+                }
+            }
+        }
+
+        // Đặt default media
+        if (defaultMedia != null) {
+            product.setDefaultMedia(defaultMedia);
+        } else if (!product.getMediaList().isEmpty()) {
+            // Nếu không có media nào được đánh dấu là default, chọn media đầu tiên
+            ProductMedia firstMedia = product.getMediaList().get(0);
+            firstMedia.setDefault(true);
+            product.setDefaultMedia(firstMedia);
+        } else {
+            product.setDefaultMedia(null);
         }
     }
 

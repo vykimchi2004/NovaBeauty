@@ -34,7 +34,7 @@ public interface ProductMapper {
     @Mapping(target = "defaultMediaUrl", source = "defaultMedia.mediaUrl", qualifiedByName = "normalizeUrl")
     @Mapping(target = "reviewCount", source = "reviews", qualifiedByName = "mapReviewCount")
     @Mapping(target = "averageRating", source = "reviews", qualifiedByName = "mapAverageRating")
-    @Mapping(target = "stockQuantity", source = "inventory.stockQuantity")
+    @Mapping(target = "stockQuantity", source = "inventory", qualifiedByName = "mapStockQuantity")
     ProductResponse toResponse(Product product);
 
     // Request to Entity
@@ -65,6 +65,7 @@ public interface ProductMapper {
     @Mapping(target = "inventory", ignore = true)
     @Mapping(target = "banners", ignore = true)
     @Mapping(target = "quantitySold", ignore = true)
+    @Mapping(target = "status", ignore = true) // Giữ nguyên status hiện tại, chỉ admin mới có thể thay đổi
     void updateProduct(@MappingTarget Product product, ProductUpdateRequest request);
 
     @Named("mapMediaUrls")
@@ -121,5 +122,10 @@ public interface ProductMapper {
     @Named("mapPromotionExpiryDate")
     default java.time.LocalDate mapPromotionExpiryDate(Promotion promotion) {
         return promotion != null ? promotion.getExpiryDate() : null;
+    }
+
+    @Named("mapStockQuantity")
+    default Integer mapStockQuantity(com.nova_beauty.backend.entity.Inventory inventory) {
+        return inventory != null ? inventory.getStockQuantity() : null;
     }
 }

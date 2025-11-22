@@ -21,18 +21,29 @@ public class CartController {
     CartService cartService;
     CartMapper cartMapper;
 
+    @GetMapping
+    @PreAuthorize("hasRole('CUSTOMER')")
+    ApiResponse<CartResponse> getCart() {
+        var cart = cartService.getOrCreateCartForCurrentCustomer();
+        return ApiResponse.<CartResponse>builder()
+                .result(cartMapper.toResponse(cart))
+                .build();
+    }
+
     @PostMapping("/items")
-    @PreAuthorize("hasAuthority('CUSTOMER')")
+    @PreAuthorize("hasRole('CUSTOMER')")
     ApiResponse<CartResponse> addItem(
-            @RequestParam("productId") String productId, @RequestParam("quantity") int quantity) {
-        var cart = cartService.addItem(productId, quantity);
+            @RequestParam("productId") String productId, 
+            @RequestParam("quantity") int quantity,
+            @RequestParam(value = "colorCode", required = false) String colorCode) {
+        var cart = cartService.addItem(productId, quantity, colorCode);
         return ApiResponse.<CartResponse>builder()
                 .result(cartMapper.toResponse(cart))
                 .build();
     }
 
     @PostMapping("/apply-voucher")
-    @PreAuthorize("hasAuthority('CUSTOMER')")
+    @PreAuthorize("hasRole('CUSTOMER')")
     ApiResponse<CartResponse> applyVoucher(@RequestParam("code") String code) {
         var cart = cartService.applyVoucher(code);
         return ApiResponse.<CartResponse>builder()

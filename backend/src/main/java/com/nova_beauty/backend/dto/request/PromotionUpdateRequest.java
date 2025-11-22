@@ -49,6 +49,9 @@ public class PromotionUpdateRequest {
     @Future(message = "NgÃ y káº¿t thÃºc pháº£i lÃ  ngÃ y trong tÆ°Æ¡ng lai")
     LocalDate expiryDate;
 
+    @Min(value = 1, message = "Giới hạn sử dụng phải lớn hơn 0")
+    Integer usageLimit;
+
     // Ãp dá»¥ng theo danh má»¥c
     Set<String> categoryIds;
 

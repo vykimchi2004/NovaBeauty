@@ -59,6 +59,9 @@ public class Promotion {
     @Builder.Default
     Integer usageCount = 0;
 
+    @Column(name = "usage_limit")
+    Integer usageLimit;
+
     @Column(name = "is_active")
     Boolean isActive;
 

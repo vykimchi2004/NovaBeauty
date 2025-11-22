@@ -204,7 +204,8 @@ public class AuthenticationService {
 
         if (user.getRole() != null) {
             Role role = user.getRole();
-            stringJoiner.add("ROLE_" + role.getName());
+            // Thêm role name trực tiếp (không có prefix ROLE_) vì SecurityConfig đã set prefix là ""
+            stringJoiner.add(role.getName());
             if (!CollectionUtils.isEmpty(role.getPermissions()))
                 role.getPermissions().forEach(permission -> stringJoiner.add(permission.getName()));
         }

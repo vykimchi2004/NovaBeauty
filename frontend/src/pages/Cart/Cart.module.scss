@@ -91,11 +91,6 @@ $white: #fff;
     tr {
       border-bottom: 1px solid #f1f3f5;
       transition: background-color 0.15s ease;
-
-      &:hover {
-        background: $primary-50;
-      }
-
       &:last-child {
         border-bottom: none;
       }
@@ -112,6 +107,12 @@ $white: #fff;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.productColorCode {
+  font-size: 13px;
+  color: $primary-700;
+  font-weight: 600;
 }
 
 .productName {
@@ -186,7 +187,7 @@ $white: #fff;
   color: $text-dark;
   background: transparent;
   outline: none;
-  -moz-appearance: textfield;
+
 
   &::-webkit-outer-spin-button,
   &::-webkit-inner-spin-button {
