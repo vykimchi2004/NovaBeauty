@@ -48,7 +48,8 @@ function Cart() {
         originalPrice: item.unitPrice, // Có thể lấy từ product nếu cần
         quantity: item.quantity,
         selected: true, // Mặc định chọn tất cả
-        finalPrice: item.finalPrice
+        finalPrice: item.finalPrice,
+        colorCode: item.colorCode || null,
       }));
 
       setCartItems(items);
@@ -77,7 +78,13 @@ function Cart() {
   };
 
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price || 0) + ' ₫';
+    const value = Math.round(Number(price) || 0);
+    return (
+      new Intl.NumberFormat('vi-VN', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(value) + ' ₫'
+    );
   };
 
   const handleSelectAll = (checked) => {
@@ -92,39 +99,48 @@ function Cart() {
     const item = cartItems.find(i => i.id === id);
     if (!item) return;
 
-    const newQuantity = Math.max(1, item.quantity + delta);
+    const newQuantity = item.quantity + delta;
     
     try {
-      // Backend chưa có update endpoint, tạm thời xóa và thêm lại
-      // Hoặc có thể gọi addItem với quantity âm/dương
-      // Tạm thời update local state và reload cart
-      await cartService.addItem(item.productId, delta);
+      if (newQuantity < 0) {
+        // Nếu quantity về âm, không làm gì
+        notify.warning('Số lượng không thể nhỏ hơn 0');
+        return;
+      }
+      
+      // Sử dụng addItem với delta để tăng/giảm số lượng
+      // Backend sẽ tự động cộng thêm delta vào quantity hiện tại
+      // Nếu quantity về 0 hoặc âm, backend sẽ tự động xóa item
+      await cartService.addItem(item.productId, delta, item.colorCode || null);
       await loadCart();
     } catch (error) {
       console.error('Error updating quantity:', error);
-      notify.error('Không thể cập nhật số lượng. Vui lòng thử lại.');
+      notify.error(error.message || 'Không thể cập nhật số lượng. Vui lòng thử lại.');
     }
   };
 
   const handleRemoveItem = async (id) => {
-    const confirmed = await notify.confirm(
-      'Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?',
-      'Xác nhận xóa sản phẩm',
-      'Xóa',
-      'Hủy'
-    );
-    
-    if (!confirmed) return;
-
     try {
-      // Backend chưa có remove endpoint, tạm thời dùng cách khác
-      // Có thể implement logic xóa trong backend
-      notify.info('Chức năng xóa đang được phát triển. Vui lòng liên hệ admin.');
-      // await cartService.removeItem(id);
-      // await loadCart();
+      const item = cartItems.find(i => i.id === id);
+      if (!item) {
+        console.warn('[Cart] Item not found:', id);
+        return;
+      }
+      
+      console.log('[Cart] Removing item:', { id, productId: item.productId, quantity: item.quantity });
+      
+      // Xóa bằng cách thêm với quantity âm bằng với số lượng hiện tại
+      // Backend sẽ tự động xóa item khi quantity về 0 hoặc âm
+      await cartService.addItem(item.productId, -item.quantity, item.colorCode || null);
+      
+      // Reload cart để cập nhật UI
+      await loadCart();
+      
+      // Dispatch event để cập nhật cart count trong header
+      window.dispatchEvent(new CustomEvent('cartUpdated'));
     } catch (error) {
-      console.error('Error removing item:', error);
-      notify.error('Không thể xóa sản phẩm. Vui lòng thử lại.');
+      console.error('[Cart] Error removing item:', error);
+      notify.error(error.message || 'Không thể xóa sản phẩm. Vui lòng thử lại.');
     }
   };
 
@@ -214,6 +230,11 @@ function Cart() {
                     <td>
                       <div className={cx('productInfo')}>
                         <div className={cx('productName')}>{item.name}</div>
+                        {item.colorCode && (
+                          <div className={cx('productColorCode')}>
+                            Mã màu: <span>{item.colorCode}</span>
+                          </div>
+                        )}
                         <div className={cx('productPrice')}>
                           <span className={cx('currentPrice')}>{formatPrice(item.currentPrice)}</span>
                         </div>

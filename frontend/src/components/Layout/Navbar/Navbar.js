@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import classNames from 'classnames/bind';
 import styles from './Navbar.module.scss';
+import { getRootCategories } from '~/services/category';
 
 const cx = classNames.bind(styles);
 
@@ -16,6 +17,7 @@ function Navbar({ open = false, setOpen = () => {}, onLoginClick = () => {} }) {
   }
 
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 992 : false);
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 992);
@@ -34,6 +36,23 @@ function Navbar({ open = false, setOpen = () => {}, onLoginClick = () => {} }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, setOpen]);
+
+  // Fetch categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await getRootCategories();
+        // Filter only active categories
+        const activeCategories = (data || []).filter(cat => cat.status !== false);
+        setCategories(activeCategories);
+      } catch (error) {
+        console.error('Error fetching categories for navbar:', error);
+        setCategories([]);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   return (
     <nav className={cx('navbar')}>
@@ -57,36 +76,14 @@ function Navbar({ open = false, setOpen = () => {}, onLoginClick = () => {} }) {
             Khuyến mãi hot
           </Link>
         </li>
-        <li>
-          <Link to="/makeup" onClick={() => setOpen(false)}>
-            Trang điểm
-          </Link>
-        </li>
-        <li>
-          <Link to="/skincare" onClick={() => setOpen(false)}>
-            Chăm sóc da
-          </Link>
-        </li>
-        <li>
-          <Link to="/personal-care" onClick={() => setOpen(false)}>
-            Chăm sóc cơ thể
-          </Link>
-        </li>
-        <li>
-          <Link to="/haircare" onClick={() => setOpen(false)}>
-            Chăm sóc tóc
-          </Link>
-        </li>
-        <li>
-          <Link to="/perfume" onClick={() => setOpen(false)}>
-            Nước hoa
-          </Link>
-        </li>
-        <li>
-          <Link to="/accessories" onClick={() => setOpen(false)}>
-            Phụ kiện
-          </Link>
-        </li>
+        {/* Dynamic categories from API - added to the right */}
+        {categories.map((category) => (
+          <li key={category.id}>
+            <Link to={`/products?category=${category.id}`} onClick={() => setOpen(false)}>
+              {category.name}
+            </Link>
+          </li>
+        ))}
 
         {/* user footer pinned to bottom on mobile drawer; render only on mobile */}
         {isMobile && (

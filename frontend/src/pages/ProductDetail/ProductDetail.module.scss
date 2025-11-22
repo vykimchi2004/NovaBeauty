@@ -237,6 +237,43 @@
   color: #2c3e50;
 }
 
+.color-codes-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.color-code-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+  border: 1px solid #e5677d;
+  border-radius: 20px;
+  color: #e5677d;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.color-code-button {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: linear-gradient(135deg, #ffeef0 0%, #ffe0e5 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(229, 103, 125, 0.2);
+  }
+  
+  &.selected {
+    background: linear-gradient(135deg, #e5677d 0%, #d4556f 100%);
+    color: #fff;
+    border-color: #e5677d;
+    box-shadow: 0 2px 8px rgba(229, 103, 125, 0.3);
+  }
+}
+
 .color-name {
   color: #666;
   font-weight: 400;

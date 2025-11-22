@@ -13,6 +13,7 @@
   }
 }
 
+
 /* Cột trái */
 .sidebar {
   width: 280px;
@@ -253,6 +254,13 @@
   font-size: 13px;
   color: #555;
   margin-bottom: 6px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .price-section {
@@ -274,4 +282,15 @@
 .discount {
   color: #e60023;
   font-weight: 700;
+}
+
+.loading,
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #888;
+  font-size: 16px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin-top: 20px;
 }

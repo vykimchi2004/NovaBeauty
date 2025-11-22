@@ -13,7 +13,51 @@ class ApiClient {
 
     // Get auth token from storage
     getAuthToken() {
-        return storage.get(STORAGE_KEYS.TOKEN);
+        try {
+            // Lấy trực tiếp từ localStorage để tránh JSON.parse có thể gây lỗi
+            const rawToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
+            if (!rawToken) {
+                console.warn('[API] No token found in localStorage');
+                return null;
+            }
+
+            let token;
+            try {
+                token = JSON.parse(rawToken);
+            } catch (e) {
+                // Nếu không parse được, có thể token được lưu dạng string thuần
+                token = rawToken;
+            }
+
+            // Token có thể là string hoặc object, cần extract string
+            if (!token) {
+                console.warn('[API] Token is null or empty');
+                return null;
+            }
+            
+            // Nếu token là string, trả về trực tiếp (loại bỏ dấu ngoặc kép nếu có)
+            if (typeof token === 'string') {
+                // Loại bỏ dấu ngoặc kép thừa nếu có
+                const cleanToken = token.replace(/^["']|["']$/g, '');
+                return cleanToken;
+            }
+            
+            // Nếu token là object, thử extract từ các field phổ biến
+            if (typeof token === 'object') {
+                const extractedToken = token.accessToken || token.token || token.value || null;
+                if (extractedToken) {
+                    return typeof extractedToken === 'string' ? extractedToken : String(extractedToken);
+                }
+                console.warn('[API] Token is object but no valid field found:', Object.keys(token));
+                return null;
+            }
+            
+            console.warn('[API] Token has unexpected type:', typeof token);
+            return null;
+        } catch (error) {
+            console.error('[API] Error getting token:', error);
+            return null;
+        }
     }
 
     // Build full URL
@@ -29,8 +73,10 @@ class ApiClient {
         };
 
         const token = this.getAuthToken();
-        if (token) {
-            headers.Authorization = `Bearer ${token}`;
+        if (token && typeof token === 'string' && token.trim().length > 0) {
+            headers.Authorization = `Bearer ${token.trim()}`;
+        } else if (process.env.NODE_ENV === 'development') {
+            console.warn('[API] No valid token found, request will be unauthenticated');
         }
 
         return headers;
@@ -63,14 +109,25 @@ class ApiClient {
                 }
             }
             
+            // Log chi tiết cho 401/403 để debug
+            if (response.status === 401 || response.status === 403) {
+                console.error('[API] Auth error:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    message: message,
+                    data: data,
+                    url: response.url
+                });
+            }
+            
             // Thay thế "Uncategorized error" bằng message rõ ràng hơn
-            if (message === 'Uncategorized error' || message.includes('Uncategorized error')) {
+            if (message === 'Uncategorized error' || message.includes('Uncategorized error') || !message || message === '') {
                 switch (response.status) {
                     case 400:
                         message = 'Dữ liệu đầu vào không hợp lệ. Vui lòng kiểm tra lại các trường bắt buộc.';
                         break;
                     case 401:
-                        message = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+                        message = 'Phiên đăng nhập đã hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.';
                         break;
                     case 403:
                         message = 'Bạn không có quyền thực hiện thao tác này.';
@@ -134,6 +191,16 @@ class ApiClient {
         const hasQueryParams = url.includes('?');
         const body = hasQueryParams ? undefined : (isFormData ? data : JSON.stringify(data));
 
+        // Log request details để debug (luôn log cho cart endpoints)
+        if (endpoint.includes('/cart')) {
+            console.log('[API] POST request:', {
+                url,
+                hasAuth: !!headers.Authorization,
+                authHeader: headers.Authorization ? `${headers.Authorization.substring(0, 30)}...` : 'none',
+                allHeaders: Object.keys(headers),
+            });
+        }
+
         try {
             const response = await fetch(url, {
                 method: 'POST',
@@ -141,6 +208,16 @@ class ApiClient {
                 body,
                 ...options,
             });
+
+            // Log response status (luôn log cho cart endpoints)
+            if (endpoint.includes('/cart')) {
+                console.log('[API] POST response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    ok: response.ok,
+                    url: response.url
+                });
+            }
 
             return await this.handleResponse(response);
         } catch (error) {

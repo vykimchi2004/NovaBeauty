@@ -129,3 +129,12 @@
 .label {
   font-weight: 600;
 }
+
+.loading,
+.empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #888;
+  font-size: 16px;
+  grid-column: 1 / -1;
+}

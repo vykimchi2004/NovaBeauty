@@ -11,7 +11,6 @@
     display: flex;
     list-style: none;
     margin: 0;
-    padding: 4px 8px;
     color: #ffffff;
     font-weight: 600;
     font-size: clamp(11px, 1.6vw, 18px); /* tự co font theo kích thước màn hình */
@@ -27,7 +26,7 @@
 
       a {
         display: block;
-        padding: 10px 12px; /* roomy clickable area */
+        padding: 15px 12px; /* roomy clickable area */
         text-decoration: none;
         color: inherit;
         border-radius: 6px;
@@ -42,7 +41,7 @@
         background: rgba(255, 255, 255, 0.15);
         color: #ffffff;
         transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+       
       }
 
       /* Active state */

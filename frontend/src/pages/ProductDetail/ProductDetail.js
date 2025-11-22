@@ -17,66 +17,7 @@ const TABS = [
   { id: 'highlights', label: 'Review' },
 ];
 
-const PRODUCT_INFO = [
-  { label: 'Nơi sản xuất', value: 'Hàn Quốc' },
-  { label: 'Thương hiệu', value: 'KLAIRS' },
-  { label: 'Đặc tính', value: 'Ngày Và Đêm' },
-  { label: 'Vấn đề về da', value: 'Da thiếu nước, thiếu ẩm' },
-  { label: 'Kết cấu', value: 'Dạng nước' },
-  { label: 'Xuất xứ thương hiệu', value: 'Hàn Quốc' },
-];
-
-const DESCRIPTION_PARAGRAPHS = [
-  'Nước hoa hồng dịu nhẹ giúp cân bằng và làm tươi mới làn da ngay sau khi làm sạch.',
-  'Kết cấu mỏng nhẹ, thấm nhanh, phù hợp sử dụng hằng ngày cho mọi loại da.',
-];
-
-const INGREDIENTS = [
-  { title: 'Sodium Hyaluronate', description: 'Khóa ẩm và giữ nước lâu dài cho da căng mịn.' },
-  { title: 'Chiết xuất lô hội', description: 'Làm dịu tức thì, giảm đỏ rát và hỗ trợ phục hồi da.' },
-  { title: 'Phyto-Oligo', description: 'Nuôi dưỡng hàng rào bảo vệ, tăng độ mềm mượt.' },
-];
-
-const BENEFITS = [
-  { title: 'Cân bằng pH', description: 'Đưa da về trạng thái ổn định sau bước làm sạch.' },
-  { title: 'Dưỡng ẩm nhanh', description: 'Bổ sung độ ẩm tức thì, hạn chế căng khô.' },
-  { title: 'Tăng hiệu quả dưỡng da', description: 'Giúp các sản phẩm kế tiếp thẩm thấu tốt hơn.' },
-];
-
-const HOW_TO_STEPS = [
-  { title: 'Bước 1', description: 'Làm sạch da và lau khô nhẹ nhàng.' },
-  { title: 'Bước 2', description: 'Thấm toner ra bông hoặc tay, áp đều lên mặt.' },
-  { title: 'Bước 3', description: 'Tiếp tục serum và kem dưỡng yêu thích.' },
-];
-const HIGHLIGHTS = [
-  { title: 'Thành phần lành tính', description: 'Không cồn, không hương liệu, thân thiện làn da nhạy cảm.' },
-  { title: 'Hiệu quả nhanh', description: 'Da mềm hơn rõ rệt chỉ sau vài lần dùng.' },
-  { title: 'Phù hợp nhiều loại da', description: 'Giữ ẩm tốt cho da khô, vẫn nhẹ nhàng cho da dầu.' },
-];
-
 const REVIEW_STARS = [1, 2, 3, 4, 5];
-
-const createMockProduct = (productId) => ({
-  id: productId,
-  brand: 'NOVA BEAUTY',
-  name: `Sản phẩm làm đẹp cao cấp #${productId}`,
-  description: 'Toner dịu nhẹ dưỡng ẩm mỗi ngày, phù hợp mọi loại da.',
-  price: `${299000 + (productId - 1) * 10000}`,
-  oldPrice: `${399000 + (productId - 1) * 10000}`,
-  rating: 5,
-  reviews: 12,
-  sku: `SKU-${String(productId).padStart(6, '0')}`,
-  origin: 'Hàn Quốc',
-  images: [image1, image1, image1, image1],
-  colors: [
-    { id: 1, name: '02 Affection', value: '#FF69B4' },
-    { id: 2, name: '01 Natural', value: '#8B4513' },
-    { id: 3, name: '03 Coral', value: '#FF6347' },
-    { id: 4, name: '04 Red', value: '#DC143C' },
-    { id: 5, name: '05 Pink', value: '#FFB6C1' },
-    { id: 6, name: '06 Green', value: '#90EE90' },
-  ],
-});
 
 const cx = classNames.bind(styles);
 
@@ -85,12 +26,12 @@ function ProductDetail() {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedColor, setSelectedColor] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [activeTab, setActiveTab] = useState('description');
   const [showFixedTabs, setShowFixedTabs] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [selectedColorCode, setSelectedColorCode] = useState(null); // Mã màu đã chọn
   const tabsSectionRef = useRef(null);
   const tabsContainerRef = useRef(null);
   const contentRefs = {
@@ -116,27 +57,8 @@ function ProductDetail() {
         setProduct(productData);
       } catch (err) {
         console.error('[ProductDetail] Error loading product:', err);
-        console.log('[ProductDetail] API failed, using mock data for testing');
-        
-        // Fallback to mock data for testing
-        // Try to extract number from ID, or use 1 as default
-        let productId = 1;
-        const numericId = Number(id);
-        if (!isNaN(numericId) && numericId > 0) {
-          productId = numericId;
-        } else if (id && id.length > 0) {
-          // If ID is UUID or string, use hash to get a number between 1-10
-          let hash = 0;
-          for (let i = 0; i < id.length; i++) {
-            hash = ((hash << 5) - hash) + id.charCodeAt(i);
-            hash = hash & hash; // Convert to 32bit integer
-          }
-          productId = Math.abs(hash % 10) + 1; // Number between 1-10
-        }
-        
-        console.log('[ProductDetail] Using mock product with ID:', productId);
-        setProduct(createMockProduct(productId));
-        setError(null); // Clear error, use mock data silently
+        setError(err.message || 'Không thể tải thông tin sản phẩm. Vui lòng thử lại.');
+        setProduct(null);
       } finally {
         setLoading(false);
       }
@@ -221,37 +143,92 @@ function ProductDetail() {
       return;
     }
 
+    // Kiểm tra user role
+    let user = null;
+    try {
+      const userRaw = storage.get(STORAGE_KEYS.USER);
+      if (userRaw) user = typeof userRaw === 'string' ? JSON.parse(userRaw) : userRaw;
+    } catch (e) {
+      console.error('[ProductDetail] Error parsing user from storage:', e);
+    }
+    
+    const userRole = user?.role?.name || user?.roleName || '';
+    console.log('[ProductDetail] User info:', { 
+      hasToken: !!token, 
+      tokenLength: typeof token === 'string' ? token.length : 'N/A',
+      userRole: userRole,
+      userId: user?.id || 'N/A'
+    });
+
     if (!product || !product.id) {
       notify.error('Sản phẩm không tồn tại');
       return;
     }
 
-    // Kiểm tra xem product.id có phải UUID không (mock data có id là số)
-    // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 ký tự với dấu gạch ngang)
-    const isUUID = typeof product.id === 'string' && product.id.length === 36 && product.id.includes('-');
-    if (!isUUID) {
-      notify.warning('Sản phẩm này chỉ để xem thử. Vui lòng chọn sản phẩm thật từ danh sách để thêm vào giỏ hàng.');
+    // Kiểm tra nếu sản phẩm có mã màu thì phải chọn màu trước
+    const hasColorCodes = colorCodes && colorCodes.length > 0;
+    if (hasColorCodes && !selectedColorCode) {
+      notify.warning('Vui lòng chọn mã màu trước khi thêm vào giỏ hàng');
       return;
     }
 
     try {
       setAddingToCart(true);
-      console.log('[ProductDetail] Adding to cart - productId:', product.id, 'quantity:', quantity);
-      // Sử dụng product.id thật từ API (UUID)
-      await cartService.addItem(product.id, quantity);
+      console.log('[ProductDetail] Adding to cart - productId:', product.id, 'quantity:', quantity, 'colorCode:', selectedColorCode);
+      await cartService.addItem(product.id, quantity, selectedColorCode || null);
       
       // Dispatch event để cập nhật cart count trong header
       window.dispatchEvent(new CustomEvent('cartUpdated'));
       
       notify.success('Đã thêm sản phẩm vào giỏ hàng!');
     } catch (error) {
-      console.error('Error adding to cart:', error);
-      if (error.code === 401 || error.code === 403) {
-        notify.error('Bạn không có quyền thực hiện thao tác này. Vui lòng đăng nhập lại.');
+      console.error('[ProductDetail] Error adding to cart:', {
+        error,
+        code: error.code,
+        status: error.status,
+        message: error.message,
+        response: error.response
+      });
+      
+      // Kiểm tra lỗi authentication (401) TRƯỚC - thường xảy ra khi token không hợp lệ hoặc thiếu
+      if (error.code === 401 || error.status === 401 || 
+          error.message?.includes('authentication') || 
+          error.message?.includes('Full authentication is required')) {
+        console.warn('[ProductDetail] 401 Unauthorized - Token may be missing or invalid');
+        notify.warning('Phiên đăng nhập đã hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.');
         storage.remove(STORAGE_KEYS.TOKEN);
         storage.remove(STORAGE_KEYS.USER);
-        window.location.reload();
-      } else if (error.message && error.message.includes('Sản phẩm không tồn tại')) {
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+        return;
+      }
+      
+      // Kiểm tra lỗi permission (403) - xảy ra khi user không có quyền
+      if (error.code === 403 || error.status === 403) {
+        console.warn('[ProductDetail] 403 Forbidden - User may not have CUSTOMER role');
+        // Kiểm tra user role từ storage
+        let user = null;
+        try {
+          const userRaw = storage.get(STORAGE_KEYS.USER);
+          if (userRaw) user = typeof userRaw === 'string' ? JSON.parse(userRaw) : userRaw;
+        } catch (e) {
+          console.error('Error parsing user from storage:', e);
+        }
+        
+        const userRole = user?.role?.name || user?.roleName || '';
+        console.log('[ProductDetail] User role from storage:', userRole);
+        
+        if (userRole && userRole !== 'CUSTOMER') {
+          notify.error(`Tài khoản ${userRole} không thể thêm sản phẩm vào giỏ hàng. Vui lòng đăng nhập bằng tài khoản CUSTOMER.`);
+        } else {
+          notify.error('Bạn không có quyền thêm sản phẩm vào giỏ hàng. Vui lòng đăng nhập bằng tài khoản khách hàng.');
+        }
+        return; // Không reload nếu là lỗi permission
+      }
+      
+      // Các lỗi khác
+      if (error.message && error.message.includes('Sản phẩm không tồn tại')) {
         notify.error('Sản phẩm không tồn tại trong hệ thống. Vui lòng chọn sản phẩm khác.');
       } else {
         notify.error(error.message || 'Không thể thêm sản phẩm vào giỏ hàng. Vui lòng thử lại.');
@@ -282,6 +259,30 @@ function ProductDetail() {
       });
     }
   };
+
+  // Parse colorCodes từ manufacturingLocation (lưu dạng JSON)
+  // Phải đặt trước các early return để tuân thủ Rules of Hooks
+  const colorCodes = useMemo(() => {
+    if (!product || !product.manufacturingLocation) return [];
+    try {
+      const parsed = JSON.parse(product.manufacturingLocation);
+      if (Array.isArray(parsed)) return parsed;
+      return [];
+    } catch (e) {
+      // Nếu không phải JSON, thử parse như comma-separated
+      if (product.manufacturingLocation.includes(',')) {
+        return product.manufacturingLocation.split(',').map(c => c.trim()).filter(c => c);
+      } else if (product.manufacturingLocation.trim()) {
+        return [product.manufacturingLocation.trim()];
+      }
+      return [];
+    }
+  }, [product?.manufacturingLocation]);
+
+  // Reset selectedColorCode khi product thay đổi
+  useEffect(() => {
+    setSelectedColorCode(null);
+  }, [product?.id]);
 
   // Loading state
   if (loading) {
@@ -330,18 +331,24 @@ function ProductDetail() {
     name: product.name || 'Sản phẩm',
     description: product.description || '',
     price: product.price || 0,
+    unitPrice: product.unitPrice || (product.price ? product.price * 1.08 : 0), // Giá hiển thị
     oldPrice: product.discountValue ? (product.price + product.discountValue) : null,
-    rating: product.averageRating || 5,
+    rating: product.averageRating || 0,
     reviews: product.reviewCount || 0,
     sku: product.id ? String(product.id).substring(0, 8) : 'N/A',
-    origin: product.manufacturingLocation || product.brandOrigin || 'N/A',
+    origin: product.brandOrigin || 'N/A',
+    size: product.size || '',
+    weight: product.weight || null,
     images: product.mediaUrls && product.mediaUrls.length > 0 
       ? product.mediaUrls 
       : (product.defaultMediaUrl ? [product.defaultMediaUrl] : [image1]),
-    colors: product.colors || [
-      { id: 1, name: '02 Affection', value: '#FF69B4' },
-      { id: 2, name: '01 Natural', value: '#8B4513' },
-    ],
+    colorCodes: colorCodes,
+    texture: product.texture || '',
+    skinType: product.skinType || '',
+    ingredients: product.ingredients || '',
+    uses: product.uses || '',
+    usageInstructions: product.usageInstructions || '',
+    reviewHighlights: product.characteristics || '',
   };
 
   return (
@@ -385,7 +392,7 @@ function ProductDetail() {
           </div>
 
           <div className={cx('price-section')}>
-            <div className={cx('current-price')}>{Math.round(displayProduct.price).toLocaleString('vi-VN')}đ</div>
+            <div className={cx('current-price')}>{Math.round(displayProduct.unitPrice || displayProduct.price).toLocaleString('vi-VN')}đ</div>
             {displayProduct.oldPrice && (
               <div className={cx('old-price-wrapper')}>
                 <span className={cx('old-price')}>{Math.round(displayProduct.oldPrice).toLocaleString('vi-VN')}đ</span>
@@ -394,24 +401,39 @@ function ProductDetail() {
                 </span>
               </div>
             )}
+            {displayProduct.price && displayProduct.unitPrice && displayProduct.unitPrice !== displayProduct.price && (
+              <div className={cx('price-note')} style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                (Giá hiển thị đã bao gồm VAT )
+              </div>
+            )}
           </div>
 
-          <div className={cx('color-section')}>
-            <label className={cx('color-label')}>
-              Color: <span className={cx('color-name')}>{displayProduct.colors[selectedColor]?.name || 'N/A'}</span>
-            </label>
-            <div className={cx('color-options')}>
-              {displayProduct.colors.map((color, index) => (
-                <button
-                  key={color.id}
-                  className={cx('color-btn', { selected: selectedColor === index })}
-                  style={{ backgroundColor: color.value }}
-                  onClick={() => setSelectedColor(index)}
-                  aria-label={color.name}
-                />
-              ))}
+          {displayProduct.colorCodes && displayProduct.colorCodes.length > 0 && (
+            <div className={cx('color-section')}>
+              <label className={cx('color-label')}>
+                Mã màu: <span style={{ color: '#e74c3c', fontSize: '12px' }}>*</span>
+              </label>
+              <div className={cx('color-codes-list')}>
+                {displayProduct.colorCodes.map((colorCode, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    className={cx('color-code-badge', 'color-code-button', {
+                      selected: selectedColorCode === colorCode
+                    })}
+                    onClick={() => setSelectedColorCode(colorCode)}
+                  >
+                    {colorCode}
+                  </button>
+                ))}
+              </div>
+              {!selectedColorCode && (
+                <div style={{ fontSize: '12px', color: '#e74c3c', marginTop: '4px' }}>
+                  Vui lòng chọn mã màu
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
           <div className={cx('quantity-section')}>
             <label className={cx('quantity-label')}>Số lượng:</label>
@@ -430,11 +452,18 @@ function ProductDetail() {
             <button 
               className={cx('btn-cart')} 
               onClick={handleAddToCart}
-              disabled={addingToCart}
+              disabled={addingToCart || (colorCodes.length > 0 && !selectedColorCode)}
+              title={colorCodes.length > 0 && !selectedColorCode ? 'Vui lòng chọn mã màu trước' : ''}
             >
               <span>🛒</span> {addingToCart ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
             </button>
-            <button className={cx('btn-buy-now')}>MUA NGAY</button>
+            <button 
+              className={cx('btn-buy-now')}
+              disabled={colorCodes.length > 0 && !selectedColorCode}
+              title={colorCodes.length > 0 && !selectedColorCode ? 'Vui lòng chọn mã màu trước' : ''}
+            >
+              MUA NGAY
+            </button>
             <button className={cx('btn-favorite')}>❤️</button>
           </div>
 
@@ -463,12 +492,42 @@ function ProductDetail() {
         <div className={cx('info-table-wrapper')}>
           <table className={cx('info-table')}>
             <tbody>
-              {PRODUCT_INFO.map((row, idx) => (
-                <tr key={idx} className={cx('info-row')}>
-                  <td className={cx('info-cell-label')}>{row.label}</td>
-                  <td className={cx('info-cell-value')}>{row.value}</td>
+              {displayProduct.brand && (
+                <tr className={cx('info-row')}>
+                  <td className={cx('info-cell-label')}>Thương hiệu</td>
+                  <td className={cx('info-cell-value')}>{displayProduct.brand}</td>
                 </tr>
-              ))}
+              )}
+              {displayProduct.origin && displayProduct.origin !== 'N/A' && (
+                <tr className={cx('info-row')}>
+                  <td className={cx('info-cell-label')}>Xuất xứ thương hiệu</td>
+                  <td className={cx('info-cell-value')}>{displayProduct.origin}</td>
+                </tr>
+              )}
+              {displayProduct.size && (
+                <tr className={cx('info-row')}>
+                  <td className={cx('info-cell-label')}>Kích thước / Quy cách</td>
+                  <td className={cx('info-cell-value')}>{displayProduct.size}</td>
+                </tr>
+              )}
+              {displayProduct.texture && (
+                <tr className={cx('info-row')}>
+                  <td className={cx('info-cell-label')}>Kết cấu</td>
+                  <td className={cx('info-cell-value')}>{displayProduct.texture}</td>
+                </tr>
+              )}
+              {displayProduct.skinType && (
+                <tr className={cx('info-row')}>
+                  <td className={cx('info-cell-label')}>Loại da</td>
+                  <td className={cx('info-cell-value')}>{displayProduct.skinType}</td>
+                </tr>
+              )}
+              {displayProduct.weight && (
+                <tr className={cx('info-row')}>
+                  <td className={cx('info-cell-label')}>Trọng lượng</td>
+                  <td className={cx('info-cell-value')}>{displayProduct.weight} g</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -507,68 +566,51 @@ function ProductDetail() {
         {/* Description Section */}
         <div ref={contentRefs.description} className={cx('tab-content')}>
           <h4 className={cx('content-title')}>Mô tả sản phẩm</h4>
-          {DESCRIPTION_PARAGRAPHS.map((text, idx) => (
-            <p key={idx}>{text}</p>
-          ))}
+          {displayProduct.description ? (
+            <p>{displayProduct.description}</p>
+          ) : (
+            <p>Chưa có mô tả sản phẩm</p>
+          )}
         </div>
 
         {/* Ingredients Section */}
         <div ref={contentRefs.ingredients} className={cx('tab-content')}>
           <h4 className={cx('content-title')}>Thành phần</h4>
-          <p>Sản phẩm được tạo nên từ các thành phần tự nhiên cao cấp, được lựa chọn kỹ lưỡng để đảm bảo an toàn và hiệu quả tối đa cho làn da.</p>
-          <ul className={cx('ingredients-list')}>
-            {INGREDIENTS.map(({ title, description }) => (
-              <li key={title}>
-                <strong>{title}:</strong> {description}
-              </li>
-            ))}
-          </ul>
+          {displayProduct.ingredients ? (
+            <p>{displayProduct.ingredients}</p>
+          ) : (
+            <p>Chưa có thông tin thành phần</p>
+          )}
         </div>
 
         {/* Benefits Section */}
         <div ref={contentRefs.benefits} className={cx('tab-content')}>
           <h4 className={cx('content-title')}>Công dụng</h4>
-          <p>Nước Hoa Hồng Klairs Supple Preparation mang lại nhiều lợi ích vượt trội cho làn da của bạn:</p>
-          <ul className={cx('benefits-list')}>
-            {BENEFITS.map(({ title, description }) => (
-              <li key={title}>
-                <strong>{title}:</strong> {description}
-              </li>
-            ))}
-          </ul>
+          {displayProduct.uses ? (
+            <p>{displayProduct.uses}</p>
+          ) : (
+            <p>Chưa có thông tin công dụng</p>
+          )}
         </div>
 
         {/* How to Use Section */}
         <div ref={contentRefs.howto} className={cx('tab-content')}>
           <h4 className={cx('content-title')}>Cách dùng</h4>
-          <p>Để đạt được hiệu quả tối ưu, bạn nên sử dụng sản phẩm theo các bước sau:</p>
-          <ol className={cx('howto-list')}>
-            {HOW_TO_STEPS.map(({ title, description }) => (
-              <li key={title}>
-                <strong>{title}:</strong> {description}
-              </li>
-            ))}
-          </ol>
-          <p className={cx('note')}>
-            <strong>Lưu ý:</strong> Tránh để sản phẩm tiếp xúc với mắt. Nếu vô tình dính vào mắt, hãy rửa ngay bằng nước
-            sạch. Bảo quản nơi khô ráo, thoáng mát, tránh ánh nắng trực tiếp.
-          </p>
+          {displayProduct.usageInstructions ? (
+            <p>{displayProduct.usageInstructions}</p>
+          ) : (
+            <p>Chưa có hướng dẫn sử dụng</p>
+          )}
         </div>
 
         {/* Highlights Section */}
         <div ref={contentRefs.highlights} className={cx('tab-content')}>
-          <h4 className={cx('content-title')}>Review</h4>
-          <p>Sản phẩm này được đánh giá cao bởi những ưu điểm vượt trội sau:</p>
-          <ul className={cx('highlights-list')}>
-            {HIGHLIGHTS.map(({ title, description }) => (
-              <li key={title}>
-                <span className={cx('check-icon')}>✓</span>
-                <div>
-                  <strong>{title}:</strong> {description}
-                </div>
-              </li>
-            ))}
-          </ul>
+          <h4 className={cx('content-title')}>Review (Ưu điểm)</h4>
+          {displayProduct.reviewHighlights ? (
+            <p>{displayProduct.reviewHighlights}</p>
+          ) : (
+            <p>Chưa có đánh giá</p>
+          )}
         </div>
       </div>
 
@@ -576,16 +618,16 @@ function ProductDetail() {
       <div className={cx('description-section')}>
         <h3 className={cx('reviews-title')}>Đánh giá sản phẩm</h3>
         <div className={cx('reviews-summary')}>
-          <div className={cx('reviews-score')}>{product.rating}.0</div>
+          <div className={cx('reviews-score')}>{displayProduct.rating > 0 ? displayProduct.rating.toFixed(1) : '0.0'}</div>
           <div className={cx('reviews-summary-content')}>
             <div className={cx('reviews-stars')}>
               {REVIEW_STARS.map((star) => (
-                <span key={star} className={cx('reviews-star', { filled: star <= product.rating })}>
+                <span key={star} className={cx('reviews-star', { filled: star <= Math.floor(displayProduct.rating) })}>
                   ★
                 </span>
               ))}
             </div>
-            <div className={cx('reviews-count')}>Dựa trên {product.reviews} đánh giá</div>
+            <div className={cx('reviews-count')}>Dựa trên {displayProduct.reviews} đánh giá</div>
           </div>
         </div>
 

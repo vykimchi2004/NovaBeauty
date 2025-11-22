@@ -1,21 +1,35 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from './FeaturedCategories.module.scss';
 import sonmoi from '~/assets/images/products/sonmoi.png';
+import { getRootCategories } from '~/services/category';
 
 const cx = classNames.bind(styles);
 
-const categories = [
-  { id: 1, name: 'Son môi', to: '/makeup', img: sonmoi },
-  { id: 2, name: 'Mặt nạ', to: '/skincare', img: sonmoi },
-  { id: 3, name: 'Kem chống nắng', to: '/skincare', img: sonmoi },
-  { id: 4, name: 'Tinh dầu dưỡng', to: '/perfume', img: sonmoi },
-  { id: 5, name: 'Kem dưỡng da', to: '/skincare', img: sonmoi },
-  { id: 6, name: 'Sữa dưỡng thể', to: '/personal-care', img: sonmoi },
-];
-
 function FeaturedCategories() {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoading(true);
+        const data = await getRootCategories();
+        // Filter only active categories
+        const activeCategories = (data || []).filter(cat => cat.status !== false);
+        setCategories(activeCategories);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        setCategories([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
   return (
     <section className={cx('container')} aria-labelledby="featured-categories-heading">
       <div className={cx('inner')}>
@@ -29,14 +43,27 @@ function FeaturedCategories() {
             </Link>
           </div>
           <div className={cx('grid')}>
-            {categories.map((c) => (
-              <Link key={c.id} to={c.to} className={cx('item')}>
-                <div className={cx('thumb')}>
-                  <img src={c.img} alt={c.name} />
-                </div>
-                <div className={cx('label')}>{c.name}</div>
-              </Link>
-            ))}
+            {loading ? (
+              <div className={cx('loading')}>Đang tải...</div>
+            ) : categories.length === 0 ? (
+              <div className={cx('empty')}>Chưa có danh mục nào</div>
+            ) : (
+              categories.slice(0, 7).map((c) => (
+                <Link key={c.id} to={`/products?category=${c.id}`} className={cx('item')}>
+                  <div className={cx('thumb')}>
+                    <img 
+                      src={sonmoi} 
+                      alt={c.name}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = sonmoi;
+                      }}
+                    />
+                  </div>
+                  <div className={cx('label')}>{c.name}</div>
+                </Link>
+              ))
+            )}
           </div>
         </div>
       </div>

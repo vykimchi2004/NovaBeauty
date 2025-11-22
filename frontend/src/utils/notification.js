@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import NotificationModal from '~/components/Common/NotificationModal';
+import NotificationModal from '~/components/Common/NotificationModal/NotificationModal';
 
 // Tạo một container để render modal
 let notificationContainer = null;

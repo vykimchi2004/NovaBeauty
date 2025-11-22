@@ -32,14 +32,18 @@ const cartService = {
      * Thêm sản phẩm vào giỏ hàng
      * @param {string} productId - ID sản phẩm
      * @param {number} quantity - Số lượng (mặc định 1)
+     * @param {string} colorCode - Mã màu (optional)
      */
-    async addItem(productId, quantity = 1) {
+    async addItem(productId, quantity = 1, colorCode = null) {
         try {
-            console.log('[Cart Service] addItem - productId:', productId, 'quantity:', quantity);
+            console.log('[Cart Service] addItem - productId:', productId, 'quantity:', quantity, 'colorCode:', colorCode);
             const params = new URLSearchParams({
                 productId: productId,
                 quantity: quantity.toString()
             });
+            if (colorCode) {
+                params.append('colorCode', colorCode);
+            }
             const response = await apiClient.post(`${API_ENDPOINTS.CART.ADD_ITEM}?${params}`, {});
             console.log('[Cart Service] addItem success:', response);
             return response;
@@ -49,36 +53,6 @@ const cartService = {
             if (error.message && error.message.includes('Sản phẩm không tồn tại')) {
                 error.message = 'Sản phẩm không tồn tại trong hệ thống. Vui lòng chọn sản phẩm khác.';
             }
-            throw error;
-        }
-    },
-
-    /**
-     * Cập nhật số lượng sản phẩm trong giỏ hàng
-     * @param {string} itemId - ID cart item
-     * @param {number} quantity - Số lượng mới
-     */
-    async updateItemQuantity(itemId, quantity) {
-        try {
-            // Backend chưa có endpoint này, cần thêm vào
-            // Tạm thời throw error hoặc implement logic khác
-            throw new Error('Update item quantity chưa được implement trong backend');
-        } catch (error) {
-            console.error('[Cart Service] updateItemQuantity error:', error);
-            throw error;
-        }
-    },
-
-    /**
-     * Xóa sản phẩm khỏi giỏ hàng
-     * @param {string} itemId - ID cart item
-     */
-    async removeItem(itemId) {
-        try {
-            // Backend chưa có endpoint này, cần thêm vào
-            throw new Error('Remove item chưa được implement trong backend');
-        } catch (error) {
-            console.error('[Cart Service] removeItem error:', error);
             throw error;
         }
     },
