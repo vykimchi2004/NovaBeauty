@@ -565,6 +565,21 @@
     }
   }
 
+  select {
+    option.category-parent {
+      font-weight: 600;
+      color: #1a1a1a;
+      background: #f8f9fa;
+      padding: 10px 12px;
+    }
+
+    option.category-child {
+      color: #555;
+      padding-left: 24px;
+      font-weight: 400;
+    }
+  }
+
   textarea {
     resize: vertical;
     font-family: inherit;

@@ -266,22 +266,33 @@
 .price-section {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .price {
-  color: #000;
-  font-weight: 600;
+  color: #e5677d;
+  font-weight: 700;
+  font-size: 18px;
 }
 
 .old-price {
   text-decoration: line-through;
   color: #999;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .discount {
-  color: #e60023;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  color: #fff;
   font-weight: 700;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(255, 107, 107, 0.35);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 
 .loading,
@@ -293,4 +304,37 @@
   background: #f8f9fa;
   border-radius: 12px;
   margin-top: 20px;
+}
+
+.error {
+  text-align: center;
+  padding: 40px 20px;
+  color: #e03131;
+  font-size: 16px;
+  background: #fff5f5;
+  border: 1px solid #ffc9c9;
+  border-radius: 12px;
+  margin-top: 20px;
+
+  p {
+    margin: 0 0 16px 0;
+  }
+}
+
+.retry-btn {
+  background: linear-gradient(135deg, #e5677d 0%, #d85a6f 100%);
+  color: #fff;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(229, 103, 125, 0.35);
+    background: linear-gradient(135deg, #f5788e 0%, #e5677d 100%);
+  }
 }

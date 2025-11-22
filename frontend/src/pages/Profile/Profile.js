@@ -8,6 +8,7 @@ import {
   faLock,
   faFileLines,
   faRightFromBracket,
+  faTicket,
 } from '@fortawesome/free-solid-svg-icons';
 import styles from './Profile.module.scss';
 import { getMyInfo, updateUser } from '~/services/user';
@@ -23,12 +24,14 @@ import ProfileSection from './sections/ProfileSection';
 import PasswordSection from './sections/PasswordSection';
 import OrdersSection from './sections/OrdersSection';
 import ComplaintSection from './sections/ComplaintSection';
+import VouchersSection from './sections/VouchersSection';
 
 const cx = classNames.bind(styles);
 
 const MENU_ITEMS = [
   { id: 'profile', label: 'Hồ sơ cá nhân', icon: faUser },
   { id: 'orders', label: 'Lịch sử mua hàng', icon: faClipboardList },
+  { id: 'vouchers', label: 'Voucher/Khuyến mãi', icon: faTicket },
   { id: 'password', label: 'Đổi mật khẩu', icon: faLock },
   { id: 'complaint', label: 'Đơn khiếu nại', icon: faFileLines },
 ];
@@ -279,6 +282,10 @@ function ProfilePage() {
 
     if (activeSection === 'complaint') {
       return <ComplaintSection />;
+    }
+
+    if (activeSection === 'vouchers') {
+      return <VouchersSection />;
     }
 
     const placeholder = PLACEHOLDER_CONTENT[activeSection];

@@ -73,6 +73,19 @@ export const API_ENDPOINTS = {
         DELETE: (id) => `/promotions/${id}`,
         APPROVE: '/promotions/approve',
     },
+    // Vouchers
+    VOUCHERS: {
+        CREATE: '/vouchers',
+        LIST: '/vouchers',
+        ACTIVE: '/vouchers/active',
+        PENDING: '/vouchers/pending',
+        BY_STATUS: (status) => `/vouchers/status/${status}`,
+        MY_VOUCHERS: '/vouchers/my',
+        DETAIL: (id) => `/vouchers/${id}`,
+        UPDATE: (id) => `/vouchers/${id}`,
+        DELETE: (id) => `/vouchers/${id}`,
+        APPROVE: '/vouchers/approve',
+    },
     // Reviews
     REVIEWS: {
         CREATE: '/reviews',

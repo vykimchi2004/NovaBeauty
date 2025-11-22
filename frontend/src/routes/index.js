@@ -1,5 +1,6 @@
 // Pages
 import Home from '../pages/Home/Home';
+import CategoryPage from '../pages/Categories/CategoryPage';
 import Makeup from '../pages/Categories/Makeup/Makeup';
 import Skincare from '../pages/Categories/Skincare/Skincare';
 import PersonalCare from '../pages/Categories/PersonalCare/PersonalCare';
@@ -15,6 +16,7 @@ import AdminPage from '../pages/Admin/AdminPage';
 import StaffPage from '../pages/Staff/StaffPage';
 import Support from '../pages/Support/Support';
 import Cart from '../pages/Cart/Cart';
+import Vouchers from '../pages/Vouchers/Vouchers';
 
 // Layouts
 import DefaultLayout from '../layouts/DefaultLayout/DefaultLayout';
@@ -23,12 +25,12 @@ import { LoginModal } from '~/pages/Auth';
 // Public routes
 const publicRoutes = [
   { path: '/', component: Home, layout: DefaultLayout },
-  { path: '/makeup', component: Makeup, layout: DefaultLayout },
-  { path: '/skincare', component: Skincare, layout: DefaultLayout },
-  { path: '/personal-care', component: PersonalCare, layout: DefaultLayout },
-  { path: '/perfume', component: Perfume, layout: DefaultLayout },
-  { path: '/accessories', component: Accessories, layout: DefaultLayout },
-  { path: '/haircare', component: HairCare, layout: DefaultLayout },
+  { path: '/makeup', component: CategoryPage, layout: DefaultLayout },
+  { path: '/skincare', component: CategoryPage, layout: DefaultLayout },
+  { path: '/personal-care', component: CategoryPage, layout: DefaultLayout },
+  { path: '/perfume', component: CategoryPage, layout: DefaultLayout },
+  { path: '/accessories', component: CategoryPage, layout: DefaultLayout },
+  { path: '/haircare', component: CategoryPage, layout: DefaultLayout },
   { path: '/promo', component: Promo, layout: DefaultLayout },
   { path: '/products', component: Products, layout: DefaultLayout },
   { path: '/best-sellers', component: BestSellersPage, layout: DefaultLayout },
@@ -36,6 +38,7 @@ const publicRoutes = [
   { path: '/profile', component: Profile, layout: DefaultLayout },
   { path: '/support', component: Support, layout: DefaultLayout },
   { path: '/cart', component: Cart, layout: DefaultLayout },
+  { path: '/vouchers', component: Vouchers, layout: DefaultLayout },
   // Admin shell with nested routes
   { path: '/admin/*', component: AdminPage },
   // Staff shell with nested routes

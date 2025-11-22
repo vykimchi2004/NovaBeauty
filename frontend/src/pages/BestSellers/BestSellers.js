@@ -222,17 +222,27 @@ function BestSellers() {
                   <h4>{p.name}</h4>
                   <p className={cx('desc')}>{p.description || 'Sản phẩm chất lượng cao'}</p>
                   <div className={cx('price-section')}>
-                    <span className={cx('price')}>{formatPrice(p.unitPrice || p.price)}</span>
-                    {p.discountValue && (
-                      <>
-                        <span className={cx('old-price')}>
-                          {formatPrice(p.price + p.discountValue)}
-                        </span>
-                        <span className={cx('discount')}>
-                          -{Math.round((p.discountValue / (p.price + p.discountValue)) * 100)}%
-                        </span>
-                      </>
-                    )}
+                    {(() => {
+                      if (!p.promotionId || !p.promotionName || !p.discountValue || p.discountValue <= 0 || !p.price || p.price <= 0) {
+                        return <span className={cx('price')}>{formatPrice(p.price)}</span>;
+                      }
+                      const originalPrice = p.price + p.discountValue;
+                      const discountPercent = Math.round((p.discountValue / originalPrice) * 100);
+                      if (discountPercent <= 0) {
+                        return <span className={cx('price')}>{formatPrice(p.price)}</span>;
+                      }
+                      return (
+                        <>
+                          <span className={cx('old-price')}>
+                            {formatPrice(originalPrice)}
+                          </span>
+                          <span className={cx('price')}>{formatPrice(p.price)}</span>
+                          <span className={cx('discount')}>
+                            -{discountPercent}%
+                          </span>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </Link>

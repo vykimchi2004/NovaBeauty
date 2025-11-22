@@ -67,7 +67,7 @@ function ProductDetailView({
   }
 
   infoRows.push(
-    { label: 'Giá niêm yết', value: formatPriceWithTax(product.price) },
+    { label: 'Giá niêm yết', value: formatPriceWithTax(product.unitPrice, product.price) },
     { label: 'Thuế', value: '8%' },
     { label: 'Trọng lượng', value: formatWeight(product.weight) },
     { label: 'Kết cấu', value: textureInfo || 'Chưa cập nhật' },

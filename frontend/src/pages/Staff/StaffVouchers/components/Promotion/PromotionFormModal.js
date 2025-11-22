@@ -61,11 +61,21 @@ function PromotionFormModal({
               <input
                 type="text"
                 value={formData.code}
-                onChange={(e) => onChange('code', e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  // Chỉ cho phép chữ hoa, số, dấu gạch ngang và gạch dưới
+                  const sanitized = e.target.value
+                    .toUpperCase()
+                    .replace(/[^A-Z0-9_-]/g, '');
+                  onChange('code', sanitized);
+                }}
                 placeholder="VD: SALE50"
                 disabled={mode === 'edit'}
+                maxLength={50}
               />
               {formErrors.code && <span className={cx('errorText')}>{formErrors.code}</span>}
+              <small className={cx('helperText')} style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                Chỉ được nhập chữ hoa, số, dấu gạch ngang (-) và gạch dưới (_)
+              </small>
             </div>
             <div className={cx('formGroup')}>
               <label>Loại giảm giá</label>

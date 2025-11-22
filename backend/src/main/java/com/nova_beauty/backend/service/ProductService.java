@@ -24,6 +24,7 @@ import com.nova_beauty.backend.dto.request.ProductUpdateRequest;
 import com.nova_beauty.backend.dto.response.ProductResponse;
 import com.nova_beauty.backend.enums.ProductStatus;
 import com.nova_beauty.backend.enums.PromotionStatus;
+import com.nova_beauty.backend.enums.DiscountValueType;
 import com.nova_beauty.backend.exception.AppException;
 import com.nova_beauty.backend.exception.ErrorCode;
 import com.nova_beauty.backend.mapper.ProductMapper;
@@ -34,6 +35,7 @@ import com.nova_beauty.backend.repository.PromotionRepository;
 import com.nova_beauty.backend.repository.VoucherRepository;
 import com.nova_beauty.backend.repository.UserRepository;
 import com.nova_beauty.backend.repository.CartItemRepository;
+import com.nova_beauty.backend.repository.BannerRepository;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -53,6 +55,7 @@ public class ProductService {
     PromotionRepository promotionRepository;
     VoucherRepository voucherRepository;
     CartItemRepository cartItemRepository;
+    BannerRepository bannerRepository;
     ProductMapper productMapper;
 
     // ========== CREATE OPERATIONS ==========
@@ -218,6 +221,11 @@ public class ProductService {
         Product product = productRepository
                 .findById(productId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
+        
+        // Load banners để đảm bảo quan hệ được load trước khi xóa
+        if (product.getBanners() != null) {
+            product.getBanners().size(); // Trigger lazy loading
+        }
 
         // 1. XÃ³a product khá»i táº¥t cáº£ Promotion.productApply (báº£ng promotion_products)
         List<Promotion> promotionsWithProduct = promotionRepository.findByProductId(productId);
@@ -241,16 +249,29 @@ public class ProductService {
             log.info("Deleted {} cart items for product: {}", cartItems.size(), productId);
         }
 
-        // 4. Set product.promotion = null (náº¿u cÃ³ promotion trá»±c tiáº¿p)
+        // 4. Xóa product khỏi tất cả Banner.products (bảng banner_products)
+        // Load banners từ product để đảm bảo quan hệ được load
+        if (product.getBanners() != null && !product.getBanners().isEmpty()) {
+            List<Banner> bannersWithProduct = new ArrayList<>(product.getBanners());
+            for (Banner banner : bannersWithProduct) {
+                if (banner.getProducts() != null) {
+                    banner.getProducts().removeIf(p -> p.getId().equals(productId));
+                    bannerRepository.save(banner);
+                }
+            }
+            log.info("Removed product {} from {} banners", productId, bannersWithProduct.size());
+        }
+
+        // 5. Set product.promotion = null (náº¿u cÃ³ promotion trá»±c tiáº¿p)
         if (product.getPromotion() != null) {
             product.setPromotion(null);
             productRepository.save(product);
         }
 
-        // 5. XÃ³a file media váº­t lÃ½ trong thÆ° má»¥c product_media (náº¿u cÃ³)
+        // 6. XÃ³a file media váº­t lÃ½ trong thÆ° má»¥c product_media (náº¿u cÃ³)
         deleteMediaFilesIfExists(product);
 
-        // 6. XÃ³a product
+        // 7. XÃ³a product
         productRepository.delete(product);
         log.info("Product deleted: {} by user: {}", productId, user.getEmail());
     }
@@ -332,36 +353,121 @@ public class ProductService {
         return true;
     }
 
+    // Apply active promotion to a product (calculate discountValue and price)
+    private void applyActivePromotionToProduct(Product product) {
+        // Ensure category is loaded (for lazy loading)
+        if (product.getCategory() != null) {
+            product.getCategory().getId(); // Trigger lazy loading
+        }
+        
+        Promotion activePromotion = findActivePromotionForProduct(product);
+        
+        if (activePromotion != null) {
+            // Calculate discountValue from promotion
+            double unitPrice = product.getUnitPrice() != null ? product.getUnitPrice() : 0.0;
+            double tax = product.getTax() != null ? product.getTax() : 0.0;
+            double discountAmount = calculateDiscountAmount(activePromotion, unitPrice);
+            
+            // Calculate final price = unitPrice * (1 + tax) - discountAmount
+            double finalPrice = Math.max(0, unitPrice * (1 + tax) - discountAmount);
+            
+            product.setDiscountValue(discountAmount);
+            product.setPrice(finalPrice);
+            product.setPromotion(activePromotion);
+            
+            log.debug("Applied promotion {} to product {}: discountValue={}, finalPrice={}", 
+                    activePromotion.getId(), product.getId(), discountAmount, finalPrice);
+        } else {
+            // No active promotion, calculate price without discount
+            double unitPrice = product.getUnitPrice() != null ? product.getUnitPrice() : 0.0;
+            double tax = product.getTax() != null ? product.getTax() : 0.0;
+            double finalPrice = unitPrice * (1 + tax);
+            
+            product.setDiscountValue(0.0);
+            product.setPrice(finalPrice);
+            product.setPromotion(null);
+        }
+    }
+
+    // Calculate discount amount from promotion
+    private double calculateDiscountAmount(Promotion promotion, double basePrice) {
+        if (basePrice <= 0 || promotion == null) return 0;
+        
+        double discountValue = promotion.getDiscountValue() != null ? promotion.getDiscountValue() : 0;
+        double discountAmount = 0;
+
+        switch (promotion.getDiscountValueType()) {
+            case PERCENTAGE -> {
+                discountAmount = basePrice * (discountValue / 100.0);
+                Double maxDiscount = promotion.getMaxDiscountValue();
+                if (maxDiscount != null && maxDiscount > 0) {
+                    discountAmount = Math.min(discountAmount, maxDiscount);
+                }
+            }
+            case AMOUNT -> discountAmount = discountValue;
+        }
+        return Math.min(discountAmount, basePrice);
+    }
+
     public List<ProductResponse> getAllProducts() {
         List<Product> products = productRepository.findAll();
         return products.stream().map(productMapper::toResponse).toList();
     }
 
     public List<ProductResponse> getActiveProducts() {
-        List<Product> products = productRepository.findByStatus(ProductStatus.APPROVED);
+        List<Product> products = productRepository.findByStatusWithCategory(ProductStatus.APPROVED);
+        // Apply active promotions to each product
+        products.forEach(this::applyActivePromotionToProduct);
         return products.stream().map(productMapper::toResponse).toList();
     }
 
     public List<ProductResponse> getProductsByCategory(String categoryId) {
-        List<Product> products = productRepository.findByCategoryId(categoryId);
+        // Lấy products từ category chính (with category loaded)
+        List<Product> products = new ArrayList<>(productRepository.findByCategoryIdWithCategory(categoryId));
+        
+        // Lấy tất cả subcategories của category này
+        List<Category> subCategories = categoryRepository.findByParentCategoryId(categoryId);
+        
+        // Lấy products từ tất cả subcategories (with category loaded)
+        for (Category subCategory : subCategories) {
+            List<Product> subProducts = productRepository.findByCategoryIdWithCategory(subCategory.getId());
+            products.addAll(subProducts);
+        }
+        
+        // Filter chỉ lấy APPROVED products, apply promotions, và map sang response
         return products.stream()
                 .filter(p -> p.getStatus() == ProductStatus.APPROVED)
+                .peek(this::applyActivePromotionToProduct)
                 .map(productMapper::toResponse)
                 .toList();
     }
 
     public List<ProductResponse> searchProducts(String keyword) {
         List<Product> products = productRepository.findByKeyword(keyword);
+        // Ensure categories are loaded before applying promotions
+        products.forEach(p -> {
+            if (p.getCategory() != null) {
+                p.getCategory().getId(); // Trigger lazy loading
+            }
+        });
         return products.stream()
                 .filter(p -> p.getStatus() == ProductStatus.APPROVED)
+                .peek(this::applyActivePromotionToProduct)
                 .map(productMapper::toResponse)
                 .toList();
     }
 
     public List<ProductResponse> getProductsByPriceRange(Double minPrice, Double maxPrice) {
         List<Product> products = productRepository.findByPriceRange(minPrice, maxPrice);
+        // Ensure categories are loaded before applying promotions
+        products.forEach(p -> {
+            if (p.getCategory() != null) {
+                p.getCategory().getId(); // Trigger lazy loading
+            }
+        });
         return products.stream()
                 .filter(p -> p.getStatus() == ProductStatus.APPROVED)
+                .peek(this::applyActivePromotionToProduct)
                 .map(productMapper::toResponse)
                 .toList();
     }

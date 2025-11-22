@@ -18,6 +18,14 @@ public interface ProductRepository extends JpaRepository<Product, String> {
     List<Product> findByCategoryId(String categoryId);
 
     List<Product> findByStatus(ProductStatus status);
+    
+    // Find products by status with category loaded (for promotion calculation)
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.status = :status")
+    List<Product> findByStatusWithCategory(@Param("status") ProductStatus status);
+    
+    // Find products by category ID with category loaded (for promotion calculation)
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.category.id = :categoryId")
+    List<Product> findByCategoryIdWithCategory(@Param("categoryId") String categoryId);
 
     // TÃ¬m products theo name (case insensitive)
     List<Product> findByNameContainingIgnoreCase(String name);

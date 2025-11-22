@@ -77,7 +77,7 @@ function Products() {
     // Filter theo price ranges
     if (selectedPriceRanges.length > 0) {
       filtered = filtered.filter(product => {
-        const productPrice = product.unitPrice || product.price || 0;
+        const productPrice = product.price || 0; // Dùng price (đã bao gồm VAT)
         
         return selectedPriceRanges.some(rangeId => {
           const range = PRICE_RANGES.find(r => r.id === rangeId);
@@ -111,6 +111,24 @@ function Products() {
         maximumFractionDigits: 0,
       }).format(safePrice) + ' ₫'
     );
+  };
+
+  // Calculate discount percentage from promotion
+  const calculateDiscountPercentage = (product) => {
+    // Only show discount if product has valid promotion
+    if (!product.promotionId || !product.promotionName) return null;
+    if (!product.discountValue || product.discountValue <= 0) return null;
+    if (!product.price || product.price <= 0) return null;
+    
+    // Calculate original price: price + discountValue
+    const originalPrice = product.price + product.discountValue;
+    if (originalPrice <= 0) return null;
+    
+    // Calculate percentage: (discountValue / originalPrice) * 100
+    const percentage = Math.round((product.discountValue / originalPrice) * 100);
+    
+    // Only return if percentage is greater than 0
+    return percentage > 0 ? percentage : null;
   };
 
   const getProductImage = (product) => {
@@ -270,17 +288,24 @@ function Products() {
                   <h4>{p.name}</h4>
                   <p className={cx('desc')}>{p.description || 'Sản phẩm chất lượng cao'}</p>
                   <div className={cx('price-section')}>
-                    <span className={cx('price')}>{formatPrice(p.unitPrice || p.price)}</span>
-                    {p.discountValue && (
-                      <>
-                        <span className={cx('old-price')}>
-                          {formatPrice(p.price + p.discountValue)}
-                        </span>
-                        <span className={cx('discount')}>
-                          -{Math.round((p.discountValue / (p.price + p.discountValue)) * 100)}%
-                        </span>
-                      </>
-                    )}
+                    {(() => {
+                      const discountPercent = calculateDiscountPercentage(p);
+                      if (!discountPercent) {
+                        return <span className={cx('price')}>{formatPrice(p.price)}</span>;
+                      }
+                      const originalPrice = (p.price || 0) + (p.discountValue || 0);
+                      return (
+                        <>
+                          <span className={cx('old-price')}>
+                            {formatPrice(originalPrice)}
+                          </span>
+                          <span className={cx('price')}>{formatPrice(p.price)}</span>
+                          <span className={cx('discount')}>
+                            -{discountPercent}%
+                          </span>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </Link>

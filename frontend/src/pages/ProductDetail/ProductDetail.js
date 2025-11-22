@@ -330,9 +330,17 @@ function ProductDetail() {
     brand: product.brand || 'NOVA BEAUTY',
     name: product.name || 'Sản phẩm',
     description: product.description || '',
-    price: product.price || 0,
-    unitPrice: product.unitPrice || (product.price ? product.price * 1.08 : 0), // Giá hiển thị
-    oldPrice: product.discountValue ? (product.price + product.discountValue) : null,
+    price: product.price || 0, // Giá sau giảm (đã áp dụng promotion nếu có)
+    oldPrice: (() => {
+      // Only show old price if product has valid promotion
+      if (!product.promotionId || !product.promotionName) return null;
+      if (!product.discountValue || product.discountValue <= 0) return null;
+      if (!product.price || product.price <= 0) return null;
+      const originalPrice = product.price + product.discountValue;
+      const discountPercent = Math.round((product.discountValue / originalPrice) * 100);
+      // Only return old price if discount percentage is greater than 0
+      return discountPercent > 0 ? originalPrice : null;
+    })(),
     rating: product.averageRating || 0,
     reviews: product.reviewCount || 0,
     sku: product.id ? String(product.id).substring(0, 8) : 'N/A',
@@ -392,20 +400,21 @@ function ProductDetail() {
           </div>
 
           <div className={cx('price-section')}>
-            <div className={cx('current-price')}>{Math.round(displayProduct.unitPrice || displayProduct.price).toLocaleString('vi-VN')}đ</div>
-            {displayProduct.oldPrice && (
-              <div className={cx('old-price-wrapper')}>
-                <span className={cx('old-price')}>{Math.round(displayProduct.oldPrice).toLocaleString('vi-VN')}đ</span>
-                <span className={cx('discount-tag')}>
-                  -{Math.round((displayProduct.oldPrice - displayProduct.price) / displayProduct.oldPrice * 100)}%
-                </span>
-              </div>
-            )}
-            {displayProduct.price && displayProduct.unitPrice && displayProduct.unitPrice !== displayProduct.price && (
-              <div className={cx('price-note')} style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                (Giá hiển thị đã bao gồm VAT )
-              </div>
-            )}
+            <div className={cx('current-price')}>{Math.round(displayProduct.price).toLocaleString('vi-VN')}đ</div>
+            {displayProduct.oldPrice && product.promotionId && product.promotionName && (() => {
+              const discountPercent = Math.round((product.discountValue / displayProduct.oldPrice) * 100);
+              // Only show if discount percentage is greater than 0
+              if (discountPercent <= 0) return null;
+              return (
+                <div className={cx('old-price-wrapper')}>
+                  <span className={cx('old-price')}>{Math.round(displayProduct.oldPrice).toLocaleString('vi-VN')}đ</span>
+                  <span className={cx('discount-tag')}>
+                    -{discountPercent}%
+                  </span>
+                </div>
+              );
+            })()}
+            <div className={cx('vat-note')}>Giá này đã bao gồm VAT</div>
           </div>
 
           {displayProduct.colorCodes && displayProduct.colorCodes.length > 0 && (

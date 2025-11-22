@@ -17,7 +17,7 @@ class ApiClient {
             // Lấy trực tiếp từ localStorage để tránh JSON.parse có thể gây lỗi
             const rawToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
             if (!rawToken) {
-                console.warn('[API] No token found in localStorage');
+                // Không log warning - public endpoints không cần token
                 return null;
             }
 
@@ -75,9 +75,8 @@ class ApiClient {
         const token = this.getAuthToken();
         if (token && typeof token === 'string' && token.trim().length > 0) {
             headers.Authorization = `Bearer ${token.trim()}`;
-        } else if (process.env.NODE_ENV === 'development') {
-            console.warn('[API] No valid token found, request will be unauthenticated');
         }
+        // Không log warning cho public endpoints - đây là bình thường
 
         return headers;
     }
@@ -109,8 +108,8 @@ class ApiClient {
                 }
             }
             
-            // Log chi tiết cho 401/403 để debug
-            if (response.status === 401 || response.status === 403) {
+            // Log chi tiết cho 401/403 để debug (nhưng không log cho /cart endpoint vì đây là bình thường khi chưa đăng nhập)
+            if ((response.status === 401 || response.status === 403) && !response.url.includes('/cart')) {
                 console.error('[API] Auth error:', {
                     status: response.status,
                     statusText: response.statusText,
@@ -163,6 +162,7 @@ class ApiClient {
     async get(endpoint, options = {}) {
         const url = this.buildURL(endpoint);
         const headers = this.buildHeaders(options.headers);
+        const isCartEndpoint = endpoint.includes('/cart');
 
         try {
             const response = await fetch(url, {
@@ -173,7 +173,10 @@ class ApiClient {
 
             return await this.handleResponse(response);
         } catch (error) {
-            console.error('[API] GET error:', error);
+            // Không log error cho 401/403 khi gọi /cart endpoint (bình thường khi chưa đăng nhập)
+            if (!isCartEndpoint || (error.status !== 401 && error.status !== 403 && error.code !== 401 && error.code !== 403)) {
+                console.error('[API] GET error:', error);
+            }
             throw error;
         }
     }

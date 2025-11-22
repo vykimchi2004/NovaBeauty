@@ -37,6 +37,13 @@ public class PromotionController {
                 .build();
     }
 
+    @GetMapping
+    ApiResponse<List<PromotionResponse>> getAllPromotions() {
+        return ApiResponse.<List<PromotionResponse>>builder()
+                .result(promotionService.getAllPromotions())
+                .build();
+    }
+
     @GetMapping("/my-promotions")
     ApiResponse<List<PromotionResponse>> getMyPromotions() {
 //        log.info("Controller: get my promotions");

@@ -135,6 +135,11 @@ public class PromotionService {
         return promotionMapper.toResponse(promotion);
     }
 
+    public List<PromotionResponse> getAllPromotions() {
+        List<Promotion> promotions = promotionRepository.findAll();
+        return promotions.stream().map(promotionMapper::toResponse).collect(Collectors.toList());
+    }
+
     public List<PromotionResponse> getMyPromotions() {
         // Get current user from security context
         User staff = getCurrentUser();

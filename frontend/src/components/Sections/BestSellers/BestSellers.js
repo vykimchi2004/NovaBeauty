@@ -8,7 +8,8 @@ import { getActiveProducts } from '~/services/product';
 
 const cx = classNames.bind(styles);
 
-const CAROUSEL_THRESHOLD = 4;
+// Luôn dùng grid layout, không dùng carousel
+const USE_CAROUSEL = false;
 
 function BestSellers() {
   console.log('BestSellers component is rendering!');
@@ -23,7 +24,23 @@ function BestSellers() {
       try {
         setLoading(true);
         const data = await getActiveProducts();
-        setProducts(data || []);
+        // Đảm bảo data là array
+        const productsList = Array.isArray(data) ? data : (data?.result && Array.isArray(data.result) ? data.result : []);
+        // Lọc các sản phẩm hợp lệ (có id và price)
+        const validProducts = productsList.filter(p => p && p.id && (p.price !== null && p.price !== undefined));
+        
+        // Debug: Log products with promotions
+        const productsWithPromo = validProducts.filter(p => p.promotionId || p.discountValue > 0);
+        console.log('[BestSellers] Products with promotion:', productsWithPromo.map(p => ({
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          discountValue: p.discountValue,
+          promotionId: p.promotionId,
+          promotionName: p.promotionName
+        })));
+        
+        setProducts(validProducts);
       } catch (error) {
         console.error('Error fetching approved products:', error);
         setProducts([]);
@@ -35,9 +52,10 @@ function BestSellers() {
     fetchProducts();
   }, []);
 
-  const isCarousel = products.length > CAROUSEL_THRESHOLD;
+  const isCarousel = USE_CAROUSEL && products.length > 20;
 
   const formatPrice = (price) => {
+    if (price === null || price === undefined || price === '') return '0 ₫';
     const value = Math.round(Number(price) || 0);
     return (
       new Intl.NumberFormat('vi-VN', {
@@ -45,6 +63,24 @@ function BestSellers() {
         maximumFractionDigits: 0,
       }).format(value) + ' ₫'
     );
+  };
+
+  // Calculate discount percentage from promotion
+  const calculateDiscountPercentage = (product) => {
+    // Only show discount if product has valid promotion
+    if (!product.promotionId || !product.promotionName) return null;
+    if (!product.discountValue || product.discountValue <= 0) return null;
+    if (!product.price || product.price <= 0) return null;
+    
+    // Calculate original price: price + discountValue
+    const originalPrice = product.price + product.discountValue;
+    if (originalPrice <= 0) return null;
+    
+    // Calculate percentage: (discountValue / originalPrice) * 100
+    const percentage = Math.round((product.discountValue / originalPrice) * 100);
+    
+    // Only return if percentage is greater than 0
+    return percentage > 0 ? percentage : null;
   };
 
   const getProductImage = (product) => {
@@ -111,10 +147,10 @@ function BestSellers() {
               ) : products.length === 0 ? (
                 <div className={cx('empty')}>Chưa có sản phẩm nào</div>
               ) : (
-                products.slice(0, 8).map((p) => (
+                products.slice(0, 4).map((p) => (
                   <div key={p.id} className={cx('slide')}>
-                    <article className={cx('card')}>
-                      <Link to={`/product/${p.id}`} className={cx('img-wrap')} onClick={() => scrollToTop()}>
+                    <Link to={`/product/${p.id}`} className={cx('card')} onClick={() => scrollToTop()}>
+                      <div className={cx('img-wrap')}>
                         <img 
                           src={getProductImage(p)} 
                           alt={p.name}
@@ -124,15 +160,35 @@ function BestSellers() {
                           }}
                         />
                         <span className={cx('freeship')}>FREESHIP</span>
-                      </Link>
+                      </div>
                       <div className={cx('info')}>
-                        <h3 className={cx('name')}>{p.name}</h3>
+                        <h4 className={cx('name')}>{p.name}</h4>
                         <p className={cx('desc')}>{p.description || 'Sản phẩm chất lượng cao'}</p>
                         <div className={cx('price-section')}>
-                          <span className={cx('price')}>{formatPrice(p.unitPrice ?? p.price)}</span>
+                          {(() => {
+                            if (!p || !p.id) {
+                              return <span className={cx('price')}>{formatPrice(p?.price)}</span>;
+                            }
+                            const discountPercent = calculateDiscountPercentage(p);
+                            if (!discountPercent) {
+                              return <span className={cx('price')}>{formatPrice(p?.price)}</span>;
+                            }
+                            const originalPrice = (p.price || 0) + (p.discountValue || 0);
+                            return (
+                              <>
+                                <span className={cx('old-price')}>
+                                  {formatPrice(originalPrice)}
+                                </span>
+                                <span className={cx('price')}>{formatPrice(p?.price)}</span>
+                                <span className={cx('discount')}>
+                                  -{discountPercent}%
+                                </span>
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
-                    </article>
+                    </Link>
                   </div>
                 ))
               )}
@@ -154,9 +210,9 @@ function BestSellers() {
             ) : products.length === 0 ? (
               <div className={cx('empty')}>Chưa có sản phẩm nào</div>
             ) : (
-              products.slice(0, 8).map((p) => (
-                <article key={p.id} className={cx('card')}>
-                  <Link to={`/product/${p.id}`} className={cx('img-wrap')} onClick={() => scrollToTop()}>
+              products.slice(0, 4).map((p) => (
+                <Link key={p.id} to={`/product/${p.id}`} className={cx('card')} onClick={() => scrollToTop()}>
+                  <div className={cx('img-wrap')}>
                     <img 
                       src={getProductImage(p)} 
                       alt={p.name}
@@ -166,15 +222,35 @@ function BestSellers() {
                       }}
                     />
                     <span className={cx('freeship')}>FREESHIP</span>
-                  </Link>
+                  </div>
                   <div className={cx('info')}>
-                    <h3 className={cx('name')}>{p.name}</h3>
+                    <h4 className={cx('name')}>{p.name}</h4>
                     <p className={cx('desc')}>{p.description || 'Sản phẩm chất lượng cao'}</p>
                     <div className={cx('price-section')}>
-                      <span className={cx('price')}>{formatPrice(p.unitPrice ?? p.price)}</span>
+                      {(() => {
+                        if (!p || !p.id) {
+                          return <span className={cx('price')}>{formatPrice(p?.price)}</span>;
+                        }
+                        const discountPercent = calculateDiscountPercentage(p);
+                        if (!discountPercent) {
+                          return <span className={cx('price')}>{formatPrice(p?.price)}</span>;
+                        }
+                        const originalPrice = (p.price || 0) + (p.discountValue || 0);
+                        return (
+                          <>
+                            <span className={cx('old-price')}>
+                              {formatPrice(originalPrice)}
+                            </span>
+                            <span className={cx('price')}>{formatPrice(p?.price)}</span>
+                            <span className={cx('discount')}>
+                              -{discountPercent}%
+                            </span>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
-                </article>
+                </Link>
               ))
             )}
           </div>

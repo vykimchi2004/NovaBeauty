@@ -96,10 +96,38 @@ function ProductDetailPage({
     return new Date(value).toLocaleString('vi-VN');
   };
 
-  const formatPriceWithTax = (price) => {
-    if (!price) return '-';
-    const unitPrice = price * 1.08; // Giá hiển thị = giá niêm yết × 1.08
-    return `${formatPrice(price)} (Hiển thị: ${formatPrice(unitPrice)})`;
+  const formatPriceWithTax = (unitPrice, finalPrice) => {
+    if (!unitPrice && !finalPrice) return '-';
+    
+    // unitPrice là giá niêm yết (chưa tính thuế)
+    // finalPrice là giá đã tính thuế (price = unitPrice * 1.08 - discount)
+    
+    let displayUnitPrice = 0;
+    let displayFinalPrice = 0;
+    
+    if (unitPrice && unitPrice > 0) {
+      // Nếu có unitPrice, dùng nó làm giá niêm yết
+      displayUnitPrice = unitPrice;
+      
+      // Kiểm tra xem finalPrice có hợp lý không
+      // Nếu finalPrice ≈ unitPrice * 1.08 (sai số nhỏ), thì dùng finalPrice
+      // Nếu không, tính từ unitPrice
+      const expectedPrice = unitPrice * 1.08;
+      if (finalPrice && finalPrice > 0 && Math.abs(finalPrice - expectedPrice) < expectedPrice * 0.1) {
+        // finalPrice gần với giá tính từ unitPrice, dùng finalPrice
+        displayFinalPrice = finalPrice;
+      } else {
+        // Tính từ unitPrice với tax 8%
+        displayFinalPrice = Math.round(unitPrice * 1.08);
+      }
+    } else if (finalPrice && finalPrice > 0) {
+      // Nếu không có unitPrice, tính ngược từ finalPrice
+      // Giả sử finalPrice = unitPrice * 1.08 (không có discount)
+      displayUnitPrice = Math.round(finalPrice / 1.08);
+      displayFinalPrice = finalPrice;
+    }
+    
+    return `${formatPrice(displayUnitPrice)} (Hiển thị: ${formatPrice(displayFinalPrice)})`;
   };
 
   const infoRows = [
@@ -115,7 +143,7 @@ function ProductDetailPage({
   }
 
   infoRows.push(
-    { label: 'Giá niêm yết', value: formatPriceWithTax(detailProduct.price || 0) },
+    { label: 'Giá niêm yết', value: formatPriceWithTax(detailProduct.unitPrice, detailProduct.price) },
     { label: 'Thuế', value: '8%' },
     { label: 'Trọng lượng', value: formatWeight(detailProduct.weight) },
     { label: 'Kết cấu', value: textureInfo },

@@ -13,6 +13,7 @@ function ProductFormModal({
   formData,
   formErrors,
   categories,
+  categoriesTree = [], // Tree structure: parent với children
   loadingCategories,
   uploadingMedia,
   maxMediaItems = 6,
@@ -71,12 +72,27 @@ function ProductFormModal({
               onChange={(e) => onFormDataChange('categoryId', e.target.value)}
             >
               <option value="">{loadingCategories ? 'Đang tải danh mục...' : 'Chọn danh mục'}</option>
-              {categories.length === 0 && !loadingCategories && (
+              {categoriesTree.length === 0 && !loadingCategories && (
                 <option value="" disabled>
                   Không có danh mục nào
                 </option>
               )}
-              {categories.map((cat) => (
+              {categoriesTree.map((parentCat) => (
+                <React.Fragment key={parentCat.id}>
+                  {/* Parent category - có thể chọn được */}
+                  <option value={parentCat.id} className={cx('category-parent')}>
+                    {parentCat.name}
+                  </option>
+                  {/* Subcategories với indent */}
+                  {parentCat.children && parentCat.children.length > 0 && parentCat.children.map((subCat) => (
+                    <option key={subCat.id} value={subCat.id} className={cx('category-child')}>
+                      &nbsp;&nbsp;&nbsp;&nbsp;{subCat.name}
+                    </option>
+                  ))}
+                </React.Fragment>
+              ))}
+              {/* Fallback: nếu không có tree, dùng flat list */}
+              {categoriesTree.length === 0 && categories.length > 0 && categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.name}
                 </option>
@@ -110,15 +126,26 @@ function ProductFormModal({
 
           <div className={cx('formRow')}>
             <div className={cx('formGroup', { error: formErrors.price })}>
-              <label>Giá niêm yết *</label>
+              <label>Giá niêm yết (đồng) *</label>
               <input
                 type="number"
                 min="0"
-                step="0.01"
+                step="1"
                 value={formData.price}
-                onChange={(e) => onFormDataChange('price', e.target.value)}
-                placeholder="Nhập giá niêm yết"
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Chỉ cho phép số nguyên (không có dấu thập phân)
+                  if (value === '' || /^\d+$/.test(value)) {
+                    onFormDataChange('price', value);
+                  }
+                }}
+                placeholder="VD: 100000 (một trăm nghìn đồng)"
               />
+              {formData.price && (
+                <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                  Giá đã nhập: {new Intl.NumberFormat('vi-VN').format(parseFloat(formData.price || 0))} ₫
+                </small>
+              )}
               {renderError('price')}
             </div>
 
@@ -129,8 +156,11 @@ function ProductFormModal({
                 readOnly
                 value={
                   formData.price
-                    ? new Intl.NumberFormat('vi-VN').format(
-                        parseFloat(formData.price || 0) * 1.08
+                    ? new Intl.NumberFormat('vi-VN', {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0,
+                      }).format(
+                        Math.round(parseFloat(formData.price || 0) * 1.08)
                       ) + ' ₫'
                     : '0 ₫'
                 }

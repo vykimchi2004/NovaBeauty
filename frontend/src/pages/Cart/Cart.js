@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash, faMinus, faPlus } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from './Cart.module.scss';
 import cartService from '~/services/cart';
 import notify from '~/utils/notification';
+import { storage } from '~/services/utils';
+import { STORAGE_KEYS } from '~/services/config';
 
 const cx = classNames.bind(styles);
 
 function Cart() {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isUnauthenticated, setIsUnauthenticated] = useState(false);
   const [discountCode, setDiscountCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [appliedVoucherCode, setAppliedVoucherCode] = useState(null);
@@ -37,6 +41,18 @@ function Cart() {
   const loadCart = async (skipEventDispatch = false) => {
     try {
       setLoading(true);
+      setIsUnauthenticated(false);
+      
+      // Kiểm tra token trước khi gọi API
+      const token = storage.get(STORAGE_KEYS.TOKEN);
+      if (!token) {
+        setIsUnauthenticated(true);
+        setCartItems([]);
+        setSubtotal(0);
+        setTotal(0);
+        return;
+      }
+      
       const cartData = await cartService.getCart();
       
       // Map dữ liệu từ API sang format hiển thị
@@ -57,6 +73,7 @@ function Cart() {
       setAppliedDiscount(cartData.voucherDiscount || 0);
       setAppliedVoucherCode(cartData.appliedVoucherCode);
       setTotal(cartData.totalAmount || 0);
+      setIsUnauthenticated(false);
 
       // Chỉ dispatch event nếu không phải từ event listener (tránh loop)
       if (!skipEventDispatch) {
@@ -65,13 +82,18 @@ function Cart() {
       }
     } catch (error) {
       console.error('Error loading cart:', error);
-      // Nếu lỗi do chưa đăng nhập, giữ giỏ hàng rỗng
-      if (error.code !== 401 && error.code !== 403) {
+      // Nếu lỗi do chưa đăng nhập
+      if (error.code === 401 || error.code === 403 || error.status === 401 || error.status === 403) {
+        setIsUnauthenticated(true);
+        setCartItems([]);
+        setSubtotal(0);
+        setTotal(0);
+      } else {
         notify.error('Không thể tải giỏ hàng. Vui lòng thử lại.');
+        setCartItems([]);
+        setSubtotal(0);
+        setTotal(0);
       }
-      setCartItems([]);
-      setSubtotal(0);
-      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -199,10 +221,21 @@ function Cart() {
 
         {cartItems.length === 0 ? (
           <div className={cx('emptyCart')}>
-            <p>Giỏ hàng của bạn đang trống</p>
-            <a href="/products" className={cx('continueShopping')}>
-              Tiếp tục mua sắm
-            </a>
+            {isUnauthenticated ? (
+              <>
+                <p>Vui lòng đăng nhập để xem giỏ hàng của bạn</p>
+                <Link to="/products" className={cx('continueShopping')}>
+                  Tiếp tục mua sắm
+                </Link>
+              </>
+            ) : (
+              <>
+                <p>Giỏ hàng của bạn đang trống</p>
+                <a href="/products" className={cx('continueShopping')}>
+                  Tiếp tục mua sắm
+                </a>
+              </>
+            )}
           </div>
         ) : (
           <div className={cx('cartTableWrapper')}>

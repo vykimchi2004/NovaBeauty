@@ -71,6 +71,7 @@ function StaffProducts() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [viewingProduct, setViewingProduct] = useState(null);
   const [categories, setCategories] = useState([]);
+  const [categoriesTree, setCategoriesTree] = useState([]); // Tree structure: parent với children
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [formData, setFormData] = useState(() => getInitialFormData());
   const [formErrors, setFormErrors] = useState({});
@@ -119,27 +120,50 @@ function StaffProducts() {
       const rootData = await getRootCategories();
       const activeRootCategories = (rootData || []).filter(cat => cat.status !== false);
       const allCategories = [...activeRootCategories];
+      const treeStructure = [];
 
+      // Build tree structure: parent với children
       for (const rootCat of activeRootCategories) {
         try {
           const subCats = await getSubCategories(rootCat.id);
           const activeSubCats = (subCats || []).filter(cat => cat.status !== false);
           allCategories.push(...activeSubCats);
+          
+          // Thêm vào tree structure
+          treeStructure.push({
+            ...rootCat,
+            children: activeSubCats
+          });
         } catch (subErr) {
           console.warn(`Error fetching subcategories for ${rootCat.id}:`, subErr);
+          // Nếu không load được subcategories, vẫn thêm parent vào tree
+          treeStructure.push({
+            ...rootCat,
+            children: []
+          });
         }
       }
 
-      setCategories(allCategories);
+      setCategories(allCategories); // Giữ flat list để tương thích
+      setCategoriesTree(treeStructure); // Tree structure cho dropdown
     } catch (err) {
       console.error('Error fetching categories:', err);
       try {
         const allData = await getCategories();
         const activeData = (allData || []).filter(cat => cat.status !== false);
         setCategories(activeData);
+        
+        // Build tree từ flat list
+        const rootCats = activeData.filter(cat => !cat.parentId);
+        const tree = rootCats.map(root => ({
+          ...root,
+          children: activeData.filter(cat => cat.parentId === root.id)
+        }));
+        setCategoriesTree(tree);
       } catch (fallbackErr) {
         console.error('Error fetching all categories:', fallbackErr);
         setCategories([]);
+        setCategoriesTree([]);
       }
     } finally {
       setLoadingCategories(false);
@@ -223,8 +247,10 @@ function StaffProducts() {
       uses: product.uses || '',
       usageInstructions: product.usageInstructions || '',
       weight: product.weight?.toString() || '',
-      price: product.price?.toString() || '',
-      tax: product.tax?.toString() || '8', // Thuế cố định 8%
+      // Dùng unitPrice (giá niêm yết) thay vì price (giá đã tính thuế)
+      price: product.unitPrice?.toString() || product.price ? (product.price / 1.08).toFixed(0) : '',
+      // Convert tax từ số thập phân (0.08) sang phần trăm (8) để hiển thị
+      tax: product.tax ? (product.tax * 100).toString() : '8', // Thuế cố định 8%
       publicationDate: product.publicationDate || new Date().toISOString().split('T')[0],
       categoryId: product.categoryId || product.category?.id || '',
       stockQuantity: product.stockQuantity?.toString() || '',
@@ -427,9 +453,10 @@ function StaffProducts() {
         weight: formData.weight ? parseFloat(formData.weight) : null,
         stockQuantity: formData.stockQuantity ? parseInt(formData.stockQuantity, 10) : null,
         manufacturingLocation: manufacturingLocation, // Lưu mã màu dạng JSON
-        // Tính unitPrice = giá niêm yết × 1.08 (thuế cố định 8%)
-        unitPrice: parseFloat(formData.price) * 1.08,
-        tax: 8.0, // Thuế cố định 8%
+        // Gửi giá niêm yết (chưa tính thuế), backend sẽ tự tính thuế
+        unitPrice: parseFloat(formData.price),
+        // Convert tax từ phần trăm (8) sang số thập phân (0.08)
+        tax: formData.tax ? parseFloat(formData.tax) / 100 : 0.08, // Thuế cố định 8% (0.08)
         publicationDate: formData.publicationDate || null,
         categoryId: formData.categoryId,
         imageUrls,
@@ -634,6 +661,7 @@ function StaffProducts() {
         formData={formData}
         formErrors={formErrors}
         categories={categories}
+        categoriesTree={categoriesTree}
         loadingCategories={loadingCategories}
         uploadingMedia={uploadingMedia}
         maxMediaItems={MAX_MEDIA_ITEMS}
@@ -653,6 +681,7 @@ function StaffProducts() {
         formData={formData}
         formErrors={formErrors}
         categories={categories}
+        categoriesTree={categoriesTree}
         loadingCategories={loadingCategories}
         uploadingMedia={uploadingMedia}
         maxMediaItems={MAX_MEDIA_ITEMS}

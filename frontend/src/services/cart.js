@@ -12,16 +12,10 @@ const cartService = {
         try {
             return await apiClient.get(API_ENDPOINTS.CART.GET);
         } catch (error) {
-            // Nếu lỗi 401/403 (chưa đăng nhập), trả về empty cart
-            if (error.code === 401 || error.code === 403) {
-                return {
-                    id: null,
-                    items: [],
-                    subtotal: 0,
-                    voucherDiscount: 0,
-                    appliedVoucherCode: null,
-                    totalAmount: 0
-                };
+            // Nếu lỗi 401/403 (chưa đăng nhập), trả về empty cart và không log error
+            if (error.code === 401 || error.code === 403 || error.status === 401 || error.status === 403) {
+                // Không log error cho trường hợp chưa đăng nhập - đây là bình thường
+                throw error; // Vẫn throw để component có thể xử lý
             }
             console.error('[Cart Service] getCart error:', error);
             throw error;
@@ -76,11 +70,24 @@ const cartService = {
      */
     async getCartCount() {
         try {
+            // Kiểm tra token trước khi gọi API
+            const { storage } = await import('./utils');
+            const { STORAGE_KEYS } = await import('./config');
+            const token = storage.get(STORAGE_KEYS.TOKEN);
+            
+            if (!token) {
+                // Chưa đăng nhập, trả về 0 mà không gọi API
+                return 0;
+            }
+            
             const cart = await this.getCart();
             if (!cart || !cart.items) return 0;
             return cart.items.reduce((total, item) => total + (item.quantity || 0), 0);
         } catch (error) {
-            console.error('[Cart Service] getCartCount error:', error);
+            // Không log error cho trường hợp chưa đăng nhập (401/403) - đây là bình thường
+            if (error.code !== 401 && error.code !== 403 && error.status !== 401 && error.status !== 403) {
+                console.error('[Cart Service] getCartCount error:', error);
+            }
             return 0;
         }
     }

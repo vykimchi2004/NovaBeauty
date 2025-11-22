@@ -474,7 +474,7 @@ export function useStaffVouchersState() {
 
     const payload = {
       name: voucherForm.name.trim(),
-      code: voucherForm.code.trim().toUpperCase(),
+      code: voucherForm.code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, ''),
       imageUrl: imageUrl || null,
       description: voucherForm.description?.trim() || null,
       discountValue: Number(voucherForm.discountValue),
@@ -530,7 +530,7 @@ export function useStaffVouchersState() {
 
     const payload = {
       name: promotionForm.name.trim(),
-      code: promotionForm.code.trim().toUpperCase(),
+      code: promotionForm.code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, ''),
       imageUrl: promotionImageUrl || null,
       description: promotionForm.description?.trim() || null,
       discountValue: Number(promotionForm.discountValue),
