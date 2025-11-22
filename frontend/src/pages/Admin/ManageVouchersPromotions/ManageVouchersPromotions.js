@@ -1,76 +1,104 @@
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faSearch,
-  faTrash,
-  faEdit,
-  faPlus,
-  faCheck,
-  faTimes,
-  faClock
-} from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faTrash, faCheck, faTimes, faEye } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from './ManageVouchersPromotions.module.scss';
 import notify from '~/utils/notification';
 import {
   getPromotions,
-  getPendingPromotions,
   getPromotionsByStatus,
   deletePromotion,
-  createPromotion,
   updatePromotion,
-  approvePromotion
+  approvePromotion,
 } from '~/services/promotion';
+import {
+  getVouchers,
+  getVouchersByStatus,
+  deleteVoucher,
+  updateVoucher,
+  approveVoucher,
+} from '~/services/voucher';
 import { getCategories } from '~/services/category';
 import { getProducts } from '~/services/product';
+import fallbackImage from '~/assets/images/products/image1.jpg';
 
 const cx = classNames.bind(styles);
 
 function ManageVouchersPromotions() {
+  const [activeTab, setActiveTab] = useState('voucher'); // 'promotion' or 'voucher' - default to 'voucher' since staff creates vouchers
   const [promotions, setPromotions] = useState([]);
-  const [filteredPromotions, setFilteredPromotions] = useState([]);
+  const [vouchers, setVouchers] = useState([]);
+  const [filteredItems, setFilteredItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all'); // Default to 'all' to show all items
   const [showModal, setShowModal] = useState(false);
-  const [editingPromotion, setEditingPromotion] = useState(null);
+  const [selectedItem, setSelectedItem] = useState(null);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
-  const [formData, setFormData] = useState({
-    name: '',
-    code: '',
-    imageUrl: '',
-    description: '',
-    discountValue: '',
-    minOrderValue: '',
-    maxDiscountValue: '',
-    startDate: '',
-    expiryDate: '',
-    usageLimit: '',
-    categoryIds: [],
-    productIds: []
-  });
-  const [formErrors, setFormErrors] = useState({});
 
   useEffect(() => {
-    fetchPromotions();
     fetchCategories();
     fetchProducts();
   }, []);
 
   useEffect(() => {
-    filterPromotions();
-  }, [searchTerm, filterStatus, promotions]);
+    applySearchFilter();
+  }, [searchTerm, promotions, vouchers, activeTab]);
 
-  const fetchPromotions = async () => {
+  useEffect(() => {
+    if (activeTab === 'promotion') {
+      fetchPromotions(filterStatus);
+    } else {
+      fetchVouchers(filterStatus);
+    }
+  }, [filterStatus, activeTab]);
+
+  const fetchPromotions = async (status = 'all') => {
     try {
       setLoading(true);
-      const data = await getPromotions();
-      setPromotions(data || []);
-      setFilteredPromotions(data || []);
+      let data;
+      if (status === 'all') {
+        data = await getPromotions();
+      } else {
+        data = await getPromotionsByStatus(status);
+      }
+      const promotionsList = Array.isArray(data) ? data : [];
+      console.log('[ManageVouchersPromotions] Fetched promotions:', {
+        count: promotionsList.length,
+        status,
+        items: promotionsList.map(p => ({ id: p.id, code: p.code, name: p.name }))
+      });
+      setPromotions(promotionsList);
     } catch (err) {
       console.error('Error fetching promotions:', err);
       notify.error('Không thể tải danh sách khuyến mãi. Vui lòng thử lại.');
+      setPromotions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchVouchers = async (status = 'all') => {
+    try {
+      setLoading(true);
+      let data;
+      if (status === 'all') {
+        data = await getVouchers();
+      } else {
+        data = await getVouchersByStatus(status);
+      }
+      const vouchersList = Array.isArray(data) ? data : [];
+      console.log('[ManageVouchersPromotions] Fetched vouchers:', {
+        count: vouchersList.length,
+        status,
+        items: vouchersList.map(v => ({ id: v.id, code: v.code, name: v.name }))
+      });
+      setVouchers(vouchersList);
+    } catch (err) {
+      console.error('Error fetching vouchers:', err);
+      notify.error('Không thể tải danh sách voucher. Vui lòng thử lại.');
+      setVouchers([]);
     } finally {
       setLoading(false);
     }
@@ -94,74 +122,38 @@ function ManageVouchersPromotions() {
     }
   };
 
-  const filterPromotions = () => {
-    let filtered = [...promotions];
+  const applySearchFilter = () => {
+    const items = activeTab === 'promotion' ? promotions : vouchers;
+    let filtered = [...items];
 
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(promo =>
-        promo.name?.toLowerCase().includes(term) ||
-        promo.code?.toLowerCase().includes(term) ||
-        promo.id?.toLowerCase().includes(term)
+      filtered = filtered.filter(item =>
+        item.name?.toLowerCase().includes(term) ||
+        item.code?.toLowerCase().includes(term) ||
+        item.id?.toLowerCase().includes(term)
       );
     }
 
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(promo => {
-        const status = promo.status?.toLowerCase() || '';
-        return status === filterStatus.toLowerCase();
-      });
-    }
+    console.log('[ManageVouchersPromotions] Filtered items:', {
+      activeTab,
+      totalItems: items.length,
+      filteredCount: filtered.length,
+      searchTerm
+    });
 
-    setFilteredPromotions(filtered);
+    setFilteredItems(filtered);
   };
 
-  const handleAdd = () => {
-    setEditingPromotion(null);
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    setFormData({
-      name: '',
-      code: '',
-      imageUrl: '',
-      description: '',
-      discountValue: '',
-      minOrderValue: '',
-      maxDiscountValue: '',
-      startDate: tomorrow.toISOString().split('T')[0],
-      expiryDate: '',
-      usageLimit: '',
-      categoryIds: [],
-      productIds: []
-    });
-    setFormErrors({});
+  const handleViewDetail = (item) => {
+    setSelectedItem(item);
     setShowModal(true);
   };
 
-  const handleEdit = (promotion) => {
-    setEditingPromotion(promotion);
-    setFormData({
-      name: promotion.name || '',
-      code: promotion.code || '',
-      imageUrl: promotion.imageUrl || '',
-      description: promotion.description || '',
-      discountValue: promotion.discountValue?.toString() || '',
-      minOrderValue: promotion.minOrderValue?.toString() || '',
-      maxDiscountValue: promotion.maxDiscountValue?.toString() || '',
-      startDate: promotion.startDate || '',
-      expiryDate: promotion.expiryDate || '',
-      usageLimit: promotion.usageLimit?.toString() || '',
-      categoryIds: Array.isArray(promotion.categoryIds) ? [...promotion.categoryIds] : [],
-      productIds: Array.isArray(promotion.productIds) ? [...promotion.productIds] : []
-    });
-    setFormErrors({});
-    setShowModal(true);
-  };
-
-  const handleDelete = async (promotionId) => {
+  const handleDelete = async (itemId) => {
     const confirmed = await notify.confirm(
-      'Bạn có chắc chắn muốn xóa khuyến mãi này?',
-      'Xác nhận xóa khuyến mãi',
+      `Bạn có chắc chắn muốn xóa ${activeTab === 'promotion' ? 'khuyến mãi' : 'voucher'} này?`,
+      `Xác nhận xóa ${activeTab === 'promotion' ? 'khuyến mãi' : 'voucher'}`,
       'Xóa',
       'Hủy'
     );
@@ -169,19 +161,27 @@ function ManageVouchersPromotions() {
     if (!confirmed) return;
 
     try {
-      await deletePromotion(promotionId);
-      setPromotions(promotions.filter(p => p.id !== promotionId));
-      notify.success('Xóa khuyến mãi thành công!');
+      if (activeTab === 'promotion') {
+        await deletePromotion(itemId);
+        setPromotions(promotions.filter(p => p.id !== itemId));
+      } else {
+        await deleteVoucher(itemId);
+        setVouchers(vouchers.filter(v => v.id !== itemId));
+      }
+      notify.success(`Xóa ${activeTab === 'promotion' ? 'khuyến mãi' : 'voucher'} thành công!`);
+      if (selectedItem?.id === itemId) {
+        closeModal();
+      }
     } catch (err) {
-      console.error('Error deleting promotion:', err);
-      notify.error('Không thể xóa khuyến mãi. Vui lòng thử lại.');
+      console.error(`Error deleting ${activeTab}:`, err);
+      notify.error(`Không thể xóa ${activeTab === 'promotion' ? 'khuyến mãi' : 'voucher'}. Vui lòng thử lại.`);
     }
   };
 
-  const handleApprove = async (promotionId) => {
+  const handleApprove = async (itemId) => {
     const confirmed = await notify.confirm(
-      'Bạn có chắc muốn duyệt khuyến mãi này?',
-      'Xác nhận duyệt khuyến mãi',
+      `Bạn có chắc muốn duyệt ${activeTab === 'promotion' ? 'khuyến mãi' : 'voucher'} này?`,
+      `Xác nhận duyệt ${activeTab === 'promotion' ? 'khuyến mãi' : 'voucher'}`,
       'Duyệt',
       'Hủy'
     );
@@ -189,88 +189,88 @@ function ManageVouchersPromotions() {
     if (!confirmed) return;
 
     try {
-      await approvePromotion({ promotionId });
-      notify.success('Đã duyệt khuyến mãi thành công!');
-      fetchPromotions();
-    } catch (err) {
-      console.error('Error approving promotion:', err);
-      notify.error('Không thể duyệt khuyến mãi. Vui lòng thử lại.');
-    }
-  };
-
-  const validateForm = () => {
-    const errors = {};
-    if (!formData.name?.trim()) errors.name = 'Tên khuyến mãi không được để trống';
-    if (!formData.code?.trim()) errors.code = 'Mã khuyến mãi không được để trống';
-    if (!formData.discountValue || parseFloat(formData.discountValue) < 0) {
-      errors.discountValue = 'Giá trị giảm giá không hợp lệ';
-    }
-    if (!formData.startDate) errors.startDate = 'Ngày bắt đầu không được để trống';
-    if (!formData.expiryDate) errors.expiryDate = 'Ngày kết thúc không được để trống';
-    if (!formData.usageLimit || parseInt(formData.usageLimit) < 1) {
-      errors.usageLimit = 'Giới hạn sử dụng phải lớn hơn 0';
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
-    try {
-      const submitData = {
-        name: formData.name.trim(),
-        code: formData.code.trim().toUpperCase(),
-        imageUrl: formData.imageUrl?.trim() || null,
-        description: formData.description?.trim() || null,
-        discountValue: parseFloat(formData.discountValue),
-        minOrderValue: formData.minOrderValue ? parseFloat(formData.minOrderValue) : null,
-        maxDiscountValue: formData.maxDiscountValue ? parseFloat(formData.maxDiscountValue) : null,
-        startDate: formData.startDate,
-        expiryDate: formData.expiryDate,
-        usageLimit: parseInt(formData.usageLimit),
-        categoryIds: formData.categoryIds.length > 0 ? formData.categoryIds : null,
-        productIds: formData.productIds.length > 0 ? formData.productIds : null
-      };
-
-      if (editingPromotion) {
-        await updatePromotion(editingPromotion.id, submitData);
-        notify.success('Cập nhật khuyến mãi thành công!');
+      if (activeTab === 'promotion') {
+        await approvePromotion({ promotionId: itemId, action: 'APPROVE' });
       } else {
-        await createPromotion(submitData);
-        notify.success('Thêm khuyến mãi thành công!');
+        await approveVoucher({ voucherId: itemId, action: 'APPROVE' });
       }
-
-      setShowModal(false);
-      fetchPromotions();
+      notify.success(`Đã duyệt ${activeTab === 'promotion' ? 'khuyến mãi' : 'voucher'} thành công!`);
+      closeModal();
+      if (activeTab === 'promotion') {
+        fetchPromotions(filterStatus);
+      } else {
+        fetchVouchers(filterStatus);
+      }
     } catch (err) {
-      console.error('Error saving promotion:', err);
-      notify.error(err.message || 'Không thể lưu khuyến mãi. Vui lòng thử lại.');
+      console.error(`Error approving ${activeTab}:`, err);
+      notify.error(`Không thể duyệt ${activeTab === 'promotion' ? 'khuyến mãi' : 'voucher'}. Vui lòng thử lại.`);
     }
   };
 
-  const toggleCategory = (categoryId) => {
-    const newCategoryIds = formData.categoryIds.includes(categoryId)
-      ? formData.categoryIds.filter(id => id !== categoryId)
-      : [...formData.categoryIds, categoryId];
-    setFormData({ ...formData, categoryIds: newCategoryIds });
+  const handleReject = async (item) => {
+    const reason = window.prompt('Nhập lý do từ chối', '');
+    if (reason === null) return;
+    const trimmed = reason.trim();
+    if (!trimmed) return;
+    try {
+      if (activeTab === 'promotion') {
+        await approvePromotion({
+          promotionId: item.id,
+          action: 'REJECT',
+          reason: trimmed,
+        });
+      } else {
+        await approveVoucher({
+          voucherId: item.id,
+          action: 'REJECT',
+          reason: trimmed,
+        });
+      }
+      notify.success(`Đã từ chối ${activeTab === 'promotion' ? 'khuyến mãi' : 'voucher'}.`);
+      closeModal();
+      if (activeTab === 'promotion') {
+        fetchPromotions(filterStatus);
+      } else {
+        fetchVouchers(filterStatus);
+      }
+    } catch (err) {
+      console.error(`Error rejecting ${activeTab}:`, err);
+      notify.error(`Không thể từ chối ${activeTab === 'promotion' ? 'khuyến mãi' : 'voucher'}. Vui lòng thử lại.`);
+    }
   };
 
-  const toggleProduct = (productId) => {
-    const newProductIds = formData.productIds.includes(productId)
-      ? formData.productIds.filter(id => id !== productId)
-      : [...formData.productIds, productId];
-    setFormData({ ...formData, productIds: newProductIds });
+  const buildPromotionPayload = (promotion, overrides = {}) => ({
+    name: promotion.name,
+    code: promotion.code,
+    imageUrl: promotion.imageUrl,
+    description: promotion.description,
+    discountValue: promotion.discountValue,
+    minOrderValue: promotion.minOrderValue,
+    maxDiscountValue: promotion.maxDiscountValue,
+    startDate: promotion.startDate,
+    expiryDate: promotion.expiryDate,
+    usageLimit: promotion.usageLimit,
+    categoryIds:
+      Array.isArray(promotion.categoryIds) && promotion.categoryIds.length ? promotion.categoryIds : null,
+    productIds:
+      Array.isArray(promotion.productIds) && promotion.productIds.length ? promotion.productIds : null,
+    discountValueType: promotion.discountValueType,
+    applyScope: promotion.applyScope,
+    ...overrides,
+  });
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedItem(null);
   };
+
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      PENDING: { label: 'Chờ duyệt', class: 'pending' },
+      PENDING_APPROVAL: { label: 'Chờ duyệt', class: 'pending' },
       APPROVED: { label: 'Đã duyệt', class: 'approved' },
       REJECTED: { label: 'Từ chối', class: 'rejected' },
-      EXPIRED: { label: 'Hết hạn', class: 'expired' }
+      EXPIRED: { label: 'Hết hạn', class: 'expired' },
     };
     const statusInfo = statusMap[status] || { label: status, class: 'default' };
     return <span className={cx('statusBadge', statusInfo.class)}>{statusInfo.label}</span>;
@@ -280,6 +280,18 @@ function ManageVouchersPromotions() {
     if (!dateString) return '-';
     const date = new Date(dateString);
     return date.toLocaleDateString('vi-VN');
+  };
+
+  const formatCurrency = (value, suffix = '₫') => {
+    if (value === null || value === undefined) return 'Không áp dụng';
+    return `${new Intl.NumberFormat('vi-VN').format(value)} ${suffix}`.trim();
+  };
+
+  const formatUsageLimit = (value) => {
+    if (value === null || value === undefined || value <= 0) {
+      return 'Không giới hạn';
+    }
+    return `${value} lượt`;
   };
 
   if (loading) {
@@ -294,6 +306,22 @@ function ManageVouchersPromotions() {
     <div className={cx('wrapper')}>
       <div className={cx('header')}>
         <h2 className={cx('title')}>Voucher & Khuyến mãi</h2>
+        <div className={cx('tabs')}>
+          <button
+            type="button"
+            className={cx('tab', activeTab === 'promotion' && 'tabActive')}
+            onClick={() => setActiveTab('promotion')}
+          >
+            Khuyến mãi
+          </button>
+          <button
+            type="button"
+            className={cx('tab', activeTab === 'voucher' && 'tabActive')}
+            onClick={() => setActiveTab('voucher')}
+          >
+            Voucher
+          </button>
+        </div>
         <div className={cx('headerActions')}>
           <div className={cx('searchBox')}>
             <input
@@ -315,21 +343,29 @@ function ManageVouchersPromotions() {
               className={cx('sortSelect')}
             >
               <option value="all">Tất cả</option>
-              <option value="pending">Chờ duyệt</option>
-              <option value="approved">Đã duyệt</option>
-              <option value="rejected">Từ chối</option>
-              <option value="expired">Hết hạn</option>
+              <option value="PENDING_APPROVAL">Chờ duyệt</option>
+              <option value="APPROVED">Đã duyệt</option>
+              <option value="REJECTED">Từ chối</option>
+              <option value="EXPIRED">Hết hạn</option>
             </select>
           </div>
         </div>
       </div>
 
       <div className={cx('tableWrapper')}>
+        <div className={cx('tableHeader')}>
+          <h3>
+            {activeTab === 'voucher' 
+              ? `Danh sách Voucher (${filteredItems.length})` 
+              : `Danh sách Khuyến mãi (${filteredItems.length})`}
+          </h3>
+        </div>
         <table className={cx('table')}>
           <thead>
             <tr>
+              <th>Loại</th>
               <th>Mã</th>
-              <th>Tên khuyến mãi</th>
+              <th>{activeTab === 'voucher' ? 'Tên voucher' : 'Tên khuyến mãi'}</th>
               <th>Giảm giá</th>
               <th>Ngày bắt đầu</th>
               <th>Ngày kết thúc</th>
@@ -339,46 +375,47 @@ function ManageVouchersPromotions() {
             </tr>
           </thead>
           <tbody>
-            {filteredPromotions.length === 0 ? (
+            {filteredItems.length === 0 ? (
               <tr>
-                <td colSpan="8" className={cx('empty')}>
-                  Không có khuyến mãi nào
+                <td colSpan="9" className={cx('empty')}>
+                  Không có {activeTab === 'promotion' ? 'khuyến mãi' : 'voucher'} nào
                 </td>
               </tr>
             ) : (
-              filteredPromotions.map((promotion) => (
-                <tr key={promotion.id}>
-                  <td className={cx('codeCell')}>{promotion.code}</td>
-                  <td className={cx('nameCell')}>{promotion.name}</td>
-                  <td>{promotion.discountValue}%</td>
-                  <td>{formatDate(promotion.startDate)}</td>
-                  <td>{formatDate(promotion.expiryDate)}</td>
-                  <td>{promotion.usageCount || 0} / {promotion.usageLimit || 0}</td>
-                  <td>{getStatusBadge(promotion.status)}</td>
+              filteredItems.map((item) => (
+                <tr key={item.id} className={cx(activeTab === 'voucher' ? 'voucherRow' : 'promotionRow')}>
+                  <td>
+                    <span className={cx('typeBadge', activeTab === 'voucher' ? 'voucherBadge' : 'promotionBadge')}>
+                      {activeTab === 'voucher' ? 'VOUCHER' : 'KHUYẾN MÃI'}
+                    </span>
+                  </td>
+                  <td className={cx('codeCell')}>{item.code}</td>
+                  <td className={cx('nameCell')}>{item.name || '-'}</td>
+                  <td>
+                    {item.discountValueType === 'PERCENTAGE' 
+                      ? `${item.discountValue}%` 
+                      : `${new Intl.NumberFormat('vi-VN').format(item.discountValue)}₫`}
+                  </td>
+                  <td>{formatDate(item.startDate)}</td>
+                  <td>{formatDate(item.expiryDate)}</td>
+                  <td>
+                    {item.usageCount || 0} / {formatUsageLimit(item.usageLimit)}
+                  </td>
+                  <td>{getStatusBadge(item.status)}</td>
                   <td>
                     <div className={cx('actions')}>
-                      {promotion.status === 'PENDING' && (
                         <button
                           type="button"
-                          className={cx('actionBtn', 'approveBtn')}
-                          onClick={() => handleApprove(promotion.id)}
-                          title="Duyệt"
-                        >
-                          <FontAwesomeIcon icon={faCheck} />
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className={cx('actionBtn', 'editBtn')}
-                        onClick={() => handleEdit(promotion)}
-                        title="Sửa"
+                        className={cx('actionBtn', 'viewBtn')}
+                        onClick={() => handleViewDetail(item)}
+                        title="Chi tiết"
                       >
-                        <FontAwesomeIcon icon={faEdit} />
+                        <FontAwesomeIcon icon={faEye} />
                       </button>
                       <button
                         type="button"
                         className={cx('actionBtn', 'deleteBtn')}
-                        onClick={() => handleDelete(promotion.id)}
+                        onClick={() => handleDelete(item.id)}
                         title="Xóa"
                       >
                         <FontAwesomeIcon icon={faTrash} />
@@ -392,180 +429,145 @@ function ManageVouchersPromotions() {
         </table>
       </div>
 
-      {/* Modal Add/Edit Promotion */}
-      {showModal && (
-        <div className={cx('modalOverlay')} onClick={() => setShowModal(false)}>
-          <div className={cx('modal', 'largeModal')} onClick={(e) => e.stopPropagation()}>
-            <div className={cx('modalHeader')}>
-              <h3>{editingPromotion ? 'Sửa khuyến mãi' : 'Thêm khuyến mãi mới'}</h3>
-              <button type="button" className={cx('closeBtn')} onClick={() => setShowModal(false)}>
-                <FontAwesomeIcon icon={faTimes} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className={cx('form')}>
-              <div className={cx('formRow')}>
-                <div className={cx('formGroup', { error: formErrors.name })}>
-                  <label>Tên khuyến mãi *</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Nhập tên khuyến mãi"
-                  />
-                  {formErrors.name && <span className={cx('errorText')}>{formErrors.name}</span>}
-                </div>
-
-                <div className={cx('formGroup', { error: formErrors.code })}>
-                  <label>Mã khuyến mãi *</label>
-                  <input
-                    type="text"
-                    value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                    placeholder="VD: SALE50"
-                    disabled={!!editingPromotion}
-                  />
-                  {formErrors.code && <span className={cx('errorText')}>{formErrors.code}</span>}
-                </div>
-              </div>
-
-              <div className={cx('formRow')}>
-                <div className={cx('formGroup', { error: formErrors.discountValue })}>
-                  <label>Giá trị giảm giá (%) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="100"
-                    value={formData.discountValue}
-                    onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
-                    placeholder="0"
-                  />
-                  {formErrors.discountValue && <span className={cx('errorText')}>{formErrors.discountValue}</span>}
-                </div>
-
-                <div className={cx('formGroup')}>
-                  <label>Giảm tối đa</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.maxDiscountValue}
-                    onChange={(e) => setFormData({ ...formData, maxDiscountValue: e.target.value })}
-                    placeholder="Không giới hạn"
+      {showModal && selectedItem && (
+        <div className={cx('modalOverlay')} onClick={closeModal}>
+          <div className={cx('detailModalWrapper')} onClick={(e) => e.stopPropagation()}>
+            <div className={cx('detailCard')}>
+              <div className={cx('detailLeft')}>
+                <div className={cx('detailImage')}>
+                  <img
+                    className={cx('detailMainImage')}
+                    src={selectedItem.imageUrl || fallbackImage}
+                    alt={selectedItem.name}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = fallbackImage;
+                    }}
                   />
                 </div>
               </div>
 
-              <div className={cx('formRow')}>
-                <div className={cx('formGroup', { error: formErrors.startDate })}>
-                  <label>Ngày bắt đầu *</label>
-                  <input
-                    type="date"
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  />
-                  {formErrors.startDate && <span className={cx('errorText')}>{formErrors.startDate}</span>}
+              <div className={cx('detailRight')}>
+                <div className={cx('detailHeaderBlock')}>
+                  <h3>Chi tiết {activeTab === 'promotion' ? 'khuyến mãi' : 'voucher'}</h3>
+                  <div className={cx('detailStatus')}>{getStatusBadge(selectedItem.status)}</div>
                 </div>
 
-                <div className={cx('formGroup', { error: formErrors.expiryDate })}>
-                  <label>Ngày kết thúc *</label>
-                  <input
-                    type="date"
-                    value={formData.expiryDate}
-                    onChange={(e) => setFormData({ ...formData, expiryDate: e.target.value })}
-                  />
-                  {formErrors.expiryDate && <span className={cx('errorText')}>{formErrors.expiryDate}</span>}
+                <div className={cx('detailInfoList')}>
+                  {[
+                    { label: `Mã ${activeTab === 'promotion' ? 'khuyến mãi' : 'voucher'}`, value: selectedItem.code || '-' },
+                    { label: `Tên ${activeTab === 'promotion' ? 'khuyến mãi' : 'voucher'}`, value: selectedItem.name || '-' },
+                    {
+                      label: 'Loại áp dụng',
+                      value:
+                        selectedItem.applyScope === 'PRODUCT'
+                          ? 'Theo sản phẩm'
+                          : selectedItem.applyScope === 'CATEGORY'
+                          ? 'Theo danh mục'
+                          : 'Toàn bộ đơn hàng',
+                    },
+                    {
+                      label: 'Giá trị giảm',
+                      value:
+                        selectedItem.discountValueType === 'AMOUNT'
+                          ? formatCurrency(selectedItem.discountValue)
+                          : `${selectedItem.discountValue ?? 0}%`,
+                    },
+                    {
+                      label: 'Đơn tối thiểu',
+                      value:
+                        selectedItem.minOrderValue && selectedItem.minOrderValue > 0
+                          ? formatCurrency(selectedItem.minOrderValue)
+                          : 'Không yêu cầu',
+                    },
+                    {
+                      label: 'Giảm tối đa',
+                      value:
+                        selectedItem.maxDiscountValue && selectedItem.maxDiscountValue > 0
+                          ? formatCurrency(selectedItem.maxDiscountValue)
+                          : 'Không giới hạn',
+                    },
+                    {
+                      label: 'Thời gian áp dụng',
+                      value: `${formatDate(selectedItem.startDate)} - ${formatDate(selectedItem.expiryDate)}`,
+                    },
+                    {
+                      label: 'Giới hạn sử dụng',
+                      value: formatUsageLimit(selectedItem.usageLimit),
+                    },
+                  ].map((item) => (
+                    <div className={cx('detailInfoRow')} key={item.label}>
+                      <span className={cx('detailInfoLabel')}>{item.label}</span>
+                      <span className={cx('detailInfoValue')}>{item.value}</span>
                 </div>
-              </div>
-
-              <div className={cx('formRow')}>
-                <div className={cx('formGroup')}>
-                  <label>Đơn hàng tối thiểu</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.minOrderValue}
-                    onChange={(e) => setFormData({ ...formData, minOrderValue: e.target.value })}
-                    placeholder="Không yêu cầu"
-                  />
-                </div>
-
-                <div className={cx('formGroup', { error: formErrors.usageLimit })}>
-                  <label>Giới hạn sử dụng *</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formData.usageLimit}
-                    onChange={(e) => setFormData({ ...formData, usageLimit: e.target.value })}
-                    placeholder="0"
-                  />
-                  {formErrors.usageLimit && <span className={cx('errorText')}>{formErrors.usageLimit}</span>}
-                </div>
-              </div>
-
-              <div className={cx('formGroup')}>
-                <label>Mô tả</label>
-                <textarea
-                  rows="3"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Mô tả về khuyến mãi"
-                />
-              </div>
-
-              <div className={cx('formGroup')}>
-                <label>URL hình ảnh</label>
-                <input
-                  type="url"
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                  placeholder="https://..."
-                />
-              </div>
-
-              <div className={cx('formGroup')}>
-                <label>Áp dụng cho danh mục (chọn nhiều)</label>
-                <div className={cx('checkboxGroup')}>
-                  {categories.map(cat => (
-                    <label key={cat.id} className={cx('checkboxLabel')}>
-                      <input
-                        type="checkbox"
-                        checked={formData.categoryIds.includes(cat.id)}
-                        onChange={() => toggleCategory(cat.id)}
-                      />
-                      <span>{cat.name}</span>
-                    </label>
                   ))}
+              </div>
+
+                <div className={cx('detailTextGroup')}>
+                  <span className={cx('detailInfoLabel')}>Mô tả</span>
+                  <p className={cx('detailParagraph')}>{selectedItem.description || 'Không có mô tả'}</p>
+                </div>
+
+                <div className={cx('detailTextGroup')}>
+                  <span className={cx('detailInfoLabel')}>Danh mục áp dụng</span>
+                  <div className={cx('chipGroup')}>
+                    {selectedItem.categoryIds?.length
+                      ? selectedItem.categoryIds.map((id) => (
+                          <span key={id} className={cx('chip')}>
+                            {categories.find((c) => c.id === id)?.name || id}
+                          </span>
+                        ))
+                      : 'Không áp dụng'}
                 </div>
               </div>
 
-              <div className={cx('formGroup')}>
-                <label>Áp dụng cho sản phẩm (chọn nhiều)</label>
-                <div className={cx('checkboxGroup')}>
-                  {products.slice(0, 20).map(product => (
-                    <label key={product.id} className={cx('checkboxLabel')}>
-                      <input
-                        type="checkbox"
-                        checked={formData.productIds.includes(product.id)}
-                        onChange={() => toggleProduct(product.id)}
-                      />
-                      <span>{product.name}</span>
-                    </label>
-                  ))}
+                <div className={cx('detailTextGroup')}>
+                  <span className={cx('detailInfoLabel')}>Sản phẩm áp dụng</span>
+                  <div className={cx('chipGroup')}>
+                    {selectedItem.productIds?.length
+                      ? selectedItem.productIds.map((id) => (
+                          <span key={id} className={cx('chip')}>
+                            {products.find((p) => p.id === id)?.name || id}
+                          </span>
+                        ))
+                      : 'Không áp dụng'}
                 </div>
               </div>
-
-              <div className={cx('formActions')}>
-                <button type="button" className={cx('cancelBtn')} onClick={() => setShowModal(false)}>
-                  Hủy
-                </button>
-                <button type="submit" className={cx('submitBtn')}>
-                  {editingPromotion ? 'Cập nhật' : 'Thêm mới'}
-                </button>
+                <div className={cx('detailActions')}>
+                  <button type="button" className={cx('cancelBtn')} onClick={closeModal}>
+                    Đóng
+                  </button>
+                  {selectedItem.status === 'PENDING_APPROVAL' && (
+                    <>
+                      <button
+                        type="button"
+                        className={cx('approveBtn')}
+                        onClick={() => handleApprove(selectedItem.id)}
+                      >
+                        <FontAwesomeIcon icon={faCheck} />
+                        Duyệt
+                      </button>
+                      <button
+                        type="button"
+                        className={cx('rejectBtn')}
+                        onClick={() => handleReject(selectedItem)}
+                      >
+                        <FontAwesomeIcon icon={faTimes} />
+                        Không duyệt
+                      </button>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    className={cx('deleteBtn')}
+                    onClick={() => handleDelete(selectedItem.id)}
+                  >
+                    <FontAwesomeIcon icon={faTrash} />
+                    Xóa {activeTab === 'promotion' ? 'khuyến mãi' : 'voucher'}
+                  </button>
+                </div>
               </div>
-            </form>
+              </div>
           </div>
         </div>
       )}
@@ -574,3 +576,5 @@ function ManageVouchersPromotions() {
 }
 
 export default ManageVouchersPromotions;
+
+

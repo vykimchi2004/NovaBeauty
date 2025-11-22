@@ -1,0 +1,290 @@
+$primary: #e5677d;
+$primary-dark: #d4556b;
+$primary-light: #fff5f8;
+$border-color: #e5e7eb;
+$text-dark: #1a1a1a;
+$text-muted: #6b7280;
+$error: #dc2626;
+$white: #fff;
+
+.page {
+  padding: 32px;
+  background: $primary-light;
+  min-height: 100vh;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+}
+
+.pageHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba($primary, 0.3);
+  border-radius: 10px;
+  padding: 10px 16px;
+  background: $white;
+  color: $primary;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: $primary;
+    color: $white;
+  }
+}
+
+.pageTitle {
+  h1 {
+    margin: 0;
+    font-size: 26px;
+    color: $text-dark;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: $text-muted;
+    font-size: 15px;
+  }
+}
+
+.card {
+  background: $white;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(229, 103, 125, 0.15);
+  padding: 32px;
+
+  @media (max-width: 768px) {
+    padding: 20px;
+  }
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.formSection {
+  h3 {
+    margin: 0 0 16px;
+    font-size: 20px;
+    color: $primary-dark;
+  }
+}
+
+.grid2,
+.grid3 {
+  display: grid;
+  gap: 20px;
+}
+
+.grid2 {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.grid3 {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  label {
+    font-weight: 600;
+    color: $text-dark;
+  }
+
+  input,
+  select,
+  textarea {
+    width: 100%;
+    border: 1px solid $border-color;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 15px;
+    background: #fafafa;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+    &:focus {
+      outline: none;
+      border-color: $primary;
+      box-shadow: 0 0 0 3px rgba($primary, 0.15);
+      background: $white;
+    }
+  }
+
+  textarea {
+    min-height: 110px;
+    resize: vertical;
+  }
+
+  &.error {
+    input,
+    textarea,
+    select {
+      border-color: $error;
+      background: rgba($error, 0.05);
+    }
+  }
+}
+
+.errorText {
+  color: $error;
+  font-size: 13px;
+}
+
+.mediaUploadRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  input[type='file'] {
+    border: 1px dashed rgba($primary, 0.6);
+    padding: 14px;
+    border-radius: 12px;
+    background: rgba($primary, 0.04);
+    cursor: pointer;
+  }
+
+  small {
+    color: $text-muted;
+  }
+}
+
+.uploadingText {
+  color: $primary-dark;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.mediaPlaceholder {
+  padding: 24px;
+  border: 1px dashed $border-color;
+  border-radius: 12px;
+  text-align: center;
+  color: $text-muted;
+}
+
+.mediaGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.mediaItem {
+  border: 1px solid $border-color;
+  border-radius: 14px;
+  padding: 12px;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+
+  &.active {
+    border-color: $primary;
+  }
+
+  img,
+  video {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin-bottom: 12px;
+  }
+}
+
+.mediaActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.defaultToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: $primary-dark;
+}
+
+.removeBtn {
+  border: none;
+  background: #fee2e2;
+  color: $error;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+
+  &:hover {
+    background: #fecaca;
+  }
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.btn {
+  min-width: 140px;
+  border-radius: 10px;
+  border: none;
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &.primary {
+    background: $primary;
+    color: $white;
+
+    &:hover {
+      background: $primary-dark;
+    }
+  }
+
+  &.muted {
+    background: #f3f4f6;
+    color: $text-dark;
+
+    &:hover {
+      background: #e5e7eb;
+    }
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+.loadingCard {
+  background: $white;
+  border-radius: 14px;
+  padding: 40px;
+  text-align: center;
+  font-size: 18px;
+  color: $text-muted;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+
+
+
+

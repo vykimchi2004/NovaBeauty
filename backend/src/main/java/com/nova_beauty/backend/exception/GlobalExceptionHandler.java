@@ -5,11 +5,13 @@ import java.util.Objects;
 
 import jakarta.validation.ConstraintViolation;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.nova_beauty.backend.dto.request.ApiResponse;
 
@@ -50,6 +52,14 @@ public class GlobalExceptionHandler {
                         .code(errorCode.getCode())
                         .message(errorCode.getMessage())
                         .build());
+    }
+
+    @ExceptionHandler(value = NoResourceFoundException.class)
+    ResponseEntity<?> handlingNoResourceFoundException(NoResourceFoundException exception) {
+        // Log ở mức debug để tránh spam log khi frontend request ảnh không tồn tại
+        log.debug("Resource not found: {}", exception.getResourcePath());
+        // Trả về 404 không có body để browser có thể xử lý
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 
     @ExceptionHandler(value = MethodArgumentNotValidException.class)

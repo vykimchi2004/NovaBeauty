@@ -52,6 +52,71 @@
   }
 }
 
+.rejectBtn {
+  background: #fdecea;
+  color: #c9372c;
+
+  &:hover {
+    background: #f9d6d0;
+  }
+}
+
+.viewBtn {
+  background: #e8f0fe;
+  color: #1a73e8;
+
+  &:hover {
+    background: #d2e3fc;
+  }
+}
+
+.readOnlyBox {
+  min-height: 44px;
+  border: 1px solid #e0e3eb;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #fafbff;
+  font-size: 14px;
+  color: #333;
+}
+
+.detailModalWrapper {
+  width: 100%;
+  max-width: 1100px;
+  background: #fff;
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.2);
+}
+
+.modalOverlay {
+  align-items: flex-start;
+  padding: 60px 20px;
+  overflow-y: auto;
+}
+
+.chipGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #f4f6fb;
+  color: #1f2a37;
+  font-size: 13px;
+  border: 1px solid #e1e7ef;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
 .checkboxGroup {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -78,6 +143,98 @@
 
   span {
     user-select: none;
+  }
+}
+
+.actionStack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-left: 12px;
+
+  button {
+    min-width: 160px;
+  }
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.tab {
+  padding: 12px 24px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #6c757d;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: -2px;
+
+  &:hover {
+    color: #ff80b5;
+  }
+}
+
+.tabActive {
+  color: #ff80b5;
+  border-bottom-color: #ff80b5;
+  font-weight: 600;
+}
+
+.tableHeader {
+  margin-bottom: 16px;
+  padding: 12px 0;
+  border-bottom: 2px solid #e9ecef;
+
+  h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #212529;
+  }
+}
+
+.typeBadge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.voucherBadge {
+  background: #e3f2fd;
+  color: #1976d2;
+  border: 1px solid #90caf9;
+}
+
+.promotionBadge {
+  background: #f3e5f5;
+  color: #7b1fa2;
+  border: 1px solid #ce93d8;
+}
+
+.voucherRow {
+  background: #f8f9ff;
+
+  &:hover {
+    background: #f0f2ff;
+  }
+}
+
+.promotionRow {
+  background: #fff8ff;
+
+  &:hover {
+    background: #fff0ff;
   }
 }
 

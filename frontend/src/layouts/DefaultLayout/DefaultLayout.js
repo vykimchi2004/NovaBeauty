@@ -11,7 +11,7 @@ import ForgotPasswordModal from '~/pages/Auth/ForgotPasswordModal';
 import VerifyCodeModal from '~/pages/Auth/VerifyCodeModal';
 import ResetPasswordModal from '~/pages/Auth/ResetPasswordModal';
 import { verifyCode, resetPassword, sendVerificationCode, logout } from '~/services/auth';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom';
 import { STORAGE_KEYS } from '~/services/config';
 import { storage } from '~/services/utils';
 
@@ -21,6 +21,7 @@ function DefaultLayout({ children }) {
   const cx = classNames.bind(styles);
   const navigate = useNavigate?.() || null;
   const location = useLocation?.() || { pathname: '/' };
+  const [searchParams] = useSearchParams?.() || [new URLSearchParams()];
   const [open, setOpen] = useState(false);
 
   // Quản lý modal đang mở: null | 'login' | 'register' | 'forgot' | 'verify-code' | 'reset-password'
@@ -35,6 +36,15 @@ function DefaultLayout({ children }) {
 
     if (ADMIN_EMAILS.includes(email) && !location.pathname.startsWith('/admin')) {
       navigate('/admin', { replace: true });
+    }
+  }, [currentUser, navigate, location.pathname]);
+
+  React.useEffect(() => {
+    const roleName = currentUser?.role?.name?.toUpperCase();
+    if (!navigate || !roleName) return;
+
+    if ((roleName === 'STAFF' || roleName === 'CUSTOMER_SUPPORT') && !location.pathname.startsWith('/staff')) {
+      navigate('/staff', { replace: true });
     }
   }, [currentUser, navigate, location.pathname]);
   
@@ -141,6 +151,36 @@ function DefaultLayout({ children }) {
   let currentLabel = BREADCRUMB_LABELS[path] || null;
   const isProductDetail = path.startsWith('/product/');
   const productName = isProductDetail && location.state && location.state.name ? location.state.name : null;
+  
+  // Get category name from query params if on /products page
+  const [categoryName, setCategoryName] = useState(null);
+  const categoryId = path === '/products' ? searchParams.get('category') : null;
+  
+  React.useEffect(() => {
+    if (categoryId && path === '/products') {
+      const fetchCategoryName = async () => {
+        try {
+          const { getCategories } = await import('~/services/category');
+          const categories = await getCategories();
+          const category = categories.find(c => c.id === categoryId);
+          if (category) {
+            setCategoryName(category.name);
+          }
+        } catch (error) {
+          console.error('Error fetching category:', error);
+          setCategoryName(null);
+        }
+      };
+      fetchCategoryName();
+    } else {
+      setCategoryName(null);
+    }
+  }, [categoryId, path]);
+  
+  // Override label if category is selected
+  if (categoryId && categoryName) {
+    currentLabel = categoryName;
+  }
 
   // Load cart count từ API
   const [cartCount, setCartCount] = useState(0);

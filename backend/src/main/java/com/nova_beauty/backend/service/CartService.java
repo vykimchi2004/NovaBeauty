@@ -1,6 +1,7 @@
 package com.nova_beauty.backend.service;
 
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,7 @@ import com.nova_beauty.backend.repository.OrderRepository;
 import com.nova_beauty.backend.util.SecurityUtil;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -77,21 +79,57 @@ public class CartService {
                 .findById(productId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
 
-        CartItem cartItem = cartItemRepository
-                .findByCartIdAndProductId(cart.getId(), productId)
-                .orElse(CartItem.builder()
-                        .cart(cart)
-                        .product(product)
-                        .unitPrice(calculateUnitPrice(product))
-                        .quantity(0)
-                        .build());
+        // Tìm cartItem theo productId và colorCode (nếu có)
+        CartItem cartItem = null;
+        String normalizedColorCode = (colorCode != null && !colorCode.trim().isEmpty())
+                ? colorCode.trim()
+                : null;
 
-        cartItem.setQuantity(cartItem.getQuantity() + quantity);
-        double finalPrice = cartItem.getQuantity() * cartItem.getUnitPrice();
-        cartItem.setFinalPrice(finalPrice);
+        if (normalizedColorCode != null) {
+            cartItem = cartItemRepository
+                    .findByCartIdAndProductIdAndColorCode(cart.getId(), productId, normalizedColorCode)
+                    .orElse(null);
+        } else {
+            // Nếu không có colorCode, tìm cartItem không có colorCode
+            cartItem = cartItemRepository
+                    .findByCartIdAndProductId(cart.getId(), productId)
+                    .orElse(null);
+        }
 
-        cartItemRepository.save(cartItem);
+        // Nếu quantity âm và không có item, không làm gì
+        if (quantity < 0 && cartItem == null) {
+            return cart;
+        }
+
+        // Nếu chưa có item và quantity dương, tạo mới
+        if (cartItem == null) {
+            cartItem = CartItem.builder()
+                    .cart(cart)
+                    .product(product)
+                    .unitPrice(calculateUnitPrice(product))
+                    .quantity(0)
+                    .colorCode(normalizedColorCode)
+                    .build();
+        }
+
+        int newQuantity = cartItem.getQuantity() + quantity;
+
+        // Nếu quantity mới <= 0, xóa item
+        if (newQuantity <= 0) {
+            cartItemRepository.delete(cartItem);
+            // Refresh cart để cập nhật cartItems collection
+            cartRepository.flush();
+            cart = cartRepository.findById(cart.getId()).orElse(cart);
+        } else {
+            cartItem.setQuantity(newQuantity);
+            double finalPrice = cartItem.getQuantity() * cartItem.getUnitPrice();
+            cartItem.setFinalPrice(finalPrice);
+            cartItemRepository.save(cartItem);
+        }
+
         recalcCartTotals(cart);
+        // Refresh cart một lần nữa để đảm bảo cartItems được cập nhật
+        cart = cartRepository.findById(cart.getId()).orElse(cart);
         return cart;
     }
 
@@ -100,50 +138,47 @@ public class CartService {
 
 
     private double calculateUnitPrice(Product product) {
-        double price = product.getPrice() != null ? product.getPrice() : 0.0;
-        return Math.round(price);
+        double basePrice = product.getPrice();
+        double discounted = basePrice;
+        // Apply active promotions by product
+        var today = java.time.LocalDate.now();
+        var promosByProduct = promotionRepository.findActiveByProductId(product.getId(), today);
+        var promosByCategory = product.getCategory() == null
+                ? java.util.List.<com.nova_beauty.backend.entity.Promotion>of()
+                : promotionRepository.findActiveByCategoryId(
+                        product.getCategory().getId(), today);
+
+        for (var p : java.util.stream.Stream.concat(promosByProduct.stream(), promosByCategory.stream())
+                .toList()) {
+            Double dv = p.getDiscountValue();
+            if (dv == null || dv <= 0) continue;
+            // Heuristic: <=1 => percent, else amount
+            double candidate = dv <= 1.0 ? basePrice * (1.0 - dv) : basePrice - dv;
+            if (p.getMaxDiscountValue() != null && p.getMaxDiscountValue() > 0 && dv > 1.0) {
+                candidate = Math.max(basePrice - p.getMaxDiscountValue(), candidate);
+            }
+            discounted = Math.min(discounted, Math.max(candidate, 0));
+        }
+
+        // Apply tax if provided (assume tax is percentage, e.g., 0.1 for 10%) to derive pre-tax unit price? Keep
+        // unitPrice pre-tax
+        return discounted;
     }
 
     private void recalcCartTotals(Cart cart) {
-        // Đồng bộ lại đơn giá và thành tiền của từng cartItem
-        if (cart.getCartItems() != null && !cart.getCartItems().isEmpty()) {
-            cart.getCartItems().forEach(item -> {
-                Product product = item.getProduct();
-                if (product != null) {
-                    // Tính lại đơn giá dựa trên cấu hình khuyến mãi hiện tại
-                    double unitPrice = calculateUnitPrice(product);
-                    item.setUnitPrice(unitPrice);
-                    // Thành tiền = đơn giá * số lượng
-                    double finalPrice = unitPrice * item.getQuantity();
-                    item.setFinalPrice(finalPrice);
-                    cartItemRepository.save(item);
-                }
-            });
-        }
-
-        // Tính lại subtotal từ các cartItem (nếu chưa có item thì subtotal = 0)
-        double subtotal = cart.getCartItems() == null
+        // Query lại cartItems từ database để đảm bảo tính toán chính xác
+        List<CartItem> cartItems = cartItemRepository.findByCartId(cart.getId());
+        double subtotal = cartItems == null || cartItems.isEmpty()
                 ? 0.0
-                : cart.getCartItems().stream()
+                : cartItems.stream()
                         .mapToDouble(CartItem::getFinalPrice)
                         .sum();
         // Làm tròn subtotal về đơn vị đồng
         subtotal = Math.round(subtotal);
         cart.setSubtotal(subtotal);
-
-        // voucherDiscount có thể null với giỏ hàng mới => mặc định 0
-        Double rawVoucherDiscount = cart.getVoucherDiscount();
-        double voucherDiscount = rawVoucherDiscount == null ? 0.0 : rawVoucherDiscount;
-        // Làm tròn tiền giảm giá về đơn vị đồng
-        voucherDiscount = Math.round(voucherDiscount);
-        cart.setVoucherDiscount(voucherDiscount);
-
+        double voucherDiscount = cart.getVoucherDiscount() != null ? cart.getVoucherDiscount() : 0.0;
         double total = Math.max(0.0, subtotal - voucherDiscount);
-        // Làm tròn tổng tiền về đơn vị đồng
-        total = Math.round(total);
         cart.setTotalAmount(total);
-
-        // Lưu lại cart với giá trị subtotal / totalAmount mới
         cartRepository.save(cart);
     }
 

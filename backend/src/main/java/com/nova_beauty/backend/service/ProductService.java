@@ -24,6 +24,7 @@ import com.nova_beauty.backend.dto.request.ProductUpdateRequest;
 import com.nova_beauty.backend.dto.response.ProductResponse;
 import com.nova_beauty.backend.enums.ProductStatus;
 import com.nova_beauty.backend.enums.PromotionStatus;
+import com.nova_beauty.backend.enums.DiscountValueType;
 import com.nova_beauty.backend.exception.AppException;
 import com.nova_beauty.backend.exception.ErrorCode;
 import com.nova_beauty.backend.mapper.ProductMapper;
@@ -33,6 +34,8 @@ import com.nova_beauty.backend.repository.ProductRepository;
 import com.nova_beauty.backend.repository.PromotionRepository;
 import com.nova_beauty.backend.repository.VoucherRepository;
 import com.nova_beauty.backend.repository.UserRepository;
+import com.nova_beauty.backend.repository.CartItemRepository;
+import com.nova_beauty.backend.repository.BannerRepository;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -51,6 +54,8 @@ public class ProductService {
     ProductMediaRepository productMediaRepository;
     PromotionRepository promotionRepository;
     VoucherRepository voucherRepository;
+    CartItemRepository cartItemRepository;
+    BannerRepository bannerRepository;
     ProductMapper productMapper;
 
     // ========== CREATE OPERATIONS ==========
@@ -128,7 +133,17 @@ public class ProductService {
         }
 
 
+
+        ProductStatus originalStatus = product.getStatus(); // Lưu status hiện tại
         productMapper.updateProduct(product, request);
+        // Đảm bảo status không bị null (giữ nguyên status hiện tại nếu request không có status)
+        if (product.getStatus() == null) {
+            product.setStatus(originalStatus);
+        }
+        // Chỉ cho phép admin thay đổi status
+        if (request.getStatus() != null && isAdmin) {
+            product.setStatus(request.getStatus());
+        }
         product.setUpdatedAt(LocalDateTime.now());
 
 
@@ -180,6 +195,7 @@ public class ProductService {
         }
 
 
+        // Cáº­p nháº­t media náº¿u cÃ³ - chá»‰ xÃ³a media khÃ´ng cÃ²n trong danh sÃ¡ch má»›i, thÃªm media má»›i
         if (request.getImageUrls() != null || request.getVideoUrls() != null) {
 
             if (product.getMediaList() != null && !product.getMediaList().isEmpty()) {
@@ -192,6 +208,7 @@ public class ProductService {
             }
 
             attachMediaFromUpdateRequest(product, request);
+            updateMediaList(product, request);
         }
 
         Product savedProduct = productRepository.save(product);
@@ -212,6 +229,11 @@ public class ProductService {
                 .findById(productId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
 
+        // Load banners để đảm bảo quan hệ được load trước khi xóa
+        if (product.getBanners() != null) {
+            product.getBanners().size(); // Trigger lazy loading
+        }
+
 
         List<Promotion> promotionsWithProduct = promotionRepository.findByProductId(productId);
         for (Promotion promotion : promotionsWithProduct) {
@@ -227,6 +249,27 @@ public class ProductService {
         }
 
 
+        // 3. Xóa tất cả CartItem liên quan đến product này
+        List<CartItem> cartItems = cartItemRepository.findByProductId(productId);
+        if (!cartItems.isEmpty()) {
+            cartItemRepository.deleteAll(cartItems);
+            log.info("Deleted {} cart items for product: {}", cartItems.size(), productId);
+        }
+
+        // 4. Xóa product khỏi tất cả Banner.products (bảng banner_products)
+        // Load banners từ product để đảm bảo quan hệ được load
+        if (product.getBanners() != null && !product.getBanners().isEmpty()) {
+            List<Banner> bannersWithProduct = new ArrayList<>(product.getBanners());
+            for (Banner banner : bannersWithProduct) {
+                if (banner.getProducts() != null) {
+                    banner.getProducts().removeIf(p -> p.getId().equals(productId));
+                    bannerRepository.save(banner);
+                }
+            }
+            log.info("Removed product {} from {} banners", productId, bannersWithProduct.size());
+        }
+
+        // 5. Set product.promotion = null (náº¿u cÃ³ promotion trá»±c tiáº¿p)
         if (product.getPromotion() != null) {
             product.setPromotion(null);
             productRepository.save(product);
@@ -315,36 +358,121 @@ public class ProductService {
         return true;
     }
 
+    // Apply active promotion to a product (calculate discountValue and price)
+    private void applyActivePromotionToProduct(Product product) {
+        // Ensure category is loaded (for lazy loading)
+        if (product.getCategory() != null) {
+            product.getCategory().getId(); // Trigger lazy loading
+        }
+
+        Promotion activePromotion = findActivePromotionForProduct(product);
+
+        if (activePromotion != null) {
+            // Calculate discountValue from promotion
+            double unitPrice = product.getUnitPrice() != null ? product.getUnitPrice() : 0.0;
+            double tax = product.getTax() != null ? product.getTax() : 0.0;
+            double discountAmount = calculateDiscountAmount(activePromotion, unitPrice);
+
+            // Calculate final price = unitPrice * (1 + tax) - discountAmount
+            double finalPrice = Math.max(0, unitPrice * (1 + tax) - discountAmount);
+
+            product.setDiscountValue(discountAmount);
+            product.setPrice(finalPrice);
+            product.setPromotion(activePromotion);
+
+            log.debug("Applied promotion {} to product {}: discountValue={}, finalPrice={}",
+                    activePromotion.getId(), product.getId(), discountAmount, finalPrice);
+        } else {
+            // No active promotion, calculate price without discount
+            double unitPrice = product.getUnitPrice() != null ? product.getUnitPrice() : 0.0;
+            double tax = product.getTax() != null ? product.getTax() : 0.0;
+            double finalPrice = unitPrice * (1 + tax);
+
+            product.setDiscountValue(0.0);
+            product.setPrice(finalPrice);
+            product.setPromotion(null);
+        }
+    }
+
+    // Calculate discount amount from promotion
+    private double calculateDiscountAmount(Promotion promotion, double basePrice) {
+        if (basePrice <= 0 || promotion == null) return 0;
+
+        double discountValue = promotion.getDiscountValue() != null ? promotion.getDiscountValue() : 0;
+        double discountAmount = 0;
+
+        switch (promotion.getDiscountValueType()) {
+            case PERCENTAGE -> {
+                discountAmount = basePrice * (discountValue / 100.0);
+                Double maxDiscount = promotion.getMaxDiscountValue();
+                if (maxDiscount != null && maxDiscount > 0) {
+                    discountAmount = Math.min(discountAmount, maxDiscount);
+                }
+            }
+            case AMOUNT -> discountAmount = discountValue;
+        }
+        return Math.min(discountAmount, basePrice);
+    }
+
     public List<ProductResponse> getAllProducts() {
         List<Product> products = productRepository.findAll();
         return products.stream().map(productMapper::toResponse).toList();
     }
 
     public List<ProductResponse> getActiveProducts() {
-        List<Product> products = productRepository.findByStatus(ProductStatus.APPROVED);
+        List<Product> products = productRepository.findByStatusWithCategory(ProductStatus.APPROVED);
+        // Apply active promotions to each product
+        products.forEach(this::applyActivePromotionToProduct);
         return products.stream().map(productMapper::toResponse).toList();
     }
 
     public List<ProductResponse> getProductsByCategory(String categoryId) {
-        List<Product> products = productRepository.findByCategoryId(categoryId);
+        // Lấy products từ category chính (with category loaded)
+        List<Product> products = new ArrayList<>(productRepository.findByCategoryIdWithCategory(categoryId));
+
+        // Lấy tất cả subcategories của category này
+        List<Category> subCategories = categoryRepository.findByParentCategoryId(categoryId);
+
+        // Lấy products từ tất cả subcategories (with category loaded)
+        for (Category subCategory : subCategories) {
+            List<Product> subProducts = productRepository.findByCategoryIdWithCategory(subCategory.getId());
+            products.addAll(subProducts);
+        }
+
+        // Filter chỉ lấy APPROVED products, apply promotions, và map sang response
         return products.stream()
                 .filter(p -> p.getStatus() == ProductStatus.APPROVED)
+                .peek(this::applyActivePromotionToProduct)
                 .map(productMapper::toResponse)
                 .toList();
     }
 
     public List<ProductResponse> searchProducts(String keyword) {
         List<Product> products = productRepository.findByKeyword(keyword);
+        // Ensure categories are loaded before applying promotions
+        products.forEach(p -> {
+            if (p.getCategory() != null) {
+                p.getCategory().getId(); // Trigger lazy loading
+            }
+        });
         return products.stream()
                 .filter(p -> p.getStatus() == ProductStatus.APPROVED)
+                .peek(this::applyActivePromotionToProduct)
                 .map(productMapper::toResponse)
                 .toList();
     }
 
     public List<ProductResponse> getProductsByPriceRange(Double minPrice, Double maxPrice) {
         List<Product> products = productRepository.findByPriceRange(minPrice, maxPrice);
+        // Ensure categories are loaded before applying promotions
+        products.forEach(p -> {
+            if (p.getCategory() != null) {
+                p.getCategory().getId(); // Trigger lazy loading
+            }
+        });
         return products.stream()
                 .filter(p -> p.getStatus() == ProductStatus.APPROVED)
+                .peek(this::applyActivePromotionToProduct)
                 .map(productMapper::toResponse)
                 .toList();
     }
@@ -356,6 +484,12 @@ public class ProductService {
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
         List<Product> products = productRepository.findBySubmittedBy(user);
+        // Fetch inventory để đảm bảo stockQuantity được load
+        products.forEach(product -> {
+            if (product.getInventory() != null) {
+                product.getInventory().getStockQuantity(); // Trigger lazy loading
+            }
+        });
         return products.stream().map(productMapper::toResponse).toList();
     }
 
@@ -498,6 +632,117 @@ public class ProductService {
                 defaultMedia.setDefault(true);
             }
             product.setDefaultMedia(defaultMedia);
+        }
+    }
+
+    private void updateMediaList(Product product, ProductUpdateRequest request) {
+        // Lấy danh sách URL từ request
+        List<String> requestedUrls = new ArrayList<>();
+        if (request.getImageUrls() != null) {
+            requestedUrls.addAll(request.getImageUrls());
+        }
+        if (request.getVideoUrls() != null) {
+            requestedUrls.addAll(request.getVideoUrls());
+        }
+
+        // Đảm bảo collection tồn tại
+        if (product.getMediaList() == null) {
+            product.setMediaList(new ArrayList<>());
+        }
+
+        // Tạo map để tra cứu media hiện tại theo URL (trước khi remove)
+        java.util.Map<String, ProductMedia> existingMediaMap = new java.util.HashMap<>();
+        for (ProductMedia media : product.getMediaList()) {
+            if (media.getMediaUrl() != null) {
+                existingMediaMap.put(media.getMediaUrl(), media);
+            }
+        }
+
+        // Xóa những media không còn trong danh sách mới và xóa file vật lý
+        List<ProductMedia> mediaToRemove = new ArrayList<>();
+        for (ProductMedia existingMedia : product.getMediaList()) {
+            if (!requestedUrls.contains(existingMedia.getMediaUrl())) {
+                mediaToRemove.add(existingMedia);
+                // Xóa file vật lý
+                deletePhysicalFileByUrl(existingMedia.getMediaUrl());
+                // Xóa khỏi map để tránh sử dụng media đã bị remove
+                existingMediaMap.remove(existingMedia.getMediaUrl());
+            }
+        }
+        // Remove từ collection (orphanRemoval sẽ tự động xóa khỏi database)
+        product.getMediaList().removeAll(mediaToRemove);
+
+        // Thêm media mới và cập nhật displayOrder, isDefault cho tất cả media
+        int displayOrder = 0;
+        ProductMedia defaultMedia = null;
+        String defaultMediaUrl = request.getDefaultMediaUrl();
+
+        // Xử lý imageUrls
+        if (request.getImageUrls() != null) {
+            for (String url : request.getImageUrls()) {
+                if (url == null || url.isBlank()) continue;
+
+                ProductMedia media = existingMediaMap.get(url);
+                if (media == null) {
+                    // Media mới - tạo mới
+                    media = ProductMedia.builder()
+                            .mediaUrl(url)
+                            .mediaType("IMAGE")
+                            .isDefault(url.equals(defaultMediaUrl))
+                            .displayOrder(displayOrder++)
+                            .product(product)
+                            .build();
+                    product.getMediaList().add(media);
+                } else {
+                    // Media đã tồn tại - chỉ cập nhật displayOrder và isDefault
+                    media.setDisplayOrder(displayOrder++);
+                    media.setDefault(url.equals(defaultMediaUrl));
+                }
+
+                if (media.isDefault()) {
+                    defaultMedia = media;
+                }
+            }
+        }
+
+        // Xử lý videoUrls
+        if (request.getVideoUrls() != null) {
+            for (String url : request.getVideoUrls()) {
+                if (url == null || url.isBlank()) continue;
+
+                ProductMedia media = existingMediaMap.get(url);
+                if (media == null) {
+                    // Media mới - tạo mới
+                    media = ProductMedia.builder()
+                            .mediaUrl(url)
+                            .mediaType("VIDEO")
+                            .isDefault(url.equals(defaultMediaUrl))
+                            .displayOrder(displayOrder++)
+                            .product(product)
+                            .build();
+                    product.getMediaList().add(media);
+                } else {
+                    // Media đã tồn tại - chỉ cập nhật displayOrder và isDefault
+                    media.setDisplayOrder(displayOrder++);
+                    media.setDefault(url.equals(defaultMediaUrl));
+                }
+
+                if (media.isDefault()) {
+                    defaultMedia = media;
+                }
+            }
+        }
+
+        // Đặt default media
+        if (defaultMedia != null) {
+            product.setDefaultMedia(defaultMedia);
+        } else if (!product.getMediaList().isEmpty()) {
+            // Nếu không có media nào được đánh dấu là default, chọn media đầu tiên
+            ProductMedia firstMedia = product.getMediaList().get(0);
+            firstMedia.setDefault(true);
+            product.setDefaultMedia(firstMedia);
+        } else {
+            product.setDefaultMedia(null);
         }
     }
 

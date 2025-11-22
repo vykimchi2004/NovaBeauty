@@ -18,24 +18,32 @@ public interface ProductRepository extends JpaRepository<Product, String> {
     List<Product> findByCategoryId(String categoryId);
 
     List<Product> findByStatus(ProductStatus status);
+    
+    // Find products by status with category loaded (for promotion calculation)
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.status = :status")
+    List<Product> findByStatusWithCategory(@Param("status") ProductStatus status);
+    
+    // Find products by category ID with category loaded (for promotion calculation)
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.category.id = :categoryId")
+    List<Product> findByCategoryIdWithCategory(@Param("categoryId") String categoryId);
 
     // TÃ¬m products theo name (case insensitive)
     List<Product> findByNameContainingIgnoreCase(String name);
 
-    // TÃ¬m products theo author
-    List<Product> findByAuthorContainingIgnoreCase(String author);
+    // TÃ¬m products theo texture (kết cấu)
+    List<Product> findByTextureContainingIgnoreCase(String texture);
 
-    // TÃ¬m products theo publisher
-    List<Product> findByPublisherContainingIgnoreCase(String publisher);
+    // TÃ¬m products theo skinType (loại da)
+    List<Product> findBySkinTypeContainingIgnoreCase(String skinType);
 
     // TÃ¬m products theo price range
     @Query("SELECT p FROM Product p WHERE p.price BETWEEN :minPrice AND :maxPrice")
     List<Product> findByPriceRange(@Param("minPrice") double minPrice, @Param("maxPrice") double maxPrice);
 
-    // TÃ¬m products theo keyword search (name, author, publisher, description)
+    // TÃ¬m products theo keyword search (name, texture, skinType, description)
     @Query("SELECT p FROM Product p WHERE " + "LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR "
-            + "LOWER(p.author) LIKE LOWER(CONCAT('%', :keyword, '%')) OR "
-            + "LOWER(p.publisher) LIKE LOWER(CONCAT('%', :keyword, '%')) OR "
+            + "LOWER(p.texture) LIKE LOWER(CONCAT('%', :keyword, '%')) OR "
+            + "LOWER(p.skinType) LIKE LOWER(CONCAT('%', :keyword, '%')) OR "
             + "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<Product> findByKeyword(@Param("keyword") String keyword);
 

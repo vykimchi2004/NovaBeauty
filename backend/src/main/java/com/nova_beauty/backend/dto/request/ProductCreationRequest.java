@@ -27,10 +27,27 @@ public class ProductCreationRequest {
     @NotBlank(message = "Tác giả không được để trống")
     @Size(max = 255, message = "Tên tác giả không được vượt quá 255 ký tự")
     String author;
+    String size;
+    String brand;
+    String brandOrigin;
+    String manufacturingLocation;
+    String texture; // Kết cấu
+    String skinType; // Loại da
+
+    @Size(max = 2000, message = "Đặc điểm không được vượt quá 2000 ký tự")
+    String characteristics;
 
     @NotBlank(message = "Nhà xuất bản không được để trống")
     @Size(max = 255, message = "Tên nhà xuất bản không được vượt quá 255 ký tự")
     String publisher;
+    @Size(max = 2000, message = "Thành phần không được vượt quá 2000 ký tự")
+    String ingredients;
+
+    @Size(max = 2000, message = "Công dụng không được vượt quá 2000 ký tự")
+    String uses;
+
+    @Size(max = 2000, message = "Hướng dẫn sử dụng không được vượt quá 2000 ký tự")
+    String usageInstructions;
 
     // Optional fields - validation only applies if value is provided (not null)
     @DecimalMin(value = "0.0", message = "Trọng lượng phải lớn hơn hoặc bằng 0")
@@ -69,3 +86,7 @@ public class ProductCreationRequest {
     List<String> videoUrls;
     String defaultMediaUrl;
 }
+
+
+
+

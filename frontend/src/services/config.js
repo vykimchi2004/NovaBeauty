@@ -28,6 +28,7 @@ export const API_ENDPOINTS = {
     PRODUCTS: {
         CREATE: '/products',
         LIST: '/products',
+        PENDING: '/products/pending',
         ACTIVE: '/products/active',
         DETAIL: (id) => `/products/${id}`,
         SEARCH: '/products/search',
@@ -36,6 +37,7 @@ export const API_ENDPOINTS = {
         MY_PRODUCTS: '/products/my-products',
         UPDATE: (id) => `/products/${id}`,
         DELETE: (id) => `/products/${id}`,
+        APPROVAL: '/products/approve',
     },
     // Categories
     CATEGORIES: {
@@ -71,6 +73,19 @@ export const API_ENDPOINTS = {
         DELETE: (id) => `/promotions/${id}`,
         APPROVE: '/promotions/approve',
     },
+    // Vouchers
+    VOUCHERS: {
+        CREATE: '/vouchers',
+        LIST: '/vouchers',
+        ACTIVE: '/vouchers/active',
+        PENDING: '/vouchers/pending',
+        BY_STATUS: (status) => `/vouchers/status/${status}`,
+        MY_VOUCHERS: '/vouchers/my',
+        DETAIL: (id) => `/vouchers/${id}`,
+        UPDATE: (id) => `/vouchers/${id}`,
+        DELETE: (id) => `/vouchers/${id}`,
+        APPROVE: '/vouchers/approve',
+    },
     // Reviews
     REVIEWS: {
         CREATE: '/reviews',
@@ -84,12 +99,15 @@ export const API_ENDPOINTS = {
     // Media
     MEDIA: {
         UPLOAD_PRODUCT: '/media/upload-product',
+        UPLOAD_PROFILE: '/media/upload',
     },
     // Cart
     CART: {
         GET: '/cart',
         ADD_ITEM: '/cart/items',
         APPLY_VOUCHER: '/cart/apply-voucher',
+        REMOVE_ITEM: (itemId) => `/cart/items/${itemId}`,
+        UPDATE_ITEM: (itemId) => `/cart/items/${itemId}`,
     },
     // Orders (placeholder - chưa có backend)
     ORDERS: {

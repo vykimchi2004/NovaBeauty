@@ -20,6 +20,9 @@ public class CartItem {
     Integer quantity;
     Double unitPrice;
     Double finalPrice;
+    
+    @Column(name = "color_code")
+    String colorCode; // Mã màu đã chọn
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")

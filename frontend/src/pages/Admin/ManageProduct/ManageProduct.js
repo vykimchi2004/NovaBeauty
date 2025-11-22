@@ -1,26 +1,45 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faSearch,
-  faTrash,
-  faEdit,
-  faPlus,
-  faEye,
-  faEyeSlash,
-  faTimes,
-  faCheck,
-  faXmark
-} from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faEye, faTimes, faCheck, faXmark, faTrash } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from './ManageProduct.module.scss';
-import { getProducts, deleteProduct, createProduct, updateProduct } from '~/services/product';
-import { getCategories } from '~/services/category';
-import { uploadProductMedia } from '~/services/media';
+import { getProducts, processProductApproval, deleteProduct } from '~/services/product';
 import notify from '~/utils/notification';
 import fallbackImage from '~/assets/images/products/image1.jpg';
+import ProductDetailView from './components/ProductDetailView';
+import {
+  extractTextureInfo,
+  extractReviewHighlights
+} from '~/utils/productPresentation';
+import { createStatusHelpers } from '~/utils/statusHelpers';
 
 const cx = classNames.bind(styles);
-const MAX_MEDIA_ITEMS = 6;
+
+const STATUS_CONFIG = {
+  DA_DUYET: { label: 'Đã duyệt', class: 'active' },
+  CHO_DUYET: { label: 'Chờ duyệt', class: 'pending' },
+  TU_CHOI: { label: 'Từ chối', class: 'rejected' }
+};
+
+const { normalizeStatus, getNormalizedProductStatus, formatStatusDisplay } = createStatusHelpers(STATUS_CONFIG);
+
+const getProductMediaList = (product) => {
+  if (!product) return [];
+
+  const urls = [];
+  const pushIfValid = (url) => {
+    if (url && typeof url === 'string' && !urls.includes(url)) {
+      urls.push(url);
+    }
+  };
+
+  pushIfValid(product.defaultMediaUrl);
+  if (Array.isArray(product.mediaUrls)) {
+    product.mediaUrls.forEach(pushIfValid);
+  }
+
+  return urls;
+};
 
 function ManageProduct() {
   const [products, setProducts] = useState([]);
@@ -28,292 +47,139 @@ function ManageProduct() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [showModal, setShowModal] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [categories, setCategories] = useState([]);
   const [viewingProduct, setViewingProduct] = useState(null);
   const [showApproveConfirm, setShowApproveConfirm] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    detailedDescription: '',
-    size: '',
-    brand: '',
-    brandOrigin: '',
-    manufacturingLocation: '',
-    characteristics: '',
-    ingredients: '',
-    uses: '',
-    usageInstructions: '',
-    weight: '',
-    price: '',
-    tax: '',
-    discountValue: '',
-    publicationDate: '',
-    categoryId: '',
-    mediaUrls: [],
-    defaultMediaUrl: ''
-  });
-  const [formErrors, setFormErrors] = useState({});
-  const [uploadingMedia, setUploadingMedia] = useState(false);
-  const fileInputRef = useRef(null);
+  const [processingApproval, setProcessingApproval] = useState(false);
+  const [processingRejection, setProcessingRejection] = useState(false);
+  const [processingDelete, setProcessingDelete] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const viewingMediaList = viewingProduct ? getProductMediaList(viewingProduct) : [];
+  const hasMediaToShow = viewingMediaList.length > 0;
+  const selectedImageUrl =
+    (hasMediaToShow && (viewingMediaList[selectedImageIndex] || viewingMediaList[0])) || '';
+  // Extract từ backend fields: texture, skinType, characteristics -> reviewHighlights
+  // Fallback về author/publisher nếu texture/skinType chưa có (cho dữ liệu cũ)
+  const textureInfo = viewingProduct
+    ? viewingProduct.texture || viewingProduct.author || extractTextureInfo(viewingProduct) || 'Chưa cập nhật'
+    : '';
+  const skinTypeInfo = viewingProduct ? viewingProduct.skinType || viewingProduct.publisher || 'Chưa cập nhật' : '';
+  const reviewHighlights = viewingProduct
+    ? viewingProduct.characteristics || extractReviewHighlights(viewingProduct) || 'Chưa có đánh giá'
+    : '';
 
   useEffect(() => {
     fetchProducts();
-    fetchCategories();
   }, []);
 
   useEffect(() => {
-    filterProducts();
-  }, [searchTerm, filterStatus, products]);
-
-  useEffect(() => {
-    if (!showModal && fileInputRef.current) {
-      fileInputRef.current.value = '';
-      setUploadingMedia(false);
-    }
-  }, [showModal]);
+    applyFilters();
+  }, [products, searchTerm, filterStatus]);
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
       const data = await getProducts();
       setProducts(data || []);
-      setFilteredProducts(data || []);
-    } catch (err) {
-      console.error('Error fetching products:', err);
+    } catch (error) {
+      console.error('Error fetching products:', error);
       notify.error('Không thể tải danh sách sản phẩm. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      const data = await getCategories();
-      setCategories(data || []);
-    } catch (err) {
-      console.error('Error fetching categories:', err);
-    }
-  };
+  const applyFilters = () => {
+    let list = [...(products || [])];
+    const keyword = searchTerm.trim().toLowerCase();
 
-  const filterProducts = () => {
-    let filtered = [...products];
-
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(product =>
-        product.name?.toLowerCase().includes(term) ||
-        product.brand?.toLowerCase().includes(term) ||
-        product.categoryName?.toLowerCase().includes(term) ||
-        product.id?.toLowerCase().includes(term)
+    if (keyword) {
+      list = list.filter(
+        (product) =>
+          product.name?.toLowerCase().includes(keyword) ||
+          product.brand?.toLowerCase().includes(keyword) ||
+          product.categoryName?.toLowerCase().includes(keyword) ||
+          product.id?.toLowerCase().includes(keyword)
       );
     }
 
     if (filterStatus !== 'all') {
-      filtered = filtered.filter(product => {
-        if (filterStatus === 'active') return product.status === 'ACTIVE';
-        if (filterStatus === 'pending') return product.status === 'PENDING';
-        if (filterStatus === 'rejected') return product.status === 'REJECTED';
-        return true;
-      });
+      list = list.filter((product) => getNormalizedProductStatus(product) === filterStatus);
     }
 
-    setFilteredProducts(filtered);
+    setFilteredProducts(list);
   };
 
-  const handleAdd = () => {
-    setEditingProduct(null);
-    setFormData({
-      name: '',
-      description: '',
-      detailedDescription: '',
-      size: '',
-      brand: '',
-      brandOrigin: '',
-      manufacturingLocation: '',
-      characteristics: '',
-      ingredients: '',
-      uses: '',
-      usageInstructions: '',
-      weight: '',
-      price: '',
-      tax: '',
-      discountValue: '',
-      publicationDate: new Date().toISOString().split('T')[0],
-      categoryId: '',
-      mediaUrls: [],
-      defaultMediaUrl: ''
-    });
-    setFormErrors({});
-    setShowModal(true);
-  };
-
-  const handleEdit = (product) => {
-    setEditingProduct(product);
-    setFormData({
-      name: product.name || '',
-      description: product.description || '',
-      detailedDescription: product.detailedDescription || '',
-      size: product.size || '',
-      brand: product.brand || '',
-      brandOrigin: product.brandOrigin || '',
-      manufacturingLocation: product.manufacturingLocation || '',
-      characteristics: product.characteristics || '',
-      ingredients: product.ingredients || '',
-      uses: product.uses || '',
-      usageInstructions: product.usageInstructions || '',
-      weight: product.weight?.toString() || '',
-      price: product.price?.toString() || '',
-      tax: product.tax?.toString() || '',
-      discountValue: product.discountValue?.toString() || '',
-      publicationDate: product.publicationDate || new Date().toISOString().split('T')[0],
-      categoryId: product.categoryId || '',
-      mediaUrls: product.mediaUrls || [],
-      defaultMediaUrl: product.defaultMediaUrl || (product.mediaUrls && product.mediaUrls[0]) || ''
-    });
-    setFormErrors({});
-    setShowModal(true);
-  };
-
-  const handleDelete = async (productId) => {
-    const confirmed = await notify.confirm(
-      'Bạn có chắc chắn muốn xóa sản phẩm này?',
-      'Xác nhận xóa sản phẩm',
-      'Xóa',
-      'Hủy'
+  const formatPrice = (price) => {
+    const value = Math.round(Number(price) || 0);
+    return (
+      new Intl.NumberFormat('vi-VN', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(value) + ' ₫'
     );
-    
-    if (!confirmed) return;
-
-    try {
-      await deleteProduct(productId);
-      setProducts(products.filter(p => p.id !== productId));
-      notify.success('Xóa sản phẩm thành công!');
-    } catch (err) {
-      console.error('Error deleting product:', err);
-      notify.error('Không thể xóa sản phẩm. Vui lòng thử lại.');
-    }
   };
 
-  const validateForm = () => {
-    const errors = {};
-    
-    // Kiểm tra rỗng và định dạng cơ bản
-    if (!formData.name?.trim()) {
-      errors.name = 'Tên sản phẩm không được để trống';
-    } else if (formData.name.trim().length > 255) {
-      errors.name = 'Tên sản phẩm không được vượt quá 255 ký tự';
-    }
-    
-    if (!formData.price || formData.price === '') {
-      errors.price = 'Giá sản phẩm không được để trống';
-    } else {
-      const price = parseFloat(formData.price);
-      if (isNaN(price) || price < 0) {
-        errors.price = 'Giá sản phẩm phải là số và lớn hơn hoặc bằng 0';
-      }
-    }
-    
-    if (!formData.publicationDate) {
-      errors.publicationDate = 'Ngày xuất bản không được để trống';
-    }
-    
-    if (!formData.categoryId) {
-      errors.categoryId = 'Danh mục không được để trống';
-    }
-
-    if (!formData.mediaUrls || formData.mediaUrls.length === 0) {
-      errors.mediaUrls = 'Vui lòng tải lên ít nhất một ảnh sản phẩm';
-    }
-    
-    // Kiểm tra các trường số khác
-    if (formData.weight && formData.weight !== '') {
-      const weight = parseFloat(formData.weight);
-      if (isNaN(weight) || weight < 0) {
-        errors.weight = 'Trọng lượng phải là số và lớn hơn hoặc bằng 0';
-      }
-    }
-    
-    if (formData.tax && formData.tax !== '') {
-      const tax = parseFloat(formData.tax);
-      if (isNaN(tax) || tax < 0) {
-        errors.tax = 'Thuế phải là số và lớn hơn hoặc bằng 0';
-      }
-    }
-    
-    if (formData.discountValue && formData.discountValue !== '') {
-      const discount = parseFloat(formData.discountValue);
-      if (isNaN(discount) || discount < 0) {
-        errors.discountValue = 'Giá trị giảm giá phải là số và lớn hơn hoặc bằng 0';
-      }
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
+  const formatWeight = (weight) => {
+    if (weight === null || weight === undefined || weight === '') return '-';
+    return `${weight} g`;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
+  const formatDate = (date) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('vi-VN');
+  };
 
-    try {
-      const submitData = {
-        ...formData,
-        weight: formData.weight ? parseFloat(formData.weight) : null,
-        price: parseFloat(formData.price),
-        tax: formData.tax ? parseFloat(formData.tax) : null,
-        discountValue: formData.discountValue ? parseFloat(formData.discountValue) : null,
-        publicationDate: formData.publicationDate,
-        mediaUrls: formData.mediaUrls,
-        defaultMediaUrl: formData.defaultMediaUrl || formData.mediaUrls[0] || null,
-      };
-
-      if (editingProduct) {
-        await updateProduct(editingProduct.id, submitData);
-        notify.success('Cập nhật sản phẩm thành công!');
-      } else {
-        // Thêm sản phẩm mới - sẽ có status PENDING
-        await createProduct(submitData);
-        notify.success('Thêm sản phẩm thành công! Sản phẩm đang ở trạng thái "Chờ duyệt". Quản trị viên sẽ xem xét và duyệt sản phẩm của bạn.');
-      }
-
-      setShowModal(false);
-      fetchProducts();
-    } catch (err) {
-      console.error('Error saving product:', err);
-      
-      // Xử lý các lỗi cụ thể
-      let errorMessage = 'Không thể lưu sản phẩm. Vui lòng thử lại.';
-      
-      if (err.message) {
-        if (err.message.includes('Tên sản phẩm đã tồn tại') || err.message.includes('PRODUCT_NAME_EXISTED')) {
-          errorMessage = 'Tên sản phẩm đã tồn tại. Vui lòng chọn tên khác.';
-          setFormErrors({ ...formErrors, name: 'Tên sản phẩm đã tồn tại' });
-        } else if (err.message.includes('Danh mục không tồn tại') || err.message.includes('CATEGORY_NOT_EXISTED')) {
-          errorMessage = 'Danh mục không tồn tại. Vui lòng chọn danh mục khác.';
-          setFormErrors({ ...formErrors, categoryId: 'Danh mục không tồn tại' });
-        } else if (err.message.includes('Dữ liệu đầu vào không hợp lệ') || err.message.includes('INVALID_INPUT')) {
-          errorMessage = 'Dữ liệu nhập vào không hợp lệ. Vui lòng kiểm tra lại các trường bắt buộc.';
-        } else if (err.message.includes('Lỗi hệ thống') || err.message.includes('INTERNAL_SERVER_ERROR')) {
-          errorMessage = 'Lỗi hệ thống khi lưu sản phẩm. Vui lòng thử lại sau.';
-        } else {
-          errorMessage = err.message;
-        }
-      }
-      
-      notify.error(errorMessage);
-    }
+  const getStatusBadge = (status, product) => {
+    const normalized = getNormalizedProductStatus(product);
+    const statusInfo = STATUS_CONFIG[normalized] || {
+      label: formatStatusDisplay(status),
+      class: 'default'
+    };
+    return <span className={cx('statusBadge', statusInfo.class)}>{statusInfo.label}</span>;
   };
 
   const handleViewDetail = (product) => {
     setViewingProduct(product);
+    setSelectedImageIndex(0);
+  };
+
+  const openApprovePrompt = (product) => {
+    setViewingProduct(product);
+    setSelectedImageIndex(0);
+    setShowRejectModal(false);
+    setShowDeleteConfirm(false);
+    setRejectReason('');
+    setShowApproveConfirm(true);
+  };
+
+  const openRejectPrompt = (product) => {
+    setViewingProduct(product);
+    setSelectedImageIndex(0);
+    setShowApproveConfirm(false);
+    setShowDeleteConfirm(false);
+    setRejectReason('');
+    setShowRejectModal(true);
+  };
+
+  const openDeletePrompt = (product) => {
+    setViewingProduct(product);
+    setSelectedImageIndex(0);
+    setShowApproveConfirm(false);
+    setShowRejectModal(false);
+    setShowDeleteConfirm(true);
   };
 
   const handleCloseViewDetail = () => {
+    if (processingApproval || processingRejection) return;
     setViewingProduct(null);
+    setShowApproveConfirm(false);
+    setShowRejectModal(false);
+    setShowDeleteConfirm(false);
+    setRejectReason('');
+    setSelectedImageIndex(0);
   };
 
   const handleApproveClick = () => {
@@ -324,20 +190,31 @@ function ManageProduct() {
     if (!viewingProduct) return;
 
     try {
-      await updateProduct(viewingProduct.id, { status: 'APPROVED' });
+      setProcessingApproval(true);
+      await processProductApproval({
+        productId: viewingProduct.id,
+        action: 'APPROVE'
+      });
       notify.success('Sản phẩm đã được duyệt thành công!');
       setShowApproveConfirm(false);
       setViewingProduct(null);
-      fetchProducts();
+      setRejectReason('');
+      await fetchProducts();
     } catch (err) {
       console.error('Error approving product:', err);
       notify.error('Không thể duyệt sản phẩm. Vui lòng thử lại.');
+    } finally {
+      setProcessingApproval(false);
     }
   };
 
   const handleRejectClick = () => {
     setShowRejectModal(true);
     setRejectReason('');
+  };
+
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
   };
 
   const handleRejectSubmit = async () => {
@@ -348,105 +225,40 @@ function ManageProduct() {
     }
 
     try {
-      await updateProduct(viewingProduct.id, { 
-        status: 'REJECTED',
-        rejectionReason: rejectReason.trim()
+      setProcessingRejection(true);
+      await processProductApproval({
+        productId: viewingProduct.id,
+        action: 'REJECT',
+        reason: rejectReason.trim()
       });
       notify.success('Sản phẩm không được duyệt. Lý do đã được lưu.');
       setShowRejectModal(false);
       setRejectReason('');
       setViewingProduct(null);
-      fetchProducts();
+      await fetchProducts();
     } catch (err) {
       console.error('Error rejecting product:', err);
       notify.error('Không thể từ chối sản phẩm. Vui lòng thử lại.');
-    }
-  };
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price || 0) + ' ₫';
-  };
-
-  const getStatusBadge = (status) => {
-    const statusMap = {
-      ACTIVE: { label: 'Hoạt động', class: 'active' },
-      PENDING: { label: 'Chờ duyệt', class: 'pending' },
-      REJECTED: { label: 'Từ chối', class: 'rejected' },
-      APPROVED: { label: 'Đã duyệt', class: 'active' }
-    };
-    const statusInfo = statusMap[status] || { label: status, class: 'default' };
-    return <span className={cx('statusBadge', statusInfo.class)}>{statusInfo.label}</span>;
-  };
-
-  const handleMediaSelect = async (event) => {
-    const files = Array.from(event.target.files || []);
-    if (!files.length) return;
-
-    const remainingSlots = MAX_MEDIA_ITEMS - (formData.mediaUrls?.length || 0);
-    if (remainingSlots <= 0) {
-      notify.warning(`Bạn chỉ có thể tải tối đa ${MAX_MEDIA_ITEMS} ảnh cho mỗi sản phẩm.`);
-      event.target.value = '';
-      return;
-    }
-
-    const filesToUpload = files.slice(0, remainingSlots);
-
-    try {
-      setUploadingMedia(true);
-      const uploadedUrls = await uploadProductMedia(filesToUpload);
-      if (!uploadedUrls || uploadedUrls.length === 0) {
-        notify.error('Không thể tải ảnh lên. Vui lòng thử lại.');
-        return;
-      }
-
-      setFormData((prev) => {
-        const nextUrls = [...(prev.mediaUrls || []), ...uploadedUrls];
-        return {
-          ...prev,
-          mediaUrls: nextUrls,
-          defaultMediaUrl: prev.defaultMediaUrl || nextUrls[0] || '',
-        };
-      });
-
-      setFormErrors((prev) => {
-        if (!prev.mediaUrls) return prev;
-        const next = { ...prev };
-        delete next.mediaUrls;
-        return next;
-      });
-
-      notify.success('Tải ảnh thành công!');
-    } catch (error) {
-      console.error('Error uploading product media:', error);
-      notify.error(error.message || 'Không thể tải ảnh lên. Vui lòng thử lại.');
     } finally {
-      setUploadingMedia(false);
-      if (event.target) {
-        event.target.value = '';
-      }
+      setProcessingRejection(false);
     }
   };
 
-  const handleRemoveMedia = (index) => {
-    setFormData((prev) => {
-      const nextUrls = [...(prev.mediaUrls || [])];
-      const [removed] = nextUrls.splice(index, 1);
-      const nextDefault =
-        removed && removed === prev.defaultMediaUrl ? (nextUrls[0] || '') : prev.defaultMediaUrl;
-
-      return {
-        ...prev,
-        mediaUrls: nextUrls,
-        defaultMediaUrl: nextDefault || '',
-      };
-    });
-  };
-
-  const handleSetDefaultMedia = (url) => {
-    setFormData((prev) => ({
-      ...prev,
-      defaultMediaUrl: url,
-    }));
+  const handleDeleteConfirm = async () => {
+    if (!viewingProduct) return;
+    try {
+      setProcessingDelete(true);
+      await deleteProduct(viewingProduct.id);
+      notify.success('Đã xóa sản phẩm.');
+      setShowDeleteConfirm(false);
+      setViewingProduct(null);
+      await fetchProducts();
+    } catch (err) {
+      console.error('Error deleting product:', err);
+      notify.error('Không thể xóa sản phẩm. Vui lòng thử lại.');
+    } finally {
+      setProcessingDelete(false);
+    }
   };
 
   if (loading) {
@@ -459,423 +271,174 @@ function ManageProduct() {
 
   return (
     <div className={cx('wrapper')}>
-      <div className={cx('header')}>
-        <h2 className={cx('title')}>Quản lý sản phẩm</h2>
-        <div className={cx('headerActions')}>
-          <div className={cx('searchBox')}>
-            <input
-              type="text"
-              placeholder="Tìm kiếm theo tên, thương hiệu..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className={cx('searchInput')}
-            />
-            <button type="button" className={cx('searchBtn')}>
-              <FontAwesomeIcon icon={faSearch} />
-            </button>
-          </div>
-          <div className={cx('sortGroup')}>
-            <span className={cx('sortLabel')}>Trạng thái:</span>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className={cx('sortSelect')}
-            >
-              <option value="all">Tất cả</option>
-              <option value="active">Hoạt động</option>
-              <option value="pending">Chờ duyệt</option>
-              <option value="rejected">Từ chối</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div className={cx('tableWrapper')}>
-        <table className={cx('table')}>
-          <thead>
-            <tr>
-              <th>Tên sản phẩm</th>
-              <th>Danh mục</th>
-              <th>Thương hiệu</th>
-              <th>Giá</th>
-              <th>Đã bán</th>
-              <th>Trạng thái</th>
-              <th>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredProducts.length === 0 ? (
-              <tr>
-                <td colSpan="8" className={cx('empty')}>
-                  Không có sản phẩm nào
-                </td>
-              </tr>
-            ) : (
-              filteredProducts.map((product) => (
-                <tr key={product.id}>
-                  <td className={cx('idCell')}>{product.id.substring(0, 8)}...</td>
-                  <td className={cx('nameCell')}>{product.name}</td>
-                  <td>{product.categoryName || '-'}</td>
-                  <td>{product.brand || '-'}</td>
-                  <td className={cx('priceCell')}>{formatPrice(product.price)}</td>
-                  <td>{product.quantitySold || 0}</td>
-                  <td>{getStatusBadge(product.status)}</td>
-                  <td>
-                    <div className={cx('actions')}>
-                      {product.status === 'PENDING' && (
-                        <button
-                          type="button"
-                          className={cx('actionBtn', 'viewBtn')}
-                          onClick={() => handleViewDetail(product)}
-                          title="Xem chi tiết"
-                        >
-                          <FontAwesomeIcon icon={faEye} />
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className={cx('actionBtn', 'editBtn')}
-                        onClick={() => handleEdit(product)}
-                        title="Sửa"
-                      >
-                        <FontAwesomeIcon icon={faEdit} />
-                      </button>
-                      <button
-                        type="button"
-                        className={cx('actionBtn', 'deleteBtn')}
-                        onClick={() => handleDelete(product.id)}
-                        title="Xóa"
-                      >
-                        <FontAwesomeIcon icon={faTrash} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Modal Add/Edit Product */}
-      {showModal && (
-        <div className={cx('modalOverlay')} onClick={() => setShowModal(false)}>
-          <div className={cx('modal')} onClick={(e) => e.stopPropagation()}>
-            <div className={cx('modalHeader')}>
-              <h3>{editingProduct ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới'}</h3>
-              <button type="button" className={cx('closeBtn')} onClick={() => setShowModal(false)}>
-                <FontAwesomeIcon icon={faTimes} />
-              </button>
+      {!viewingProduct && (
+        <>
+          <div className={cx('header')}>
+            <h2 className={cx('title')}>Duyệt sản phẩm</h2>
+            <div className={cx('headerActions')}>
+              <div className={cx('searchBox')}>
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm theo tên, thương hiệu, mã sản phẩm..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className={cx('searchInput')}
+                />
+                <button type="button" className={cx('searchBtn')}>
+                  <FontAwesomeIcon icon={faSearch} />
+                </button>
+              </div>
+              <div className={cx('sortGroup')}>
+                <span className={cx('sortLabel')}>Trạng thái:</span>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className={cx('sortSelect')}
+                >
+                  <option value="all">Tất cả</option>
+                  <option value="CHO_DUYET">Chờ duyệt</option>
+                  <option value="DA_DUYET">Đã duyệt</option>
+                  <option value="TU_CHOI">Từ chối</option>
+                </select>
+              </div>
             </div>
-
-            <form onSubmit={handleSubmit} className={cx('form')}>
-              <div className={cx('formRow')}>
-                <div className={cx('formGroup', { error: formErrors.name })}>
-                  <label>Tên sản phẩm *</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Nhập tên sản phẩm"
-                  />
-                  {formErrors.name && <span className={cx('errorText')}>{formErrors.name}</span>}
-                </div>
-
-                <div className={cx('formGroup', { error: formErrors.categoryId })}>
-                  <label>Danh mục *</label>
-                  <select
-                    value={formData.categoryId}
-                    onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                  >
-                    <option value="">Chọn danh mục</option>
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
-                  {formErrors.categoryId && <span className={cx('errorText')}>{formErrors.categoryId}</span>}
-                </div>
-              </div>
-
-              <div className={cx('formRow')}>
-                <div className={cx('formGroup', { error: formErrors.price })}>
-                  <label>Giá *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    placeholder="0"
-                  />
-                  {formErrors.price && <span className={cx('errorText')}>{formErrors.price}</span>}
-                </div>
-
-                <div className={cx('formGroup')}>
-                  <label>Giảm giá</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.discountValue}
-                    onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-
-              <div className={cx('formRow')}>
-                <div className={cx('formGroup')}>
-                  <label>Thương hiệu</label>
-                  <input
-                    type="text"
-                    value={formData.brand}
-                    onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                    placeholder="Nhập thương hiệu"
-                  />
-                </div>
-
-                <div className={cx('formGroup', { error: formErrors.publicationDate })}>
-                  <label>Ngày xuất bản *</label>
-                  <input
-                    type="date"
-                    value={formData.publicationDate}
-                    onChange={(e) => setFormData({ ...formData, publicationDate: e.target.value })}
-                  />
-                  {formErrors.publicationDate && <span className={cx('errorText')}>{formErrors.publicationDate}</span>}
-                </div>
-              </div>
-
-              <div className={cx('formGroup')}>
-                <label>Mô tả</label>
-                <textarea
-                  rows="3"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Mô tả ngắn về sản phẩm"
-                />
-              </div>
-
-              <div className={cx('formGroup', { error: formErrors.mediaUrls })}>
-                <label>Ảnh sản phẩm *</label>
-                <div className={cx('mediaUploadRow')}>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleMediaSelect}
-                    disabled={uploadingMedia || (formData.mediaUrls?.length || 0) >= MAX_MEDIA_ITEMS}
-                    className={cx('mediaFileInput')}
-                  />
-                  <small>
-                    Có thể tải tối đa {MAX_MEDIA_ITEMS} ảnh. Ảnh đầu tiên sẽ là ảnh chính, bạn có thể thay đổi sau khi tải lên.
-                  </small>
-                </div>
-                {uploadingMedia && <span className={cx('uploadingText')}>Đang tải ảnh...</span>}
-                {formErrors.mediaUrls && <span className={cx('errorText')}>{formErrors.mediaUrls}</span>}
-
-                <div className={cx('mediaPreviewGrid')}>
-                  {(formData.mediaUrls || []).map((url, index) => (
-                    <div
-                      key={`${url}-${index}`}
-                      className={cx('mediaPreviewItem', {
-                        active: formData.defaultMediaUrl === url,
-                      })}
-                    >
-                      <img src={url} alt={`Ảnh sản phẩm ${index + 1}`} />
-                      <div className={cx('mediaPreviewActions')}>
-                        <button
-                          type="button"
-                          className={cx('mediaActionBtn')}
-                          onClick={() => handleSetDefaultMedia(url)}
-                          disabled={formData.defaultMediaUrl === url}
-                        >
-                          {formData.defaultMediaUrl === url ? 'Ảnh chính' : 'Đặt làm ảnh chính'}
-                        </button>
-                        <button
-                          type="button"
-                          className={cx('mediaActionBtn', 'danger')}
-                          onClick={() => handleRemoveMedia(index)}
-                        >
-                          Xóa
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  {(!formData.mediaUrls || formData.mediaUrls.length === 0) && (
-                    <div className={cx('mediaPlaceholder')}>
-                      <span>Chưa có ảnh nào. Vui lòng tải ảnh sản phẩm.</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className={cx('formGroup')}>
-                <label>Mô tả chi tiết</label>
-                <textarea
-                  rows="5"
-                  value={formData.detailedDescription}
-                  onChange={(e) => setFormData({ ...formData, detailedDescription: e.target.value })}
-                  placeholder="Mô tả chi tiết về sản phẩm"
-                />
-              </div>
-
-              <div className={cx('formGroup')}>
-                <label>Thành phần</label>
-                <textarea
-                  rows="3"
-                  value={formData.ingredients}
-                  onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
-                  placeholder="Thành phần sản phẩm"
-                />
-              </div>
-
-              <div className={cx('formGroup')}>
-                <label>Công dụng</label>
-                <textarea
-                  rows="3"
-                  value={formData.uses}
-                  onChange={(e) => setFormData({ ...formData, uses: e.target.value })}
-                  placeholder="Công dụng của sản phẩm"
-                />
-              </div>
-
-              <div className={cx('formActions')}>
-                <button type="button" className={cx('cancelBtn')} onClick={() => setShowModal(false)}>
-                  Hủy
-                </button>
-                <button type="submit" className={cx('submitBtn')}>
-                  {editingProduct ? 'Cập nhật' : 'Thêm mới'}
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
+
+          <div className={cx('tableWrapper')}>
+            <table className={cx('table')}>
+              <thead>
+                <tr>
+                  <th>Tên & mã sản phẩm</th>
+                  <th>Danh mục</th>
+                  <th>Thương hiệu</th>
+                  <th>Giá</th>
+                  <th>Trạng thái</th>
+                  <th>Trọng lượng</th>
+                  <th>Ngày gửi</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProducts.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" className={cx('empty')}>
+                      Không có sản phẩm nào
+                    </td>
+                  </tr>
+                ) : (
+                  filteredProducts.map((product) => (
+                    <tr key={product.id}>
+                      <td className={cx('nameCell')}>
+                        <div className={cx('productName')}>{product.name || '-'}</div>
+                        <div className={cx('productCode')}>
+                          Mã: <span>{product.id || '-'}</span>
+                        </div>
+                      </td>
+                      <td>{product.categoryName || '-'}</td>
+                      <td>{product.brand || '-'}</td>
+                      <td className={cx('priceCell')}>{formatPrice(product.price)}</td>
+                      <td>{getStatusBadge(product.status, product)}</td>
+                      <td>{formatWeight(product.weight)}</td>
+                      <td>{formatDate(product.createdAt)}</td>
+                      <td>
+                        <div className={cx('actions')}>
+                          <button
+                            type="button"
+                            className={cx('actionBtn', 'viewBtn')}
+                            onClick={() => handleViewDetail(product)}
+                            title="Xem chi tiết"
+                          >
+                            <FontAwesomeIcon icon={faEye} />
+                          </button>
+                          {normalizeStatus(product.status) === 'CHO_DUYET' && (
+                            <>
+                              <button
+                                type="button"
+                                className={cx('actionBtn', 'approveBtn')}
+                                onClick={() => openApprovePrompt(product)}
+                                title="Duyệt sản phẩm"
+                              >
+                                <FontAwesomeIcon icon={faCheck} /> Duyệt
+                              </button>
+                              <button
+                                type="button"
+                                className={cx('actionBtn', 'rejectBtn')}
+                                onClick={() => openRejectPrompt(product)}
+                                title="Không duyệt"
+                              >
+                                <FontAwesomeIcon icon={faXmark} /> Không duyệt
+                              </button>
+                            </>
+                          )}
+                          <button
+                            type="button"
+                            className={cx('actionBtn', 'deleteBtn')}
+                            onClick={() => openDeletePrompt(product)}
+                            title="Xóa sản phẩm"
+                          >
+                            <FontAwesomeIcon icon={faTrash} /> Xóa
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
-      {/* Modal Xem Chi Tiết Sản Phẩm */}
       {viewingProduct && (
-        <div className={cx('modalOverlay')} onClick={handleCloseViewDetail}>
-          <div className={cx('modal', 'largeModal')} onClick={(e) => e.stopPropagation()}>
+        <ProductDetailView
+          product={viewingProduct}
+          mediaList={viewingMediaList}
+          hasMedia={hasMediaToShow}
+          selectedImageIndex={selectedImageIndex}
+          onSelectImage={setSelectedImageIndex}
+          selectedImageUrl={selectedImageUrl || fallbackImage}
+          onBack={handleCloseViewDetail}
+          onClose={handleCloseViewDetail}
+          onApprove={handleApproveClick}
+          onReject={handleRejectClick}
+          onDelete={handleDeleteClick}
+          processingApproval={processingApproval}
+          processingRejection={processingRejection}
+           processingDelete={processingDelete}
+          getStatusBadge={(status) => getStatusBadge(status, viewingProduct)}
+          getNormalizedStatus={getNormalizedProductStatus}
+          formatPrice={formatPrice}
+          formatWeight={formatWeight}
+          formatDate={formatDate}
+          textureInfo={textureInfo}
+          skinTypeInfo={skinTypeInfo}
+          reviewHighlights={reviewHighlights}
+        />
+      )}
+      {showDeleteConfirm && (
+        <div className={cx('modalOverlay')} onClick={() => setShowDeleteConfirm(false)}>
+          <div className={cx('modal')} onClick={(e) => e.stopPropagation()}>
             <div className={cx('modalHeader')}>
-              <h3>Chi tiết sản phẩm</h3>
-              <button type="button" className={cx('closeBtn')} onClick={handleCloseViewDetail}>
+              <h3>Xác nhận xóa sản phẩm</h3>
+              <button type="button" className={cx('closeBtn')} onClick={() => setShowDeleteConfirm(false)}>
                 <FontAwesomeIcon icon={faTimes} />
               </button>
             </div>
-
             <div className={cx('form')}>
-              <div className={cx('detailImage')}>
-                {viewingProduct.defaultMediaUrl || (viewingProduct.mediaUrls && viewingProduct.mediaUrls.length > 0) ? (
-                  <>
-                    <img 
-                      src={viewingProduct.defaultMediaUrl || viewingProduct.mediaUrls[0]} 
-                      alt={viewingProduct.name}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = fallbackImage;
-                      }}
-                    />
-                    {viewingProduct.mediaUrls && viewingProduct.mediaUrls.length > 1 && (
-                      <div className={cx('detailThumbList')}>
-                        {viewingProduct.mediaUrls.map((url, index) => (
-                          <img
-                            key={`${url}-${index}`}
-                            src={url}
-                            alt={`${viewingProduct.name} ${index + 1}`}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                            }}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className={cx('mediaPlaceholder')}>Không có ảnh</div>
-                )}
+              <p>Bạn có chắc chắn muốn xóa sản phẩm này? Thao tác không thể hoàn tác.</p>
+              <div className={cx('formActions')}>
+                <button type="button" className={cx('cancelBtn')} onClick={() => setShowDeleteConfirm(false)}>
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  className={cx('deleteBtn')}
+                  onClick={handleDeleteConfirm}
+                  disabled={processingDelete}
+                >
+                  {processingDelete ? 'Đang xóa...' : 'Xóa'}
+                </button>
               </div>
-
-              <div className={cx('formRow')}>
-                <div className={cx('formGroup')}>
-                  <label>ID Sản phẩm</label>
-                  <input type="text" value={viewingProduct.id} readOnly />
-                </div>
-                <div className={cx('formGroup')}>
-                  <label>Trạng thái</label>
-                  <div>{getStatusBadge(viewingProduct.status)}</div>
-                </div>
-              </div>
-
-              <div className={cx('formRow')}>
-                <div className={cx('formGroup')}>
-                  <label>Tên sản phẩm</label>
-                  <input type="text" value={viewingProduct.name || ''} readOnly />
-                </div>
-                <div className={cx('formGroup')}>
-                  <label>Danh mục</label>
-                  <input type="text" value={viewingProduct.categoryName || '-'} readOnly />
-                </div>
-              </div>
-
-              <div className={cx('formRow')}>
-                <div className={cx('formGroup')}>
-                  <label>Giá</label>
-                  <input type="text" value={formatPrice(viewingProduct.price)} readOnly />
-                </div>
-                <div className={cx('formGroup')}>
-                  <label>Giảm giá</label>
-                  <input type="text" value={formatPrice(viewingProduct.discountValue || 0)} readOnly />
-                </div>
-              </div>
-
-              <div className={cx('formRow')}>
-                <div className={cx('formGroup')}>
-                  <label>Thương hiệu</label>
-                  <input type="text" value={viewingProduct.brand || '-'} readOnly />
-                </div>
-                <div className={cx('formGroup')}>
-                  <label>Ngày xuất bản</label>
-                  <input type="text" value={viewingProduct.publicationDate || '-'} readOnly />
-                </div>
-              </div>
-
-              <div className={cx('formGroup')}>
-                <label>Mô tả</label>
-                <textarea rows="3" value={viewingProduct.description || ''} readOnly />
-              </div>
-
-              <div className={cx('formGroup')}>
-                <label>Mô tả chi tiết</label>
-                <textarea rows="5" value={viewingProduct.detailedDescription || ''} readOnly />
-              </div>
-
-              <div className={cx('formRow')}>
-                <div className={cx('formGroup')}>
-                  <label>Thành phần</label>
-                  <textarea rows="3" value={viewingProduct.ingredients || ''} readOnly />
-                </div>
-                <div className={cx('formGroup')}>
-                  <label>Công dụng</label>
-                  <textarea rows="3" value={viewingProduct.uses || ''} readOnly />
-                </div>
-              </div>
-
-              {viewingProduct.status === 'PENDING' && (
-                <div className={cx('formActions')}>
-                  <button type="button" className={cx('cancelBtn')} onClick={handleCloseViewDetail}>
-                    Đóng
-                  </button>
-                  <button type="button" className={cx('rejectBtn')} onClick={handleRejectClick}>
-                    <FontAwesomeIcon icon={faXmark} />
-                    Không duyệt
-                  </button>
-                  <button type="button" className={cx('approveBtn')} onClick={handleApproveClick}>
-                    <FontAwesomeIcon icon={faCheck} />
-                    Duyệt
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -897,8 +460,13 @@ function ManageProduct() {
                 <button type="button" className={cx('cancelBtn')} onClick={() => setShowApproveConfirm(false)}>
                   Hủy
                 </button>
-                <button type="button" className={cx('approveBtn')} onClick={handleApproveConfirm}>
-                  Xác nhận
+                <button
+                  type="button"
+                  className={cx('approveBtn')}
+                  onClick={handleApproveConfirm}
+                  disabled={processingApproval}
+                >
+                  {processingApproval ? 'Đang duyệt...' : 'Xác nhận'}
                 </button>
               </div>
             </div>
@@ -930,8 +498,13 @@ function ManageProduct() {
                 <button type="button" className={cx('cancelBtn')} onClick={() => setShowRejectModal(false)}>
                   Hủy
                 </button>
-                <button type="button" className={cx('rejectBtn')} onClick={handleRejectSubmit}>
-                  Gửi
+                <button
+                  type="button"
+                  className={cx('rejectBtn')}
+                  onClick={handleRejectSubmit}
+                  disabled={processingRejection}
+                >
+                  {processingRejection ? 'Đang gửi...' : 'Gửi'}
                 </button>
               </div>
             </div>
@@ -943,3 +516,4 @@ function ManageProduct() {
 }
 
 export default ManageProduct;
+

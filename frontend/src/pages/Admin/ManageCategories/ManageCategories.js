@@ -139,6 +139,19 @@ function ManageCategories() {
     return Object.keys(errors).length === 0;
   };
 
+  // Helper function to generate ID from name
+  const generateCategoryId = (name) => {
+    if (!name) return '';
+    // Convert Vietnamese to ASCII, remove special chars, uppercase, replace spaces with underscores
+    return name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+      .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters
+      .trim()
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .toUpperCase();
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -148,6 +161,15 @@ function ManageCategories() {
       const submitData = {
         name: formData.name.trim()
       };
+      
+      // Tự động generate id từ tên nếu đang tạo mới
+      if (!editingCategory) {
+        submitData.id = generateCategoryId(formData.name.trim());
+        // Nếu id rỗng sau khi generate, thử dùng UUID hoặc timestamp
+        if (!submitData.id) {
+          submitData.id = 'CAT_' + Date.now();
+        }
+      }
       
       // Chỉ thêm description nếu có giá trị
       if (formData.description && formData.description.trim().length > 0) {

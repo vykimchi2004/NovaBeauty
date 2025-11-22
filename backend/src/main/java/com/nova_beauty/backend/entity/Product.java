@@ -21,7 +21,6 @@ import lombok.experimental.FieldDefaults;
 @Table(name = "products")
 public class Product {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     String id;
 
     @Column(name = "name", nullable = false)
@@ -37,10 +36,10 @@ public class Product {
     String size;
 
     @Column(name = "author")
-    String author;
+    String texture; // Kết cấu
 
     @Column(name = "publisher")
-    String publisher;
+    String skinType; // Loại da
 
     @Column(name = "brand")
     String brand;

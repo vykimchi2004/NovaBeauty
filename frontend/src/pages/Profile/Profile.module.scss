@@ -770,6 +770,344 @@ $white: #fff;
   }
 }
 
+// Vouchers section styles
+.vouchersCard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.vouchersHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  h2 {
+    margin: 0;
+    padding: 0;
+    color: $primary-700;
+  }
+
+  p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 14px;
+  }
+}
+
+.vouchersTabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #f1f3f5;
+  padding-bottom: 12px;
+}
+
+.vouchersTab {
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: #f8f9fa;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  border: none;
+
+  svg {
+    font-size: 14px;
+  }
+
+  &:hover {
+    background: $primary-50;
+    color: $primary-700;
+  }
+}
+
+.vouchersTabActive {
+  background: $primary-600;
+  color: $white;
+  border-color: $primary-600;
+  box-shadow: 0 4px 10px rgba(255, 128, 181, 0.2);
+}
+
+.vouchersFilters {
+  display: grid;
+  grid-template-columns: 2fr 1fr auto 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.vouchersSearchField,
+.vouchersDateField {
+  display: flex;
+  align-items: center;
+  padding: 0 0 5px 10px;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  background: #fafbfc;
+
+  input {
+    border: none;
+    flex: 1;
+    padding: 5px 0 5px 10px;
+    background: transparent;
+
+    &:focus {
+      outline: none;
+    }
+  }
+  svg {
+    color: #adb5bd;
+  }
+}
+
+.vouchersSortField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: end;
+
+  label {
+    font-size: 14px;
+    color: #495057;
+  }
+
+  select {
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid #dee2e6;
+    background: #fff;
+
+    &:focus {
+      outline: none;
+      border-color: $primary;
+      box-shadow: 0 0 0 3px rgba(255, 128, 181, 0.15);
+    }
+  }
+}
+
+.vouchersList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.voucherCard {
+  border: 1px solid $border-soft;
+  border-radius: 16px;
+  padding: 20px;
+  background: linear-gradient(135deg, #fff 0%, #fff5f8 100%);
+  box-shadow: 0 4px 16px rgba(255, 128, 181, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(255, 128, 181, 0.2);
+    border-color: $primary-600;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, rgba(255, 128, 181, 0.1) 0%, rgba(255, 106, 168, 0.05) 100%);
+    border-radius: 50%;
+    transform: translate(30%, -30%);
+  }
+}
+
+.voucherCardType {
+  border-left: 4px solid #1976d2;
+  background: linear-gradient(135deg, #fff 0%, #e3f2fd 100%);
+
+  &::before {
+    background: linear-gradient(135deg, rgba(25, 118, 210, 0.1) 0%, rgba(25, 118, 210, 0.05) 100%);
+  }
+}
+
+.promotionCardType {
+  border-left: 4px solid #7b1fa2;
+  background: linear-gradient(135deg, #fff 0%, #f3e5f5 100%);
+
+  &::before {
+    background: linear-gradient(135deg, rgba(123, 31, 162, 0.1) 0%, rgba(123, 31, 162, 0.05) 100%);
+  }
+}
+
+.voucherTypeLabel {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.voucherLabel {
+  background: #e3f2fd;
+  color: #1976d2;
+  border: 1px solid #90caf9;
+}
+
+.promotionLabel {
+  background: #f3e5f5;
+  color: #7b1fa2;
+  border: 1px solid #ce93d8;
+}
+
+.voucherIconType {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+}
+
+.promotionIconType {
+  background: linear-gradient(135deg, #7b1fa2 0%, #6a1b9a 100%);
+}
+
+.voucherContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.voucherInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.voucherTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: $text-dark;
+  line-height: 1.4;
+}
+
+.voucherExpiry {
+  margin: 0;
+  font-size: 13px;
+  color: #6c757d;
+}
+
+.voucherCode {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: $primary-700;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.voucherCodeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px 0;
+}
+
+.copyBtn {
+  padding: 4px 8px;
+  background: $primary-50;
+  border: 1px solid $primary;
+  border-radius: 6px;
+  color: $primary-700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+
+  &:hover {
+    background: $primary;
+    color: $white;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.voucherActions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.saveBtn {
+  padding: 8px;
+  background: transparent;
+  border: 1px solid $border-soft;
+  border-radius: 8px;
+  color: #6c757d;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+
+  &:hover {
+    background: $primary-50;
+    border-color: $primary;
+    color: $primary-700;
+  }
+
+  &.saved {
+    background: $primary-50;
+    border-color: $primary;
+    color: $primary-700;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.voucherIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, $primary-600 0%, $primary-700 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $white;
+  font-size: 20px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(255, 106, 168, 0.3);
+}
+
+@media (max-width: 1024px) {
+  .vouchersFilters {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .vouchersSortField {
+    justify-self: stretch;
+  }
+
+  .vouchersList {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 640px) {
   .ordersTabs {
     overflow-x: auto;

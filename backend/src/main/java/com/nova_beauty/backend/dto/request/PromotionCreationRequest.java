@@ -63,6 +63,10 @@ public class PromotionCreationRequest {
     LocalDate expiryDate;
 
     // Áp dụng theo danh mục
+    @Min(value = 1, message = "Giới hạn sử dụng phải lớn hơn 0")
+    Integer usageLimit;
+
+    // Ãp dá»¥ng theo danh má»¥c
     Set<String> categoryIds;
 
     // Áp dụng theo sản phẩm cụ thể

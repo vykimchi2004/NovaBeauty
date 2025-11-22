@@ -30,7 +30,7 @@ spring:
 #  Brevo Email Configuration
 brevo:
   api:
-    key: ${BREVO_API_KEY_NOVA}
+    key: ${BREVO_API_KEY_NOVA:change-me}
   sender:
     email: ${BREVO_EMAIL} # Email đã verify trong Brevo
 

@@ -91,11 +91,6 @@ $white: #fff;
     tr {
       border-bottom: 1px solid #f1f3f5;
       transition: background-color 0.15s ease;
-
-      &:hover {
-        background: $primary-50;
-      }
-
       &:last-child {
         border-bottom: none;
       }
@@ -112,6 +107,12 @@ $white: #fff;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.productColorCode {
+  font-size: 13px;
+  color: $primary-700;
+  font-weight: 600;
 }
 
 .productName {
@@ -186,7 +187,7 @@ $white: #fff;
   color: $text-dark;
   background: transparent;
   outline: none;
-  -moz-appearance: textfield;
+
 
   &::-webkit-outer-spin-button,
   &::-webkit-inner-spin-button {
@@ -442,6 +443,32 @@ $white: #fff;
   }
 }
 
+.authActions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.btnLogin {
+  display: inline-block;
+  padding: 12px 24px;
+  background: $primary-700;
+  color: $white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+  border: none;
+  cursor: pointer;
+
+  &:hover {
+    background: $primary-600;
+    transform: translateY(-1px);
+  }
+}
+
 .continueShopping {
   display: inline-block;
   padding: 12px 24px;
@@ -455,6 +482,18 @@ $white: #fff;
   &:hover {
     background: $primary-600;
     transform: translateY(-1px);
+  }
+
+  // Khi nằm trong authActions, style khác
+  .authActions & {
+    background: transparent;
+    color: $primary-700;
+    border: 2px solid $primary-700;
+
+    &:hover {
+      background: $primary-50;
+      transform: translateY(-1px);
+    }
   }
 }
 

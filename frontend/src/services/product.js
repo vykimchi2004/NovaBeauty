@@ -61,6 +61,21 @@ export async function getProductsByCategory(categoryId, params = {}) {
     }
 }
 
+// Get pending products (admin only)
+export async function getPendingProducts(params = {}) {
+    try {
+        const queryString = new URLSearchParams(params).toString();
+        const endpoint = queryString
+            ? `${API_ENDPOINTS.PRODUCTS.PENDING}?${queryString}`
+            : API_ENDPOINTS.PRODUCTS.PENDING;
+
+        return await apiClient.get(endpoint);
+    } catch (error) {
+        console.error('[Product Service] getPendingProducts error:', error);
+        throw error;
+    }
+}
+
 // Get active products
 export async function getActiveProducts() {
     try {
@@ -121,6 +136,20 @@ export async function deleteProduct(productId) {
         return await apiClient.delete(API_ENDPOINTS.PRODUCTS.DELETE(productId));
     } catch (error) {
         console.error('[Product Service] deleteProduct error:', error);
+        throw error;
+    }
+}
+
+// Approve or reject product (admin only)
+export async function processProductApproval({ productId, action, reason }) {
+    try {
+        return await apiClient.post(API_ENDPOINTS.PRODUCTS.APPROVAL, {
+            productId,
+            action,
+            reason,
+        });
+    } catch (error) {
+        console.error('[Product Service] processProductApproval error:', error);
         throw error;
     }
 }

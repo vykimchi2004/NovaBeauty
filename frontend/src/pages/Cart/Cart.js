@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash, faMinus, faPlus } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from './Cart.module.scss';
 import cartService from '~/services/cart';
 import notify from '~/utils/notification';
+import { storage } from '~/services/utils';
+import { STORAGE_KEYS } from '~/services/config';
 
 const cx = classNames.bind(styles);
 
 function Cart() {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isUnauthenticated, setIsUnauthenticated] = useState(false);
   const [discountCode, setDiscountCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [appliedVoucherCode, setAppliedVoucherCode] = useState(null);
@@ -37,6 +41,18 @@ function Cart() {
   const loadCart = async (skipEventDispatch = false) => {
     try {
       setLoading(true);
+      setIsUnauthenticated(false);
+      
+      // Kiểm tra token trước khi gọi API
+      const token = storage.get(STORAGE_KEYS.TOKEN);
+      if (!token) {
+        setIsUnauthenticated(true);
+        setCartItems([]);
+        setSubtotal(0);
+        setTotal(0);
+        return;
+      }
+      
       const cartData = await cartService.getCart();
       
       // Map dữ liệu từ API sang format hiển thị
@@ -48,7 +64,8 @@ function Cart() {
         originalPrice: item.unitPrice, // Có thể lấy từ product nếu cần
         quantity: item.quantity,
         selected: true, // Mặc định chọn tất cả
-        finalPrice: item.finalPrice
+        finalPrice: item.finalPrice,
+        colorCode: item.colorCode || null,
       }));
 
       setCartItems(items);
@@ -56,6 +73,7 @@ function Cart() {
       setAppliedDiscount(cartData.voucherDiscount || 0);
       setAppliedVoucherCode(cartData.appliedVoucherCode);
       setTotal(cartData.totalAmount || 0);
+      setIsUnauthenticated(false);
 
       // Chỉ dispatch event nếu không phải từ event listener (tránh loop)
       if (!skipEventDispatch) {
@@ -64,20 +82,31 @@ function Cart() {
       }
     } catch (error) {
       console.error('Error loading cart:', error);
-      // Nếu lỗi do chưa đăng nhập, giữ giỏ hàng rỗng
-      if (error.code !== 401 && error.code !== 403) {
+      // Nếu lỗi do chưa đăng nhập
+      if (error.code === 401 || error.code === 403 || error.status === 401 || error.status === 403) {
+        setIsUnauthenticated(true);
+        setCartItems([]);
+        setSubtotal(0);
+        setTotal(0);
+      } else {
         notify.error('Không thể tải giỏ hàng. Vui lòng thử lại.');
+        setCartItems([]);
+        setSubtotal(0);
+        setTotal(0);
       }
-      setCartItems([]);
-      setSubtotal(0);
-      setTotal(0);
     } finally {
       setLoading(false);
     }
   };
 
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price || 0) + ' ₫';
+    const value = Math.round(Number(price) || 0);
+    return (
+      new Intl.NumberFormat('vi-VN', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(value) + ' ₫'
+    );
   };
 
   const handleSelectAll = (checked) => {
@@ -92,39 +121,48 @@ function Cart() {
     const item = cartItems.find(i => i.id === id);
     if (!item) return;
 
-    const newQuantity = Math.max(1, item.quantity + delta);
+    const newQuantity = item.quantity + delta;
     
     try {
-      // Backend chưa có update endpoint, tạm thời xóa và thêm lại
-      // Hoặc có thể gọi addItem với quantity âm/dương
-      // Tạm thời update local state và reload cart
-      await cartService.addItem(item.productId, delta);
+      if (newQuantity < 0) {
+        // Nếu quantity về âm, không làm gì
+        notify.warning('Số lượng không thể nhỏ hơn 0');
+        return;
+      }
+      
+      // Sử dụng addItem với delta để tăng/giảm số lượng
+      // Backend sẽ tự động cộng thêm delta vào quantity hiện tại
+      // Nếu quantity về 0 hoặc âm, backend sẽ tự động xóa item
+      await cartService.addItem(item.productId, delta, item.colorCode || null);
       await loadCart();
     } catch (error) {
       console.error('Error updating quantity:', error);
-      notify.error('Không thể cập nhật số lượng. Vui lòng thử lại.');
+      notify.error(error.message || 'Không thể cập nhật số lượng. Vui lòng thử lại.');
     }
   };
 
   const handleRemoveItem = async (id) => {
-    const confirmed = await notify.confirm(
-      'Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?',
-      'Xác nhận xóa sản phẩm',
-      'Xóa',
-      'Hủy'
-    );
-    
-    if (!confirmed) return;
-
     try {
-      // Backend chưa có remove endpoint, tạm thời dùng cách khác
-      // Có thể implement logic xóa trong backend
-      notify.info('Chức năng xóa đang được phát triển. Vui lòng liên hệ admin.');
-      // await cartService.removeItem(id);
-      // await loadCart();
+      const item = cartItems.find(i => i.id === id);
+      if (!item) {
+        console.warn('[Cart] Item not found:', id);
+        return;
+      }
+      
+      console.log('[Cart] Removing item:', { id, productId: item.productId, quantity: item.quantity });
+      
+      // Xóa bằng cách thêm với quantity âm bằng với số lượng hiện tại
+      // Backend sẽ tự động xóa item khi quantity về 0 hoặc âm
+      await cartService.addItem(item.productId, -item.quantity, item.colorCode || null);
+      
+      // Reload cart để cập nhật UI
+      await loadCart();
+      
+      // Dispatch event để cập nhật cart count trong header
+      window.dispatchEvent(new CustomEvent('cartUpdated'));
     } catch (error) {
-      console.error('Error removing item:', error);
-      notify.error('Không thể xóa sản phẩm. Vui lòng thử lại.');
+      console.error('[Cart] Error removing item:', error);
+      notify.error(error.message || 'Không thể xóa sản phẩm. Vui lòng thử lại.');
     }
   };
 
@@ -183,10 +221,21 @@ function Cart() {
 
         {cartItems.length === 0 ? (
           <div className={cx('emptyCart')}>
-            <p>Giỏ hàng của bạn đang trống</p>
-            <a href="/products" className={cx('continueShopping')}>
-              Tiếp tục mua sắm
-            </a>
+            {isUnauthenticated ? (
+              <>
+                <p>Vui lòng đăng nhập để xem giỏ hàng của bạn</p>
+                <Link to="/products" className={cx('continueShopping')}>
+                  Tiếp tục mua sắm
+                </Link>
+              </>
+            ) : (
+              <>
+                <p>Giỏ hàng của bạn đang trống</p>
+                <a href="/products" className={cx('continueShopping')}>
+                  Tiếp tục mua sắm
+                </a>
+              </>
+            )}
           </div>
         ) : (
           <div className={cx('cartTableWrapper')}>
@@ -214,6 +263,11 @@ function Cart() {
                     <td>
                       <div className={cx('productInfo')}>
                         <div className={cx('productName')}>{item.name}</div>
+                        {item.colorCode && (
+                          <div className={cx('productColorCode')}>
+                            Mã màu: <span>{item.colorCode}</span>
+                          </div>
+                        )}
                         <div className={cx('productPrice')}>
                           <span className={cx('currentPrice')}>{formatPrice(item.currentPrice)}</span>
                         </div>
