@@ -62,7 +62,7 @@ class UserControllerTest {
                 .email("john@example.com")
                 .fullName("John Doe")
                 .address("123 Main St")
-                .isActive(true)
+
                 .createAt(LocalDate.now())
                 .build();
     }

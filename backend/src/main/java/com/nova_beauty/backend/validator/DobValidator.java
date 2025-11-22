@@ -7,24 +7,24 @@ import java.util.Objects;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
-// Má»—i annotation chá»‰ nÃªn xá»­ lÃ½ cho 1 constraint nháº¥t Ä‘á»‹nh,
-// 2 param: annotation mÃ  validator sáº½ chá»‹u trÃ¡ch nhiá»‡m, Kiá»ƒu dá»¯ liá»‡u data sáº½ validate
+// Mỗi annotation chỉ nên xử lý cho 1 constraint nhất định,
+// 2 param: annotation mà validator sẽ chịu trách nhiệm, Kiểu dữ liệu data sẽ validate
 public class DobValidator implements ConstraintValidator<DobConstraint, LocalDate> {
 
     private int min;
 
-    // HÃ m xá»­ lÃ½ data cÃ³ Ä‘Ãºng hay khÃ´ng
+    // Hàm xử lý data có đúng hay không
     @Override
     public boolean isValid(LocalDate value, ConstraintValidatorContext context) {
         if (Objects.isNull(value)) return true;
 
         long years = ChronoUnit.YEARS.between(
-                value, LocalDate.now()); // Cho biáº¿t thá»i Ä‘iá»ƒm nháº­p vÃ o vÃ  thá»i Ä‘iá»ƒm hiá»‡n táº¡i Ä‘Ã£ tráº£i qua bao nhiÃªu nÄƒm
+                value, LocalDate.now()); // Cho biết thời điểm nhập vào và thời điểm hiện tại đã trải qua bao nhiêu năm
 
         return years >= min;
     }
 
-    // HÃ m khá»Ÿi táº¡o, cháº¡y trÆ°á»›c isValid, get nhá»¯ng thÃ´ng sá»‘ cá»§a annotation
+    // Hàm khởi tạo, chạy trước isValid, get những thông số của annotation
     @Override
     public void initialize(DobConstraint constraintAnnotation) {
         ConstraintValidator.super.initialize(constraintAnnotation);

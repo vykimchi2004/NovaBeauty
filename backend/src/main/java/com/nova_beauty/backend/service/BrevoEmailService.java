@@ -1,6 +1,8 @@
 package com.nova_beauty.backend.service;
 
+import java.text.NumberFormat;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -10,6 +12,8 @@ import org.springframework.web.client.RestTemplate;
 
 import com.nova_beauty.backend.exception.AppException;
 import com.nova_beauty.backend.exception.ErrorCode;
+import com.nova_beauty.backend.entity.Order;
+import com.nova_beauty.backend.entity.OrderItem;
 
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
@@ -45,16 +49,16 @@ public class BrevoEmailService {
 
             // Prepare request body
             Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("sender", Map.of("email", senderEmail, "name", "LuminaBook"));
+            requestBody.put("sender", Map.of("email", senderEmail, "name", "NovaBeauty"));
             requestBody.put("to", new Object[] {Map.of("email", toEmail, "name", "User")});
-            requestBody.put("subject", "MÃ£ xÃ¡c thá»±c OTP - LuminaBook");
+            requestBody.put("subject", "Mã xác thực OTP - NovaBeauty");
 
             String emailContent = String.format(
-                    "Xin chÃ o,\n\n" + "MÃ£ xÃ¡c thá»±c OTP cá»§a báº¡n lÃ : %s\n\n"
-                            + "MÃ£ nÃ y cÃ³ hiá»‡u lá»±c trong 5 phÃºt.\n"
-                            + "Vui lÃ²ng khÃ´ng chia sáº» mÃ£ nÃ y vá»›i báº¥t ká»³ ai.\n\n"
-                            + "TrÃ¢n trá»ng,\n"
-                            + "Äá»™i ngÅ© LuminaBook",
+                    "Xin chào,\n\n" + "Mã xác thực OTP của bạn là: %s\n\n"
+                            + "Mã này có hiệu lực trong 5 phút.\n"
+                            + "Vui lòng không chia sẻ mã này với bất kỳ ai.\n\n"
+                            + "Trân trọng,\n"
+                            + "Đội ngũ NovaBeauty",
                     otpCode);
 
             requestBody.put("textContent", emailContent);
@@ -63,6 +67,7 @@ public class BrevoEmailService {
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
 
             // Send request
+            @SuppressWarnings("rawtypes")
             ResponseEntity<Map> response = restTemplate.postForEntity(BREVO_API_URL, request, Map.class);
 
             if (response.getStatusCode() == HttpStatus.CREATED) {
@@ -89,22 +94,22 @@ public class BrevoEmailService {
 
             // Prepare request body
             Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("sender", Map.of("email", senderEmail, "name", "LuminaBook Admin"));
+            requestBody.put("sender", Map.of("email", senderEmail, "name", "NovaBeauty Admin"));
             requestBody.put("to", new Object[] {Map.of("email", toEmail, "name", staffName)});
-            requestBody.put("subject", "ThÃ´ng tin tÃ i khoáº£n nhÃ¢n viÃªn - LuminaBook");
+            requestBody.put("subject", "Thông tin tài khoản nhân viên - NovaBeauty");
 
             String emailContent = String.format(
-                    "Xin chÃ o %s,\n\n"
-                            + "ChÃ o má»«ng báº¡n Ä‘áº¿n vá»›i Ä‘á»™i ngÅ© LuminaBook!\n\n"
-                            + "ThÃ´ng tin tÃ i khoáº£n cá»§a báº¡n:\n"
+                    "Xin chào %s,\n\n"
+                            + "Chào mừng bạn đến với đội ngũ NovaBeauty!\n\n"
+                            + "Thông tin tài khoản của bạn:\n"
                             + "- Email: %s\n"
-                            + "- Máº­t kháº©u: %s\n"
-                            + "- Vai trÃ²: %s\n\n"
-                            + "Vui lÃ²ng Ä‘Äƒng nháº­p vÃ  thay Ä‘á»•i máº­t kháº©u ngay láº§n Ä‘áº§u tiÃªn Ä‘á»ƒ báº£o máº­t tÃ i khoáº£n.\n"
-                            + "Äá»‹a chá»‰ Ä‘Äƒng nháº­p: http://localhost:3000\n\n"
-                            + "LÆ°u Ã½: Vui lÃ²ng khÃ´ng chia sáº» thÃ´ng tin nÃ y vá»›i báº¥t ká»³ ai.\n\n"
-                            + "TrÃ¢n trá»ng,\n"
-                            + "Äá»™i ngÅ© LuminaBook",
+                            + "- Mật khẩu: %s\n"
+                            + "- Vai trò: %s\n\n"
+                            + "Vui lòng đăng nhập và thay đổi mật khẩu ngay lần đầu tiên để bảo mật tài khoản.\n"
+                            + "Địa chỉ đăng nhập: http://localhost:3000\n\n"
+                            + "Lưu ý: Vui lòng không chia sẻ thông tin này với bất kỳ ai.\n\n"
+                            + "Trân trọng,\n"
+                            + "Đội ngũ NovaBeauty",
                     staffName, toEmail, password, role);
 
             requestBody.put("textContent", emailContent);
@@ -113,6 +118,7 @@ public class BrevoEmailService {
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
 
             // Send request
+            @SuppressWarnings("rawtypes")
             ResponseEntity<Map> response = restTemplate.postForEntity(BREVO_API_URL, request, Map.class);
 
             if (response.getStatusCode() == HttpStatus.CREATED) {
@@ -140,40 +146,40 @@ public class BrevoEmailService {
 
             // Prepare request body
             Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("sender", Map.of("email", senderEmail, "name", "LuminaBook Admin"));
+            requestBody.put("sender", Map.of("email", senderEmail, "name", "NovaBeauty Admin"));
             requestBody.put("to", new Object[] {Map.of("email", toEmail, "name", userName != null ? userName : "User")});
-            requestBody.put("subject", "ThÃ´ng bÃ¡o: TÃ i khoáº£n cá»§a báº¡n Ä‘Ã£ bá»‹ khÃ³a - LuminaBook");
+            requestBody.put("subject", "Thông báo: Tài khoản của bạn đã bị khóa - NovaBeauty");
 
-            String roleDisplayName = "KhÃ¡ch hÃ ng";
+            String roleDisplayName = "Khách hàng";
             if (roleName != null) {
                 switch (roleName.toUpperCase()) {
                     case "STAFF":
-                        roleDisplayName = "NhÃ¢n viÃªn";
+                        roleDisplayName = "Nhân viên";
                         break;
                     case "CUSTOMER_SUPPORT":
-                        roleDisplayName = "NhÃ¢n viÃªn chÄƒm sÃ³c khÃ¡ch hÃ ng";
+                        roleDisplayName = "Nhân viên chăm sóc khách hàng";
                         break;
                     case "CUSTOMER":
                     default:
-                        roleDisplayName = "KhÃ¡ch hÃ ng";
+                        roleDisplayName = "Khách hàng";
                         break;
                 }
             }
 
             String emailContent = String.format(
-                    "Xin chÃ o %s,\n\n"
-                            + "ChÃºng tÃ´i xin thÃ´ng bÃ¡o ráº±ng tÃ i khoáº£n %s cá»§a báº¡n táº¡i LuminaBook Ä‘Ã£ bá»‹ khÃ³a.\n\n"
-                            + "ThÃ´ng tin tÃ i khoáº£n:\n"
+                    "Xin chào %s,\n\n"
+                            + "Chúng tôi xin thông báo rằng tài khoản %s của bạn tại NovaBeauty đã bị khóa.\n\n"
+                            + "Thông tin tài khoản:\n"
                             + "- Email: %s\n"
-                            + "- Vai trÃ²: %s\n\n"
-                            + "Khi tÃ i khoáº£n bá»‹ khÃ³a, báº¡n sáº½ khÃ´ng thá»ƒ Ä‘Äƒng nháº­p vÃ o há»‡ thá»‘ng.\n\n"
-                            + "Náº¿u báº¡n cho ráº±ng Ä‘Ã¢y lÃ  sá»± nháº§m láº«n hoáº·c cáº§n Ä‘Æ°á»£c há»— trá»£, vui lÃ²ng liÃªn há»‡ vá»›i chÃºng tÃ´i:\n"
-                            + "- Email há»— trá»£: %s\n"
-                            + "- Hoáº·c liÃªn há»‡ qua hotline:  \n\n"
-                            + "ChÃºng tÃ´i sáº½ xem xÃ©t vÃ  pháº£n há»“i yÃªu cáº§u cá»§a báº¡n trong thá»i gian sá»›m nháº¥t.\n\n"
-                            + "TrÃ¢n trá»ng,\n"
-                            + "Äá»™i ngÅ© LuminaBook",
-                    userName != null ? userName : "QuÃ½ khÃ¡ch", roleDisplayName, toEmail, roleDisplayName, senderEmail);
+                            + "- Vai trò: %s\n\n"
+                            + "Khi tài khoản bị khóa, bạn sẽ không thể đăng nhập vào hệ thống.\n\n"
+                            + "Nếu bạn cho rằng đây là sự nhầm lẫn hoặc cần được hỗ trợ, vui lòng liên hệ với chúng tôi:\n"
+                            + "- Email hỗ trợ: %s\n"
+                            + "- Hoặc liên hệ qua hotline:  \n\n"
+                            + "Chúng tôi sẽ xem xét và phản hồi yêu cầu của bạn trong thời gian sớm nhất.\n\n"
+                            + "Trân trọng,\n"
+                            + "Đội ngũ NovaBeauty",
+                    userName != null ? userName : "Quý khách", roleDisplayName, toEmail, roleDisplayName, senderEmail);
 
             requestBody.put("textContent", emailContent);
             requestBody.put("htmlContent", emailContent.replace("\n", "<br>"));
@@ -181,6 +187,7 @@ public class BrevoEmailService {
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
 
             // Send request
+            @SuppressWarnings("rawtypes")
             ResponseEntity<Map> response = restTemplate.postForEntity(BREVO_API_URL, request, Map.class);
 
             if (response.getStatusCode() == HttpStatus.CREATED) {
@@ -195,6 +202,77 @@ public class BrevoEmailService {
                     "Failed to send account locked email via Brevo API to: {} - Error: {}", toEmail, e.getMessage(), e);
             // Don't throw exception here - account lock should succeed even if email fails
             // Just log the error
+        }
+    }
+
+    public void sendOrderConfirmationEmail(Order order) {
+        if (order == null || order.getUser() == null || order.getUser().getEmail() == null) {
+            return;
+        }
+        try {
+            String toEmail = order.getUser().getEmail();
+            String customerName = order.getUser().getFullName() != null
+                    ? order.getUser().getFullName()
+                    : "Quý khách";
+
+            log.info("Sending order confirmation email to {}", toEmail);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("api-key", apiKey);
+
+            NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("vi-VN"));
+
+            StringBuilder itemsBuilder = new StringBuilder();
+            if (order.getItems() != null) {
+                for (OrderItem item : order.getItems()) {
+                    String name = item.getProduct() != null ? item.getProduct().getName() : "Sản phẩm";
+                    itemsBuilder.append("- ")
+                            .append(name)
+                            .append(" x")
+                            .append(item.getQuantity())
+                            .append(" : ")
+                            .append(currencyFormat.format(item.getFinalPrice()))
+                            .append("\n");
+                }
+            }
+
+            String content = String.format(
+                    "Xin chào %s,\n\n"
+                            + "Cảm ơn bạn đã đặt hàng tại NovaBeauty. Đơn hàng %s của bạn đã được ghi nhận.\n\n"
+                            + "Tổng tiền: %s\n"
+                            + "Phí vận chuyển: %s\n"
+                            + "Phương thức thanh toán: %s\n\n"
+                            + "Chi tiết sản phẩm:\n%s\n"
+                            + "Địa chỉ giao hàng: %s\n\n"
+                            + "Chúng tôi sẽ liên hệ khi đơn hàng được giao cho đơn vị vận chuyển.\n\n"
+                            + "Trân trọng,\nĐội ngũ NovaBeauty",
+                    customerName,
+                    order.getCode(),
+                    currencyFormat.format(order.getTotalAmount()),
+                    currencyFormat.format(order.getShippingFee() != null ? order.getShippingFee() : 0),
+                    order.getPaymentMethod() != null ? order.getPaymentMethod().name() : "Không xác định",
+                    itemsBuilder.toString(),
+                    order.getShippingAddress());
+
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("sender", Map.of("email", senderEmail, "name", "NovaBeauty"));
+            requestBody.put("to", new Object[] {Map.of("email", toEmail, "name", customerName)});
+            requestBody.put("subject", "Xác nhận đơn hàng " + order.getCode());
+            requestBody.put("textContent", content);
+            requestBody.put("htmlContent", content.replace("\n", "<br>"));
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+            @SuppressWarnings("rawtypes")
+            ResponseEntity<Map> response = restTemplate.postForEntity(BREVO_API_URL, request, Map.class);
+
+            if (response.getStatusCode() == HttpStatus.CREATED) {
+                log.info("Order confirmation email sent to {}", toEmail);
+            } else {
+                log.warn("Failed to send order confirmation email. Status {}", response.getStatusCode());
+            }
+        } catch (Exception e) {
+            log.error("Failed to send order confirmation email", e);
         }
     }
 }

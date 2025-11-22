@@ -18,40 +18,40 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class PromotionUpdateRequest {
 
-    @Size(max = 255, message = "TÃªn khuyáº¿n mÃ£i khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 255 kÃ½ tá»±")
+    @Size(max = 255, message = "Tên khuyến mãi không được vượt quá 255 ký tự")
     String name;
 
-    @Size(max = 50, message = "MÃ£ khuyáº¿n mÃ£i khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 50 kÃ½ tá»±")
-    @Pattern(regexp = "^[A-Z0-9_-]+$", message = "MÃ£ khuyáº¿n mÃ£i chá»‰ Ä‘Æ°á»£c chá»©a chá»¯ hoa, sá»‘, dáº¥u gáº¡ch ngang vÃ  gáº¡ch dÆ°á»›i")
+    @Size(max = 50, message = "Mã khuyến mãi không được vượt quá 50 ký tự")
+    @Pattern(regexp = "^[A-Z0-9_-]+$", message = "Mã khuyến mãi chỉ được chứa chữ hoa, số, dấu gạch ngang và gạch dưới")
     String code;
 
     String imageUrl;
 
-    @Size(max = 1000, message = "MÃ´ táº£ khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 1000 kÃ½ tá»±")
+    @Size(max = 1000, message = "Mô tả không được vượt quá 1000 ký tự")
     String description;
 
-    @DecimalMin(value = "0.0", message = "GiÃ¡ trá»‹ giáº£m giÃ¡ pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0")
+    @DecimalMin(value = "0.0", message = "Giá trị giảm giá phải lớn hơn hoặc bằng 0")
     Double discountValue;
 
-    @DecimalMin(value = "0.0", message = "GiÃ¡ trá»‹ Ä‘Æ¡n hÃ ng tá»‘i thiá»ƒu pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0")
+    @DecimalMin(value = "0.0", message = "Giá trị đơn hàng tối thiểu phải lớn hơn hoặc bằng 0")
     Double minOrderValue;
 
-    @DecimalMin(value = "0.0", message = "GiÃ¡ trá»‹ giáº£m tá»‘i Ä‘a pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0")
+    @DecimalMin(value = "0.0", message = "Giá trị giảm tối đa phải lớn hơn hoặc bằng 0")
     Double maxDiscountValue;
 
     DiscountValueType discountValueType;
 
     DiscountApplyScope applyScope;
 
-    @Future(message = "NgÃ y báº¯t Ä‘áº§u pháº£i lÃ  ngÃ y trong tÆ°Æ¡ng lai")
+    @FutureOrPresent(message = "Ngày bắt đầu không được trước ngày hiện tại")
     LocalDate startDate;
 
-    @Future(message = "NgÃ y káº¿t thÃºc pháº£i lÃ  ngÃ y trong tÆ°Æ¡ng lai")
+    @FutureOrPresent(message = "Ngày kết thúc không được trước ngày hiện tại")
     LocalDate expiryDate;
 
-    // Ãp dá»¥ng theo danh má»¥c
+    // Áp dụng theo danh mục
     Set<String> categoryIds;
 
-    // Ãp dá»¥ng theo sáº£n pháº©m cá»¥ thá»ƒ
+    // Áp dụng theo sản phẩm cụ thể
     Set<String> productIds;
 }

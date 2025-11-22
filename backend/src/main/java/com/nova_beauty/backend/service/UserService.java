@@ -127,7 +127,7 @@ public class UserService {
 
     public UserResponse getMyInfo() {
         // SecurityContextHolder chá»©a thÃ´ng tin vá» user Ä‘ang Ä‘Äƒng nháº­p
-        // Khi request Ä‘Æ°á»£c xÃ¡c Ä‘á»‹nh thÃ nh cÃ´ng -> thÃ´ng tin lÆ°u trá»¯ cá»§a user Ä‘Æ°á»£c lÆ°u trong Security context holder
+        // Khi request được xác định thành công -> thông tin lưu trữ của user được lưu trong Security context holder
         var context = SecurityContextHolder.getContext();
         String name = context.getAuthentication().getName();
 

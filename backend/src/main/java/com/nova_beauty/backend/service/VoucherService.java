@@ -299,9 +299,9 @@ public class VoucherService {
                 java.net.URI uri = java.net.URI.create(url);
                 String path = uri.getPath();
                 if (path != null && !path.isBlank()) {
-                    // Loáº¡i bá» context path náº¿u cÃ³ (vÃ­ dá»¥: /lumina_book)
-                    if (path.startsWith("/lumina_book")) {
-                        path = path.substring("/lumina_book".length());
+                    // Loáº¡i bá» context path náº¿u cÃ³ (vÃ­ dá»¥: /nova_beauty)
+                    if (path.startsWith("/nova_beauty")) {
+                        path = path.substring("/nova_beauty".length());
                     }
                     // TÃ¬m pháº§n path sau /voucher_media/ hoáº·c legacy /vouchers/
                     if (path.contains("/voucher_media/")) {
@@ -330,8 +330,8 @@ public class VoucherService {
                     } catch (Exception ignored) { }
                 }
                 // Loáº¡i bá» context path náº¿u cÃ³
-                if (path.startsWith("/lumina_book")) {
-                    path = path.substring("/lumina_book".length());
+                if (path.startsWith("/nova_beauty")) {
+                    path = path.substring("/nova_beauty".length());
                 }
                 if (path.startsWith("/")) path = path.substring(1);
                 if (path.startsWith("uploads/vouchers/")) {

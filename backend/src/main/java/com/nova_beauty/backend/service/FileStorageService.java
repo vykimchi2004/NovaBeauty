@@ -26,47 +26,47 @@ public class FileStorageService {
     private static final String PROFILE_MEDIA_URL = "/profile_media/";
 
     /**
-     * LÆ°u file media cá»§a product vÃ o thÆ° má»¥c product_media/
-     * @param file File cáº§n lÆ°u
-     * @return URL cá»§a file Ä‘Ã£ lÆ°u
+     * Lưu file media của product vào thư mục product_media/
+     * @param file File cần lưu
+     * @return URL của file đã lưu
      */
     public String storeProductMedia(MultipartFile file) {
         return storeFile(file, PRODUCT_MEDIA_DIR, "/product_media/");
     }
 
     /**
-     * LÆ°u file media cá»§a voucher vÃ o thÆ° má»¥c vouchers/
-     * @param file File cáº§n lÆ°u
-     * @return URL cá»§a file Ä‘Ã£ lÆ°u
+     * Lưu file media của voucher vào thư mục vouchers/
+     * @param file File cần lưu
+     * @return URL của file đã lưu
      */
     public String storeVoucherMedia(MultipartFile file) {
         return storeFile(file, VOUCHER_MEDIA_DIR, VOUCHER_MEDIA_URL);
     }
 
     /**
-     * LÆ°u file media cá»§a promotion vÃ o thÆ° má»¥c promotions/
-     * @param file File cáº§n lÆ°u
-     * @return URL cá»§a file Ä‘Ã£ lÆ°u
+     * Lưu file media của promotion vào thư mục promotions/
+     * @param file File cần lưu
+     * @return URL của file đã lưu
      */
     public String storePromotionMedia(MultipartFile file) {
         return storeFile(file, PROMOTION_MEDIA_DIR, PROMOTION_MEDIA_URL);
     }
 
     /**
-     * LÆ°u file avatar/profile vÃ o thÆ° má»¥c profile_media/
-     * @param file File cáº§n lÆ°u
-     * @return URL cá»§a file Ä‘Ã£ lÆ°u
+     * Lưu file avatar/profile vào thư mục profile_media/
+     * @param file File cần lưu
+     * @return URL của file đã lưu
      */
     public String storeProfileMedia(MultipartFile file) {
         return storeFile(file, PROFILE_MEDIA_DIR, PROFILE_MEDIA_URL);
     }
 
     /**
-     * LÆ°u file vÃ o thÆ° má»¥c chá»‰ Ä‘á»‹nh
-     * @param file File cáº§n lÆ°u
-     * @param directory ThÆ° má»¥c Ä‘Ã­ch
-     * @param urlPath ÄÆ°á»ng dáº«n URL Ä‘á»ƒ truy cáº­p file
-     * @return URL cá»§a file Ä‘Ã£ lÆ°u
+     * Lưu file vào thư mục chỉ định
+     * @param file File cần lưu
+     * @param directory Thư mục đích
+     * @param urlPath Đường dẫn URL để truy cập file
+     * @return URL của file đã lưu
      */
     private String storeFile(MultipartFile file, String directory, String urlPath) {
         try {
@@ -97,5 +97,3 @@ public class FileStorageService {
         }
     }
 }
-
-

@@ -30,7 +30,7 @@ public class OtpService {
 
     @Transactional
     public String generateAndSendOtp(String email) {
-        // XÃ³a cÃ¡c OTP cÅ© cá»§a email nÃ y
+        // Xóa các OTP cũ của email này
         otpRepository.deleteAllByEmail(email);
 
         String otpCode = generateOtpCode();

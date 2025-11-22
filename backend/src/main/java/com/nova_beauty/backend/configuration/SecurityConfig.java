@@ -20,7 +20,7 @@ import org.springframework.web.filter.CorsFilter;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
-    // API khÃ´ng cáº§n xÃ¡c thá»±c (ai cÅ©ng cÃ³ thá»ƒ gá»i Ä‘Æ°á»£c).
+    // API không cần xác thực (ai cũng có thể gọi được).
     private static final String[] PUBLIC_POST_ENDPOINTS = {
         "/users",
         "/auth/token",
@@ -29,7 +29,8 @@ public class SecurityConfig {
         "/auth/refresh",
         "/auth/send-otp",
         "/auth/verify-otp",
-        "/auth/reset-password"
+        "/auth/reset-password",
+        "/ghn/shipping-fees"
     };
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {
@@ -37,11 +38,16 @@ public class SecurityConfig {
         "/voucher_media/**",
         "/promotion_media/**",
         "/profile_media/**",
+        "/reviews/**",
         "/vouchers/**",
         "/promotions/**",
         "/products/**",
         "/uploads/**",
+        "/assets/**",
         "/banners/active",
+        "/ghn/provinces",
+        "/ghn/districts",
+        "/ghn/wards",
         "/error"  // Allow error endpoint to be accessed without authentication
     };
 
@@ -104,7 +110,7 @@ public class SecurityConfig {
         return jwtAuthenticationConverter;
     }
 
-    // MÃ£ hÃ³a máº­t kháº©u
+    // Mã hóa mật khẩu
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(10);

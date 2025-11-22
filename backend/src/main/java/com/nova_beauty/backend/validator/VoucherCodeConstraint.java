@@ -11,7 +11,7 @@ import jakarta.validation.Payload;
 @Retention(RetentionPolicy.RUNTIME)
 
 public @interface VoucherCodeConstraint {
-    String message() default "MÃ£ voucher khÃ´ng há»£p lá»‡";
+    String message() default "Mã voucher không hợp lệ";
 
     Class<?>[] groups() default {};
 

@@ -14,15 +14,15 @@ import com.nova_beauty.backend.entity.ProductMedia;
 @Repository
 public interface ProductMediaRepository extends JpaRepository<ProductMedia, String> {
 
-    // TÃ¬m media máº·c Ä‘á»‹nh cá»§a product
+    // Tìm media mặc định của product
     Optional<ProductMedia> findByProductIdAndIsDefaultTrue(String productId);
 
-    // Láº¥y táº¥t cáº£ media cá»§a product, sáº¯p xáº¿p theo displayOrder
+    // Lấy tất cả media của product, sắp xếp theo displayOrder
     List<ProductMedia> findByProductIdOrderByDisplayOrderAsc(String productId);
 
-    // TÃ¬m media theo productId vÃ  mediaUrl
+    // Tìm media theo productId và mediaUrl
     Optional<ProductMedia> findByProductIdAndMediaUrl(String productId, String mediaUrl);
 
-    // Äáº¿m sá»‘ media cá»§a product
+    // Đếm số media của product
     long countByProductId(String productId);
 }

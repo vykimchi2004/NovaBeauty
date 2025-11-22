@@ -62,12 +62,12 @@ public class ProductService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        // Validate vÃ  láº¥y category
+
         Category category = categoryRepository
                 .findById(request.getCategoryId())
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
 
-        // Validate vÃ  láº¥y promotion náº¿u cÃ³
+
         Promotion promotion = null;
         if (request.getPromotionId() != null && !request.getPromotionId().isEmpty()) {
             promotion = promotionRepository
@@ -75,7 +75,6 @@ public class ProductService {
                     .orElseThrow(() -> new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION));
         }
 
-        // Táº¡o product entity tá»« request
         Product product = productMapper.toProduct(request);
         product.setId(request.getId());
         product.setSubmittedBy(user);
@@ -86,17 +85,16 @@ public class ProductService {
         product.setQuantitySold(0);
         product.setStatus(ProductStatus.PENDING);
 
-        // TÃ­nh toÃ¡n giÃ¡ sáº£n pháº©m
+
         if (request.getUnitPrice() == null || request.getUnitPrice() < 0) {
             throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
         }
         product.setUnitPrice(request.getUnitPrice());
         product.setPrice(computeFinalPrice(request.getUnitPrice(), request.getTax(), request.getDiscountValue()));
 
-        // Gáº¯n media (áº£nh/video) tá»« request
+
         attachMediaFromRequest(product, request);
 
-        // LÆ°u sáº£n pháº©m
         try {
             Product savedProduct = productRepository.save(product);
             log.info("Product created with ID: {} by user: {}", savedProduct.getId(), user.getId());
@@ -109,11 +107,7 @@ public class ProductService {
 
     // ========== UPDATE OPERATIONS ==========
 
-    /**
-     * Cáº­p nháº­t thÃ´ng tin sáº£n pháº©m
-     * Staff chá»‰ cÃ³ thá»ƒ cáº­p nháº­t sáº£n pháº©m cá»§a chÃ­nh há»
-     * Admin cÃ³ thá»ƒ cáº­p nháº­t báº¥t ká»³ sáº£n pháº©m nÃ o
-     */
+
     @Transactional
     public ProductResponse updateProduct(String productId, ProductUpdateRequest request) {
         var context = SecurityContextHolder.getContext();
@@ -133,11 +127,11 @@ public class ProductService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        // Cáº­p nháº­t thÃ´ng tin sáº£n pháº©m
+
         productMapper.updateProduct(product, request);
         product.setUpdatedAt(LocalDateTime.now());
 
-        // TÃ­nh láº¡i giÃ¡ náº¿u unitPrice, tax, hoáº·c discountValue Ä‘Æ°á»£c cáº­p nháº­t
+
         if (request.getUnitPrice() != null || request.getTax() != null || request.getDiscountValue() != null) {
             Double unitPrice = request.getUnitPrice() != null ? request.getUnitPrice() : product.getUnitPrice();
             Double tax = request.getTax() != null ? request.getTax() : product.getTax();
@@ -149,7 +143,7 @@ public class ProductService {
             }
         }
 
-        // Cáº­p nháº­t category náº¿u cÃ³
+
         if (request.getCategoryId() != null && !request.getCategoryId().isEmpty()) {
             Category category = categoryRepository
                     .findById(request.getCategoryId())
@@ -157,10 +151,10 @@ public class ProductService {
             product.setCategory(category);
         }
 
-        // Cáº­p nháº­t promotion náº¿u cÃ³
+
         if (request.getPromotionId() != null) {
             if (request.getPromotionId().isEmpty()) {
-                // Náº¿u promotionId lÃ  chuá»—i rá»—ng, xÃ³a promotion
+
                 product.setPromotion(null);
             } else {
                 Promotion promotion = promotionRepository
@@ -170,7 +164,7 @@ public class ProductService {
             }
         }
 
-        // Cáº­p nháº­t inventory náº¿u cÃ³
+
         if (request.getStockQuantity() != null) {
             if (product.getInventory() == null) {
                 Inventory inventory = Inventory.builder()
@@ -185,18 +179,18 @@ public class ProductService {
             }
         }
 
-        // Cáº­p nháº­t media náº¿u cÃ³
+
         if (request.getImageUrls() != null || request.getVideoUrls() != null) {
-            // XÃ³a media cÅ© vÃ  file váº­t lÃ½
+
             if (product.getMediaList() != null && !product.getMediaList().isEmpty()) {
-                // XÃ³a file váº­t lÃ½
+
                 for (ProductMedia oldMedia : product.getMediaList()) {
                     deletePhysicalFileByUrl(oldMedia.getMediaUrl());
                 }
-                // XÃ³a media khá»i database
+
                 productMediaRepository.deleteAll(product.getMediaList());
             }
-            // Gáº¯n media má»›i tá»« request
+
             attachMediaFromUpdateRequest(product, request);
         }
 
@@ -218,31 +212,29 @@ public class ProductService {
                 .findById(productId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
 
-        // 1. XÃ³a product khá»i táº¥t cáº£ Promotion.productApply (báº£ng promotion_products)
+
         List<Promotion> promotionsWithProduct = promotionRepository.findByProductId(productId);
         for (Promotion promotion : promotionsWithProduct) {
             promotion.getProductApply().remove(product);
             promotionRepository.save(promotion);
         }
 
-        // 2. XÃ³a product khá»i táº¥t cáº£ Voucher.productApply (báº£ng voucher_products)
-        // TÃ¬m táº¥t cáº£ vouchers cÃ³ product nÃ y
+
         List<Voucher> vouchersWithProduct = voucherRepository.findByProductId(productId);
         for (Voucher voucher : vouchersWithProduct) {
             voucher.getProductApply().remove(product);
             voucherRepository.save(voucher);
         }
 
-        // 3. Set product.promotion = null (náº¿u cÃ³ promotion trá»±c tiáº¿p)
+
         if (product.getPromotion() != null) {
             product.setPromotion(null);
             productRepository.save(product);
         }
 
-        // 4. XÃ³a file media váº­t lÃ½ trong thÆ° má»¥c product_media (náº¿u cÃ³)
         deleteMediaFilesIfExists(product);
 
-        // 5. XÃ³a product
+
         productRepository.delete(product);
         log.info("Product deleted: {} by user: {}", productId, user.getEmail());
     }
@@ -253,26 +245,26 @@ public class ProductService {
                 .findByIdWithRelations(productId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
         
-        // TÃ¬m promotion active cho sáº£n pháº©m nÃ y
+
         Promotion activePromotion = findActivePromotionForProduct(product);
         
-        // Náº¿u cÃ³ promotion active, set vÃ o product
+
         if (activePromotion != null) {
             product.setPromotion(activePromotion);
         } else {
-            // Náº¿u khÃ´ng cÃ³ promotion active, set null
+
             product.setPromotion(null);
         }
         
         return productMapper.toResponse(product);
     }
 
-    // TÃ¬m promotion Ä‘ang active cho sáº£n pháº©m (theo product trá»±c tiáº¿p hoáº·c theo category)
+
     private Promotion findActivePromotionForProduct(Product product) {
         LocalDate today = LocalDate.now();
         List<Promotion> activePromotions = new ArrayList<>();
         
-        // 1. Kiá»ƒm tra promotion trá»±c tiáº¿p cá»§a product
+
         if (product.getPromotion() != null) {
             Promotion directPromo = product.getPromotion();
             if (isPromotionActive(directPromo, today)) {
@@ -280,19 +272,18 @@ public class ProductService {
             }
         }
         
-        // 2. TÃ¬m promotion active theo product ID (tá»« promotion_products table)
+
         if (product.getId() != null) {
             List<Promotion> productPromotions = promotionRepository.findActiveByProductId(product.getId(), today);
             activePromotions.addAll(productPromotions);
         }
-        
-        // 3. TÃ¬m promotion active theo category
+
         if (product.getCategory() != null && product.getCategory().getId() != null) {
             List<Promotion> categoryPromotions = promotionRepository.findActiveByCategoryId(product.getCategory().getId(), today);
             activePromotions.addAll(categoryPromotions);
         }
         
-        // Loáº¡i bá» trÃ¹ng láº·p vÃ  láº¥y promotion cÃ³ startDate sá»›m nháº¥t (Æ°u tiÃªn promotion báº¯t Ä‘áº§u sá»›m hÆ¡n)
+
         return activePromotions.stream()
                 .distinct()
                 .filter(p -> isPromotionActive(p, today))
@@ -301,11 +292,11 @@ public class ProductService {
                 .orElse(null);
     }
 
-    // Kiá»ƒm tra promotion cÃ³ Ä‘ang active khÃ´ng
+
     private boolean isPromotionActive(Promotion promotion, LocalDate today) {
         if (promotion == null) return false;
-        
-        // Pháº£i lÃ  APPROVED vÃ  isActive = true
+
+
         if (promotion.getStatus() != PromotionStatus.APPROVED) {
             return false;
         }
@@ -313,12 +304,12 @@ public class ProductService {
             return false;
         }
         
-        // Kiá»ƒm tra thá»i gian: startDate <= today <= expiryDate
+
         if (promotion.getStartDate() != null && promotion.getStartDate().isAfter(today)) {
-            return false; // ChÆ°a Ä‘áº¿n ngÃ y báº¯t Ä‘áº§u
+            return false;
         }
         if (promotion.getExpiryDate() != null && promotion.getExpiryDate().isBefore(today)) {
-            return false; // ÄÃ£ háº¿t háº¡n
+            return false;
         }
         
         return true;
@@ -388,7 +379,7 @@ public class ProductService {
                 .findById(request.getProductId())
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
 
-        // Xá»­ lÃ½ approve hoáº·c reject
+
         if ("APPROVE".equals(request.getAction())) {
             product.setStatus(ProductStatus.APPROVED);
             product.setApprovedBy(admin);
@@ -398,7 +389,7 @@ public class ProductService {
             log.info("Product approved: {} by admin: {}", product.getId(), adminEmail);
         } else if ("REJECT".equals(request.getAction())) {
             product.setStatus(ProductStatus.REJECTED);
-            // KhÃ´ng thiáº¿t láº­p thá»i gian duyá»‡t khi tá»« chá»‘i
+
             product.setApprovedBy(null);
             product.setApprovedAt(null);
             product.setRejectionReason(request.getReason());
@@ -483,7 +474,7 @@ public class ProductService {
             }
         }
 
-        // Xá»­ lÃ½ video
+
         if (request.getVideoUrls() != null) {
             for (String url : request.getVideoUrls()) {
                 if (url == null || url.isBlank()) continue;
@@ -499,7 +490,6 @@ public class ProductService {
             }
         }
 
-        // Gáº¯n media vÃ o product
         if (!mediaEntities.isEmpty()) {
             product.setMediaList(mediaEntities);
             // Náº¿u khÃ´ng cÃ³ media nÃ o Ä‘Æ°á»£c Ä‘Ã¡nh dáº¥u lÃ  default, chá»n media Ä‘áº§u tiÃªn
@@ -516,7 +506,7 @@ public class ProductService {
         ProductMedia defaultMedia = null;
         int displayOrder = 0;
 
-        // Xá»­ lÃ½ áº£nh
+
         if (request.getImageUrls() != null) {
             for (String url : request.getImageUrls()) {
                 if (url == null || url.isBlank()) continue;
@@ -532,7 +522,6 @@ public class ProductService {
             }
         }
 
-        // Xá»­ lÃ½ video
         if (request.getVideoUrls() != null) {
             for (String url : request.getVideoUrls()) {
                 if (url == null || url.isBlank()) continue;
@@ -548,10 +537,10 @@ public class ProductService {
             }
         }
 
-        // Gáº¯n media vÃ o product
+
         if (!mediaEntities.isEmpty()) {
             product.setMediaList(mediaEntities);
-            // Náº¿u khÃ´ng cÃ³ media nÃ o Ä‘Æ°á»£c Ä‘Ã¡nh dáº¥u lÃ  default, chá»n media Ä‘áº§u tiÃªn
+
             if (defaultMedia == null) {
                 defaultMedia = mediaEntities.get(0);
                 defaultMedia.setDefault(true);
@@ -606,7 +595,7 @@ public class ProductService {
 
             if (filename == null || filename.isBlank()) return;
 
-            // XÃ¡c Ä‘á»‹nh thÆ° má»¥c dá»±a trÃªn URL (máº·c Ä‘á»‹nh lÃ  uploads/product_media)
+
             Path targetDir = Paths.get("uploads", "product_media");
             Path filePath = targetDir.resolve(filename);
             boolean deleted = Files.deleteIfExists(filePath);

@@ -81,7 +81,7 @@ public interface ProductMapper {
         if (lower.startsWith("http://") || lower.startsWith("https://")) {
             return url;
         }
-        // Náº¿u URL báº¯t Ä‘áº§u vá»›i /product_media, thÃ¬ thÃªm thÃ´ng tin context path (vÃ­ dá»¥: /lumina_book)
+        // Nếu URL bắt đầu với /product_media, thì thêm thông tin context path (ví dụ: /nova_beauty)
         if (url.startsWith("/product_media")) {
             String base = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
             return base + url;

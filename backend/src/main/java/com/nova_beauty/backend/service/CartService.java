@@ -1,7 +1,6 @@
 package com.nova_beauty.backend.service;
 
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +16,7 @@ import com.nova_beauty.backend.enums.DiscountValueType;
 import com.nova_beauty.backend.enums.DiscountApplyScope;
 import com.nova_beauty.backend.repository.VoucherRepository;
 import com.nova_beauty.backend.repository.OrderRepository;
+import com.nova_beauty.backend.util.SecurityUtil;
 
 import java.time.LocalDate;
 
@@ -38,17 +38,34 @@ public class CartService {
     OrderRepository orderRepository;
 
     @Transactional
-    @PreAuthorize("hasAuthority('CUSTOMER')")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public Cart getOrCreateCartForCurrentCustomer() {
-        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        // Authentication name đang là email (subject của JWT)
+        String email = SecurityUtil.getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        // Lấy cart hiện tại của user (nếu có), nếu không thì tạo mới.
         return cartRepository
                 .findByUserId(user.getId())
                 .orElseGet(() -> cartRepository.save(Cart.builder().user(user).build()));
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('CUSTOMER')")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public Cart getCart() {
+        Cart cart = getOrCreateCartForCurrentCustomer();
+        // Force load cart items to avoid lazy loading issues
+        if (cart.getCartItems() != null) {
+            cart.getCartItems().size(); // Trigger lazy loading
+        }
+        // Recalculate totals to ensure they are up to date
+        recalcCartTotals(cart);
+        return cart;
+    }
+
+    @Transactional
+    @PreAuthorize("hasRole('CUSTOMER')")
     public Cart addItem(String productId, int quantity) {
         if (quantity <= 0) {
             throw new AppException(ErrorCode.OUT_OF_STOCK);
@@ -78,49 +95,60 @@ public class CartService {
         return cart;
     }
 
+
+     //Tính đơn giá sản phẩm cho giỏ hàng.
+
+
     private double calculateUnitPrice(Product product) {
-        double basePrice = product.getPrice();
-        double discounted = basePrice;
-        // Apply active promotions by product
-        var today = java.time.LocalDate.now();
-        var promosByProduct = promotionRepository.findActiveByProductId(product.getId(), today);
-        var promosByCategory = product.getCategory() == null
-                ? java.util.List.<com.nova_beauty.backend.entity.Promotion>of()
-                : promotionRepository.findActiveByCategoryId(
-                        product.getCategory().getId(), today);
-
-        for (var p : java.util.stream.Stream.concat(promosByProduct.stream(), promosByCategory.stream())
-                .toList()) {
-            Double dv = p.getDiscountValue();
-            if (dv == null || dv <= 0) continue;
-            // Heuristic: <=1 => percent, else amount
-            double candidate = dv <= 1.0 ? basePrice * (1.0 - dv) : basePrice - dv;
-            if (p.getMaxDiscountValue() != null && p.getMaxDiscountValue() > 0 && dv > 1.0) {
-                candidate = Math.max(basePrice - p.getMaxDiscountValue(), candidate);
-            }
-            discounted = Math.min(discounted, Math.max(candidate, 0));
-        }
-
-        // Apply tax if provided (assume tax is percentage, e.g., 0.1 for 10%) to derive pre-tax unit price? Keep
-        // unitPrice pre-tax
-        return discounted;
+        double price = product.getPrice() != null ? product.getPrice() : 0.0;
+        return Math.round(price);
     }
 
     private void recalcCartTotals(Cart cart) {
+        // Đồng bộ lại đơn giá và thành tiền của từng cartItem
+        if (cart.getCartItems() != null && !cart.getCartItems().isEmpty()) {
+            cart.getCartItems().forEach(item -> {
+                Product product = item.getProduct();
+                if (product != null) {
+                    // Tính lại đơn giá dựa trên cấu hình khuyến mãi hiện tại
+                    double unitPrice = calculateUnitPrice(product);
+                    item.setUnitPrice(unitPrice);
+                    // Thành tiền = đơn giá * số lượng
+                    double finalPrice = unitPrice * item.getQuantity();
+                    item.setFinalPrice(finalPrice);
+                    cartItemRepository.save(item);
+                }
+            });
+        }
+
+        // Tính lại subtotal từ các cartItem (nếu chưa có item thì subtotal = 0)
         double subtotal = cart.getCartItems() == null
                 ? 0.0
                 : cart.getCartItems().stream()
                         .mapToDouble(CartItem::getFinalPrice)
                         .sum();
+        // Làm tròn subtotal về đơn vị đồng
+        subtotal = Math.round(subtotal);
         cart.setSubtotal(subtotal);
-        double voucherDiscount = cart.getVoucherDiscount();
-        double total = Math.max(0.0, subtotal - (voucherDiscount == 0 ? 0.0 : voucherDiscount));
+
+        // voucherDiscount có thể null với giỏ hàng mới => mặc định 0
+        Double rawVoucherDiscount = cart.getVoucherDiscount();
+        double voucherDiscount = rawVoucherDiscount == null ? 0.0 : rawVoucherDiscount;
+        // Làm tròn tiền giảm giá về đơn vị đồng
+        voucherDiscount = Math.round(voucherDiscount);
+        cart.setVoucherDiscount(voucherDiscount);
+
+        double total = Math.max(0.0, subtotal - voucherDiscount);
+        // Làm tròn tổng tiền về đơn vị đồng
+        total = Math.round(total);
         cart.setTotalAmount(total);
+
+        // Lưu lại cart với giá trị subtotal / totalAmount mới
         cartRepository.save(cart);
     }
 
     @Transactional
-    @PreAuthorize("hasAuthority('CUSTOMER')")
+    @PreAuthorize("hasRole('CUSTOMER')")
     public Cart applyVoucher(String code) {
         Cart cart = getOrCreateCartForCurrentCustomer();
         if (cart.getCartItems() == null || cart.getCartItems().isEmpty()) {
@@ -139,18 +167,18 @@ public class CartService {
             throw new AppException(ErrorCode.VOUCHER_NOT_EXISTED);
         }
         
-        // Láº¥y current user
+        // Lấy current user
         User currentUser = cart.getUser();
         if (currentUser == null) {
-            String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-            currentUser = userRepository.findByEmail(userEmail)
+            org.springframework.security.core.Authentication authentication = SecurityUtil.getAuthentication();
+            currentUser = userRepository.findByEmail(authentication.getName())
                     .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
         }
         
-        // LÆ°u userId vÃ o biáº¿n final Ä‘á»ƒ sá»­ dá»¥ng trong lambda
+
         final String userId = currentUser.getId();
         
-        // Kiá»ƒm tra usagePerUser: sá»‘ láº§n user Ä‘Ã£ dÃ¹ng voucher nÃ y
+
         if (voucher.getUsagePerUser() != null && voucher.getUsagePerUser() > 0) {
             long userUsageCount = orderRepository.findAll().stream()
                     .filter(order -> order.getUser() != null && userId.equals(order.getUser().getId()))
@@ -165,16 +193,16 @@ public class CartService {
         
         recalcCartTotals(cart);
         
-        // TÃ­nh tá»•ng giÃ¡ trá»‹ Ä‘Æ¡n hÃ ng cÃ³ thá»ƒ Ã¡p dá»¥ng voucher
+        // Tính tổng giá trị đơn hàng có thể áp dụng voucher
         double applicableSubtotal = calculateApplicableSubtotal(cart, voucher);
         
-        // Náº¿u giÃ¡ trá»‹ Ä‘Æ¡n hÃ ng cÃ³ thá»ƒ Ã¡p dá»¥ng voucher nhá» hÆ¡n giÃ¡ trá»‹ tá»‘i thiá»ƒu cá»§a voucher, throw error
+
         if (voucher.getMinOrderValue() != null && voucher.getMinOrderValue() > 0 
                 && applicableSubtotal < voucher.getMinOrderValue()) {
             throw new AppException(ErrorCode.INVALID_VOUCHER_MINIUM);
         }
 
-        // TÃ­nh giÃ¡ trá»‹ giáº£m giÃ¡ dá»±a trÃªn loáº¡i giáº£m giÃ¡ cá»§a voucher
+        // Tính giá trị giảm giá dựa trên loại giảm giá của voucher
         double discountValue = voucher.getDiscountValue();
         double discount;
         if (voucher.getDiscountValueType() == DiscountValueType.PERCENTAGE) {
@@ -183,27 +211,28 @@ public class CartService {
             discount = discountValue;
         }
         
-        // Náº¿u giÃ¡ trá»‹ giáº£m giÃ¡ vÆ°á»£t quÃ¡ giÃ¡ trá»‹ giáº£m giÃ¡ tá»‘i Ä‘a cá»§a voucher, set giÃ¡ trá»‹ giáº£m giÃ¡ tá»‘i Ä‘a cá»§a voucher
+        // Nếu giá trị giảm giá vượt quá giá trị giảm giá tối đa của voucher, set giá trị giảm giá tối đa của voucher
         if (voucher.getMaxDiscountValue() != null && voucher.getMaxDiscountValue() > 0) {
             discount = Math.min(discount, voucher.getMaxDiscountValue());
         }
         
-        // Náº¿u giÃ¡ trá»‹ giáº£m giÃ¡ vÆ°á»£t quÃ¡ giÃ¡ trá»‹ Ä‘Æ¡n hÃ ng cÃ³ thá»ƒ Ã¡p dá»¥ng voucher, set giÃ¡ trá»‹ giáº£m giÃ¡ tá»‘i Ä‘a cá»§a voucher
+        // Nếu giá trị giảm giá vượt quá giá trị đơn hàng có thể áp dụng voucher, set giá trị giảm giá tối đa của voucher
         discount = Math.min(discount, applicableSubtotal);
         
-        // Láº¥y tá»•ng giÃ¡ trá»‹ Ä‘Æ¡n hÃ ng Ä‘á»ƒ tÃ­nh toÃ¡n cuá»‘i cÃ¹ng
+        // Lấy tổng giá trị đơn hàng để tính toán cuối cùng
         double fullSubtotal = cart.getSubtotal();
 
         cart.setAppliedVoucherCode(voucher.getCode());
         cart.setVoucherDiscount(discount);
-        cart.setTotalAmount(Math.max(0.0, fullSubtotal - discount));
+        // Tổng sau voucher cũng làm tròn về đồng
+        cart.setTotalAmount((double) Math.round(Math.max(0.0, fullSubtotal - discount)));
         return cartRepository.save(cart);
     }
 
-    // TÃ­nh tá»•ng giÃ¡ trá»‹ Ä‘Æ¡n hÃ ng cÃ³ thá»ƒ Ã¡p dá»¥ng voucher dá»±a trÃªn pháº¡m vi Ã¡p dá»¥ng cá»§a voucher
+    // Tính tổng giá trị đơn hàng có thể áp dụng voucher dựa trên phạm vi áp dụng của voucher
     private double calculateApplicableSubtotal(Cart cart, Voucher voucher) {
         if (voucher.getApplyScope() == null || voucher.getApplyScope() == DiscountApplyScope.ORDER) {
-            // Ãp dá»¥ng cho toÃ n bá»™ Ä‘Æ¡n hÃ ng
+
             return cart.getSubtotal();
         }
 
@@ -216,12 +245,12 @@ public class CartService {
 
                     DiscountApplyScope scope = voucher.getApplyScope();
                     if (scope == DiscountApplyScope.PRODUCT) {
-                        // Náº¿u sáº£n pháº©m cÃ³ náº±m trong danh sÃ¡ch sáº£n pháº©m cá»§a voucher, return true
+                        // Nếu sản phẩm có nằm trong danh sách sản phẩm của voucher, return true
                         return voucher.getProductApply() != null
                                 && voucher.getProductApply().stream()
                                         .anyMatch(vp -> vp.getId().equals(product.getId()));
                     } else if (scope == DiscountApplyScope.CATEGORY) {
-                        // Náº¿u danh má»¥c sáº£n pháº©m cÃ³ náº±m trong danh sÃ¡ch danh má»¥c cá»§a voucher, return true
+                        // Nếu danh mục sản phẩm có nằm trong danh sách danh mục của voucher, return true
                         Category productCategory = product.getCategory();
                         return productCategory != null
                                 && voucher.getCategoryApply() != null
@@ -232,5 +261,83 @@ public class CartService {
                 })
                 .mapToDouble(CartItem::getFinalPrice)
                 .sum();
+    }
+
+    @Transactional
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public Cart updateCartItemQuantity(String cartItemId, int quantity) {
+        if (quantity <= 0) {
+            throw new AppException(ErrorCode.OUT_OF_STOCK);
+        }
+
+        Cart cart = getOrCreateCartForCurrentCustomer();
+        CartItem cartItem = cartItemRepository.findById(cartItemId)
+                .orElseThrow(() -> new AppException(ErrorCode.CART_ITEM_NOT_EXISTED));
+
+        // Kiểm tra cartItem thuộc về cart của user hiện tại
+        if (!cartItem.getCart().getId().equals(cart.getId())) {
+            throw new AppException(ErrorCode.CART_ITEM_NOT_EXISTED);
+        }
+
+        cartItem.setQuantity(quantity);
+        double finalPrice = cartItem.getQuantity() * cartItem.getUnitPrice();
+        cartItem.setFinalPrice(finalPrice);
+
+        cartItemRepository.save(cartItem);
+        recalcCartTotals(cart);
+        return cart;
+    }
+
+    @Transactional
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public Cart removeCartItem(String cartItemId) {
+        Cart cart = getOrCreateCartForCurrentCustomer();
+        CartItem cartItem = cartItemRepository.findById(cartItemId)
+                .orElseThrow(() -> new AppException(ErrorCode.CART_ITEM_NOT_EXISTED));
+
+        // Kiểm tra cartItem thuộc về cart của user hiện tại
+        if (!cartItem.getCart().getId().equals(cart.getId())) {
+            throw new AppException(ErrorCode.CART_ITEM_NOT_EXISTED);
+        }
+
+        // Xóa cartItem khỏi DB
+        cartItemRepository.delete(cartItem);
+
+        // Đồng bộ lại collection cartItems trong entity Cart hiện tại,
+        // tránh việc recalcCartTotals() save lại item vừa xóa.
+        if (cart.getCartItems() != null && !cart.getCartItems().isEmpty()) {
+            cart.getCartItems().removeIf(item -> cartItemId.equals(item.getId()));
+        }
+
+        // Tính lại tổng tiền sau khi đã loại bỏ item vừa xóa
+        recalcCartTotals(cart);
+        return cart;
+    }
+
+    @Transactional
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public Cart clearVoucher() {
+        Cart cart = getOrCreateCartForCurrentCustomer();
+        cart.setAppliedVoucherCode(null);
+        cart.setVoucherDiscount(0.0);
+        recalcCartTotals(cart);
+        return cart;
+    }
+
+    @Transactional
+    public void removeCartItemsForOrder(User user, java.util.List<String> cartItemIds) {
+        if (user == null || cartItemIds == null || cartItemIds.isEmpty()) {
+            return;
+        }
+        Cart cart = cartRepository.findByUserId(user.getId()).orElse(null);
+        if (cart == null) {
+            return;
+        }
+        cartItemIds.forEach(id -> cartItemRepository.findById(id).ifPresent(item -> {
+            if (item.getCart() != null && item.getCart().getId().equals(cart.getId())) {
+                cartItemRepository.delete(item);
+            }
+        }));
+        recalcCartTotals(cart);
     }
 }

@@ -19,52 +19,52 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@PromotionDateConstraint // Validate ngÃ y báº¯t Ä‘áº§u vÃ  káº¿t thÃºc
+@PromotionDateConstraint // Validate ngày bắt đầu và kết thúc
 @PromotionScopeConstraint
 public class PromotionCreationRequest {
 
-    @NotBlank(message = "TÃªn khuyáº¿n mÃ£i khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
-    @Size(max = 255, message = "TÃªn khuyáº¿n mÃ£i khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 255 kÃ½ tá»±")
+    @NotBlank(message = "Tên khuyến mãi không được để trống")
+    @Size(max = 255, message = "Tên khuyến mãi không được vượt quá 255 ký tự")
     String name;
 
-    @NotBlank(message = "MÃ£ khuyáº¿n mÃ£i khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
-    @Size(max = 50, message = "MÃ£ khuyáº¿n mÃ£i khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 50 kÃ½ tá»±")
-    @Pattern(regexp = "^[A-Z0-9_-]+$", message = "MÃ£ khuyáº¿n mÃ£i chá»‰ Ä‘Æ°á»£c chá»©a chá»¯ hoa, sá»‘, dáº¥u gáº¡ch ngang vÃ  gáº¡ch dÆ°á»›i")
-    @PromotionCodeConstraint // Validate mÃ£ khuyáº¿n mÃ£i unique
+    @NotBlank(message = "Mã khuyến mãi không được để trống")
+    @Size(max = 50, message = "Mã khuyến mãi không được vượt quá 50 ký tự")
+    @Pattern(regexp = "^[A-Z0-9_-]+$", message = "Mã khuyến mãi chỉ được chứa chữ hoa, số, dấu gạch ngang và gạch dưới")
+    @PromotionCodeConstraint // Validate mã khuyến mãi unique
     String code;
 
     String imageUrl;
 
-    @Size(max = 1000, message = "MÃ´ táº£ khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 1000 kÃ½ tá»±")
+    @Size(max = 1000, message = "Mô tả không được vượt quá 1000 ký tự")
     String description;
 
-    @NotNull(message = "GiÃ¡ trá»‹ giáº£m giÃ¡ khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
-    @DecimalMin(value = "0.0", message = "GiÃ¡ trá»‹ giáº£m giÃ¡ pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0")
+    @NotNull(message = "Giá trị giảm giá không được để trống")
+    @DecimalMin(value = "0.0", message = "Giá trị giảm giá phải lớn hơn hoặc bằng 0")
     Double discountValue;
 
-    @DecimalMin(value = "0.0", message = "GiÃ¡ trá»‹ Ä‘Æ¡n hÃ ng tá»‘i thiá»ƒu pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0")
+    @DecimalMin(value = "0.0", message = "Giá trị đơn hàng tối thiểu phải lớn hơn hoặc bằng 0")
     Double minOrderValue;
 
-    @DecimalMin(value = "0.0", message = "GiÃ¡ trá»‹ giáº£m tá»‘i Ä‘a pháº£i lá»›n hÆ¡n hoáº·c báº±ng 0")
+    @DecimalMin(value = "0.0", message = "Giá trị giảm tối đa phải lớn hơn hoặc bằng 0")
     Double maxDiscountValue;
 
-    @NotNull(message = "Loáº¡i giÃ¡ trá»‹ giáº£m khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    @NotNull(message = "Loại giá trị giảm không được để trống")
     DiscountValueType discountValueType;
 
-    @NotNull(message = "Pháº¡m vi Ã¡p dá»¥ng khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    @NotNull(message = "Phạm vi áp dụng không được để trống")
     DiscountApplyScope applyScope;
 
-    @NotNull(message = "NgÃ y báº¯t Ä‘áº§u khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
-    @Future(message = "NgÃ y báº¯t Ä‘áº§u pháº£i lÃ  ngÃ y trong tÆ°Æ¡ng lai")
+    @NotNull(message = "Ngày bắt đầu không được để trống")
+    @FutureOrPresent(message = "Ngày bắt đầu không được trước ngày hiện tại")
     LocalDate startDate;
 
-    @NotNull(message = "NgÃ y káº¿t thÃºc khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
-    @Future(message = "NgÃ y káº¿t thÃºc pháº£i lÃ  ngÃ y trong tÆ°Æ¡ng lai")
+    @NotNull(message = "Ngày kết thúc không được để trống")
+    @FutureOrPresent(message = "Ngày kết thúc không được trước ngày hiện tại")
     LocalDate expiryDate;
 
-    // Ãp dá»¥ng theo danh má»¥c
+    // Áp dụng theo danh mục
     Set<String> categoryIds;
 
-    // Ãp dá»¥ng theo sáº£n pháº©m cá»¥ thá»ƒ
+    // Áp dụng theo sản phẩm cụ thể
     Set<String> productIds;
 }

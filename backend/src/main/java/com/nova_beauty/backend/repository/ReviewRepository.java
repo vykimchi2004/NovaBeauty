@@ -23,18 +23,18 @@ public interface ReviewRepository extends JpaRepository<Review, String> {
 
     boolean existsByUserAndProduct(User user, Product product);
 
-    // TÃ¬m review cá»§a user cho product cá»¥ thá»ƒ
+    // Tìm review của user cho product cụ thể
     Optional<Review> findByUserIdAndProductId(String userId, String productId);
 
-    // TÃ­nh rating trung bÃ¬nh cá»§a product
+    // Tính rating trung bình của product
     @Query("SELECT AVG(r.rating) FROM Review r WHERE r.product.id = :productId")
     Double getAverageRatingByProductId(@Param("productId") String productId);
 
-    // TÃ¬m reviews theo keyword trong comment
+    // Tìm reviews theo keyword trong comment
     @Query("SELECT r FROM Review r WHERE r.comment LIKE %:keyword%")
     Page<Review> findByCommentContaining(@Param("keyword") String keyword, Pageable pageable);
 
-    // TÃ¬m reviews theo rating range
+    // Tìm reviews theo rating range
     @Query("SELECT r FROM Review r WHERE r.product.id = :productId AND r.rating BETWEEN :minRating AND :maxRating")
     Page<Review> findByProductIdAndRatingRange(
             @Param("productId") String productId,

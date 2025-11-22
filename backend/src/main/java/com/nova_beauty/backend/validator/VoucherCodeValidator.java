@@ -24,7 +24,7 @@ public class VoucherCodeValidator implements ConstraintValidator<VoucherCodeCons
         // check exists
         if (voucherRepository.findByCode(code).isPresent()) {
             context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate("MÃ£ voucher Ä‘Ã£ tá»“n táº¡i")
+            context.buildConstraintViolationWithTemplate("Mã voucher đã tồn tại")
                     .addConstraintViolation();
             return false;
         }

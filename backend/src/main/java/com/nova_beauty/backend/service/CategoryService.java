@@ -36,12 +36,12 @@ public class CategoryService {
     public CategoryResponse createCategory(CategoryCreationRequest request) {
         // Check if id already exists
         if (categoryRepository.findById(request.getId()).isPresent()) {
-            throw new AppException(ErrorCode.CATEGORY_ALREADY_EXISTS); // MÃ£ danh má»¥c Ä‘Ã£ tá»“n táº¡i
+            throw new AppException(ErrorCode.CATEGORY_ALREADY_EXISTS); // Mã danh mục đã tồn tại
         }
 
         // Check if name already exists
         if (categoryRepository.findByName(request.getName()).isPresent()) {
-            throw new AppException(ErrorCode.CATEGORY_ALREADY_EXISTS); // TÃªn danh má»¥c Ä‘Ã£ tá»“n táº¡i
+            throw new AppException(ErrorCode.CATEGORY_ALREADY_EXISTS); // Tên danh mục đã tồn tại
         }
 
         // Create category entity using mapper

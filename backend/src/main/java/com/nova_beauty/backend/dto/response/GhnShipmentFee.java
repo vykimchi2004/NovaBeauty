@@ -12,17 +12,17 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
 public class GhnShipmentFee {
-    Long main_service; // PhÃ­ váº­n chuyá»ƒn.
-    Long insurance; // GiÃ¡ trá»‹ cá»§a Ä‘Æ¡n hÃ ng ( TrÆ°á»ng há»£p máº¥t hÃ ng , bá»ƒ hÃ ng sáº½ Ä‘á»n theo giÃ¡ trá»‹ cá»§a Ä‘Æ¡n hÃ ng).
-    Long station_do; // PhÃ­ gá»­i hÃ ng táº¡i bÆ°u cá»¥c
-    Long station_pu; // PhÃ­ láº¥y hÃ ng táº¡i bÆ°u cá»¥c.
+    Long main_service; // Phí vận chuyển.
+    Long insurance; // Giá trị của đơn hàng ( Trường hợp mất hàng , bể hàng sẽ đền theo giá trị của đơn hàng).
+    Long station_do; // Phí gửi hàng tại bưu cục
+    Long station_pu; // Phí lấy hàng tại bưu cục.
 
     @JsonProperty("return")
     Long returnFee;
 
-    Long r2s; // PhÃ­ giao láº¡i hÃ ng.
+    Long r2s; // Phí giao lại hàng.
     Long coupon;
 
     @JsonProperty("cod_failed_fee")
-    Long cod_failed_fee; // set báº±ng 0.
+    Long cod_failed_fee; // set bằng 0.
 }

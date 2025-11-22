@@ -9,14 +9,14 @@ import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
 
 // METHOD, FIELD, ANNOTATION_TYPE, CONSTRUCTOR, PARAMETER, TYPE_USE
-@Target({FIELD}) // Annotation nÃ y sáº½ Ä‘Æ°á»£c apply á»Ÿ Ä‘Ã¢u
-@Retention(RUNTIME) // Annotation sáº½ Ä‘Æ°á»£c xá»­ lÃ½ lÃºc nÃ o
-@Constraint(validatedBy = {DobValidator.class}) // Class chá»‹u trÃ¡ch nhiá»‡m cho annotation nÃ y
+@Target({FIELD}) // Annotation này sẽ được apply ở đâu
+@Retention(RUNTIME) // Annotation sẽ được xử lý lúc nào
+@Constraint(validatedBy = {DobValidator.class}) // Class chịu trách nhiệm cho annotation này
 public @interface DobConstraint {
-    /// KhÃ´ng cÃ³ giÃ¡ trá»‹ default tráº£ vá» -> báº¯t buá»™c pháº£i khai bÃ¡o
+    /// Không có giá trị default trả về -> bắt buộc phải khai báo
     int min();
 
-    /// 3 property cÆ¡ báº£n cá»§a annotation dÃ nh cho validation
+    /// 3 property cơ bản của annotation dành cho validation
     String message() default "Invalid date of birth";
 
     Class<?>[] groups() default {};

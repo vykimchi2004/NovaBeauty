@@ -150,7 +150,7 @@ public class Product {
     @JoinColumn(name = "promotion")
     Promotion promotionApply;
 
-    // Bridge getters/setters to keep compatibility with LuminaBook code using 'promotion'
+    // Bridge getters/setters to keep compatibility with NovaBeauty code using 'promotion'
     public Promotion getPromotion() {
         return promotionApply;
     }

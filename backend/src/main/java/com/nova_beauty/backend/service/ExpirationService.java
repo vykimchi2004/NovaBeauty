@@ -108,7 +108,7 @@ public class ExpirationService {
 
                 expiredVoucherRepository.save(expiredVoucher);
                 
-                // Cáº­p nháº­t status cá»§a voucher gá»‘c thÃ nh EXPIRED
+                // Cập nhật status của voucher gốc thành EXPIRED
                 voucher.setStatus(VoucherStatus.EXPIRED);
                 voucherRepository.save(voucher);
                 
@@ -148,7 +148,7 @@ public class ExpirationService {
                 expiredPromotionRepository.save(expiredPromotion);
                 promotionService.detachPromotionFromProducts(promotion);
                 
-                // Cáº­p nháº­t status cá»§a promotion gá»‘c thÃ nh EXPIRED
+                // Cập nhật status của promotion gốc thành EXPIRED
                 promotion.setStatus(PromotionStatus.EXPIRED);
                 promotionRepository.save(promotion);
                 

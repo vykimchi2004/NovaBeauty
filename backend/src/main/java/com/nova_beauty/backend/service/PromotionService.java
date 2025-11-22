@@ -386,7 +386,7 @@ public class PromotionService {
         List<String> conflictedNames = new ArrayList<>();
         
         for (Product product : products) {
-            // Kiá»ƒm tra promotion hiá»‡n táº¡i cá»§a sáº£n pháº©m
+            // Kiểm tra promotion hiện tại của sản phẩm
             if (product.getPromotion() != null 
                     && !promotion.getId().equals(product.getPromotion().getId())) {
                 Promotion existingPromo = product.getPromotion();
@@ -454,11 +454,11 @@ public class PromotionService {
     
     /**
      * Kiá»ƒm tra xem hai khoáº£ng thá»i gian cÃ³ trÃ¹ng láº·p khÃ´ng
-     * @param start1 NgÃ y báº¯t Ä‘áº§u cá»§a promotion 1
-     * @param end1 NgÃ y káº¿t thÃºc cá»§a promotion 1
-     * @param start2 NgÃ y báº¯t Ä‘áº§u cá»§a promotion 2
-     * @param end2 NgÃ y káº¿t thÃºc cá»§a promotion 2
-     * @return true náº¿u cÃ³ overlap
+     * @param start1 Ngày bắt đầu của promotion 1
+     * @param end1 Ngày kết thúc của promotion 1
+     * @param start2 Ngày bắt đầu của promotion 2
+     * @param end2 Ngày kết thúc của promotion 2
+     * @return true nếu có overlap
      */
     private boolean hasDateRangeOverlap(LocalDate start1, LocalDate end1, LocalDate start2, LocalDate end2) {
         if (start1 == null || end1 == null || start2 == null || end2 == null) {
@@ -603,9 +603,9 @@ public class PromotionService {
                 URI uri = URI.create(url);
                 String path = uri.getPath();
                 if (path != null && !path.isBlank()) {
-                    // Loáº¡i bá» context path náº¿u cÃ³ (vÃ­ dá»¥: /lumina_book)
-                    if (path.startsWith("/lumina_book")) {
-                        path = path.substring("/lumina_book".length());
+                    // Loáº¡i bá» context path náº¿u cÃ³ (vÃ­ dá»¥: /nova_beauty)
+                    if (path.startsWith("/nova_beauty")) {
+                        path = path.substring("/nova_beauty".length());
                     }
                     // TÃ¬m pháº§n path sau /promotion_media/ hoáº·c legacy /promotions/
                     if (path.contains("/promotion_media/")) {
@@ -634,8 +634,8 @@ public class PromotionService {
                     } catch (Exception ignored) { }
                 }
                 // Loáº¡i bá» context path náº¿u cÃ³
-                if (path.startsWith("/lumina_book")) {
-                    path = path.substring("/lumina_book".length());
+                if (path.startsWith("/nova_beauty")) {
+                    path = path.substring("/nova_beauty".length());
                 }
                 if (path.startsWith("/")) path = path.substring(1);
                 if (path.startsWith("uploads/promotions/")) {

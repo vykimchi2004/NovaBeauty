@@ -144,7 +144,7 @@ public class AuthenticationService {
         // payload = nhieu claim
         JWTClaimsSet jwtClaimSet = new JWTClaimsSet.Builder()
                 .subject(user.getEmail()) // user Ä‘Äƒng nháº­p lÃ  ai
-                .issuer("lumina_book.com") // Äá»‹nh danh ai lÃ  ngÆ°á»i issuer nÃ y Ä‘Æ°á»£c issuer tá»« ai, thÆ°á»ng lÃ  issue
+                .issuer("nova_beauty.com") // Äá»‹nh danh ai lÃ  ngÆ°á»i issuer nÃ y Ä‘Æ°á»£c issuer tá»« ai, thÆ°á»ng lÃ  issue
                 .issueTime(new Date()) // Thá»i Ä‘iá»ƒm láº§n Ä‘áº§u login
                 .expirationTime(
                         new Date( // Thá»i Ä‘iá»ƒm háº¿t háº¡n token

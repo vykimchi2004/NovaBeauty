@@ -24,7 +24,7 @@ public class PromotionCodeValidator implements ConstraintValidator<PromotionCode
         // check exists
         if (promotionRepository.findByCode(code).isPresent()) {
             context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate("MÃ£ khuyáº¿n mÃ£i Ä‘Ã£ tá»“n táº¡i")
+            context.buildConstraintViolationWithTemplate("Mã khuyến mãi đã tồn tại")
                     .addConstraintViolation();
             return false;
         }

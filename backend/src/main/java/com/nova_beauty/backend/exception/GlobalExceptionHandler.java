@@ -65,21 +65,20 @@ public class GlobalExceptionHandler {
         try {
             errorCode = ErrorCode.valueOf(enumKey);
 
-            // getBindingResult lÃ  nhá»¯ng error mÃ  method MethodArgumentNotValidException wrap láº¡i
+
             var constraintViolation = exception
                     .getBindingResult()
                     .getAllErrors()
                     .get(0) // Láº¥y lá»—i dáº§u tiÃªn
                     .unwrap(ConstraintViolation.class);
 
-            // getConstraintDescriptor: get ná»™i dung nhá»¯ng annotation
-            // getAttributes: láº¥y Map cÃ¡c tham sá»‘ trong annotation. VD: {min=3, message="USERNAME_TOO_SHORT", ...}
+
             attributes = constraintViolation.getConstraintDescriptor().getAttributes();
 
             log.info(attributes.toString());
 
         } catch (IllegalArgumentException ex) {
-            // Náº¿u khÃ´ng tÃ¬m tháº¥y ErrorCode enum, sá»­ dá»¥ng message tá»« validation annotation
+
             if (exception.getFieldError() != null) {
                 String validationMessage = exception.getFieldError().getDefaultMessage();
                 log.warn("Validation error - field: {}, message: {}", 
@@ -96,7 +95,7 @@ public class GlobalExceptionHandler {
         apiResponse.setCode(errorCode.getCode());
         String message = errorCode.getMessage();
         if (Objects.nonNull(attributes) && message != null && message.contains("{")) {
-            message = mapAttribute(message, attributes); // thay {min} náº¿u cÃ³
+            message = mapAttribute(message, attributes);
         }
         apiResponse.setMessage(message);
 
@@ -107,8 +106,6 @@ public class GlobalExceptionHandler {
         String minValue = String.valueOf(attributes.get(MIN_ATTRIBUTE));
 
         return message.replace("{" + MIN_ATTRIBUTE + "}", minValue);
-        // cáº·p {} Ä‘á»ƒ
-        // 1. TrÃ¡nh nháº§m láº«n vá»›i message thÃ´ng thÆ°á»ng;
-        // 2. ÄÃ¢y lÃ  1 chuáº©n cá»§a java khi replay 1 chuá»—i
+
     }
 }

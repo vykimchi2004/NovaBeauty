@@ -4,6 +4,8 @@ server:
   port: 8080
   servlet:
     context-path: /nova_beauty
+  tomcat:
+    max-swallow-size: 100MB
 
 #  Config cau hinh database
 spring:
@@ -20,13 +22,17 @@ spring:
     database-platform: org.hibernate.dialect.MySQLDialect
   # validate: Hibernate chi kiem tra cac bang, cot, kieu du lieu trong DB co phu hop voi entity trong code hay không. Neu khong khop → bao loi, khong tu sua.
   # update : Hibernate so sanh entity va DB → tu dong them hoac chinh sua bang/cot de khop. Tuy nhien, no khong xoa cac cot cu.
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
 
 #  Brevo Email Configuration
 brevo:
   api:
     key: ${BREVO_API_KEY_NOVA}
   sender:
-    email: ${BREVO_EMAIL} # Email ?� verify trong Brevo
+    email: ${BREVO_EMAIL} # Email đã verify trong Brevo
 
 #  Secret Key
 jwt:
@@ -37,12 +43,26 @@ jwt:
 # Default avatar configuration
 app:
   default-avatar: "/assets/images/default-avatar.png"
+  frontend:
+    base-url: "http://localhost:8080/nova_beauty"
 
 # GHN shipment configuration
 ghn:
   token: ${GHN_TOKEN:change-me}
   shopId: ${GHN_SHOP_ID:0}
   baseUrl: ${GHN_BASE_URL:https://online-gateway.ghn.vn}
+
+# Momo payment configuration
+momo:
+  # Thông tin tích hợp MoMo sandbox (có thể thay bằng thông tin tài khoản của bạn)
+  partner-code: MOMOLRJZ20181206
+  return-url: "http://localhost:3000/order-success"
+  end-point: "https://test-payment.momo.vn/v2/gateway/api"
+  # Lưu ý: context-path của backend là /nova_beauty nên IPN URL cần kèm context-path
+  ipn-url: "http://localhost:8080/nova_beauty/api/momo/ipn-handler"
+  access-key: "mTCKt9W3eU1m39TW"
+  secret-key: "SetA5RDnLHvt51AULf51DyauxUo3kDU6"
+  request-type: "captureWallet"
 
 # Layer1 - Controller: Quan ly cac mapping, endpoint
 # Layer2 - Service: Xu ly cac logic lien quan toi subdomain

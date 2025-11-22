@@ -71,7 +71,7 @@ public class InventoryService {
         return inventoryRepository.save(inventory);
     }
 
-    // Láº¥y sá»‘ lÆ°á»£ng tá»“n kho cá»§a product
+    // Lấy số lượng tồn kho của product
     public Integer getStockQuantity(String productId) {
         return inventoryRepository
                 .findByProductId(productId)

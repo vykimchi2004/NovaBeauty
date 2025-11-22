@@ -13,15 +13,15 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = lombok.AccessLevel.PRIVATE)
 public class GhnShipmentData {
     String order_code;
-    String sort_code; // MÃ£ phÃ¢n loáº¡i (VD: "sort_code":"19-60-06")
-    String trans_type; // Loáº¡i váº­n chuyá»ƒn (VD: "trans_type":"truck")
+    String sort_code; // Mã phân loại (VD: "sort_code":"19-60-06")
+    String trans_type; // Loại vận chuyển (VD: "trans_type":"truck")
     String ward_encode;
     String district_encode;
-    GhnShipmentFee fee; // PhÃ­
+    GhnShipmentFee fee; // Phí
 
     @JsonProperty("total_fee")
-    Long total_fee; // Tá»•ng phÃ­ dá»‹ch vá»¥
+    Long total_fee; // Tổng phí dịch vụ
 
     @JsonProperty("expected_delivery_time")
-    String expected_delivery_time; // Thá»i gian giao hÃ ng dá»± kiáº¿n tráº£ vá» tá»« GHN
+    String expected_delivery_time; // Thời gian giao hàng dự kiến trả về từ GHN
 }
