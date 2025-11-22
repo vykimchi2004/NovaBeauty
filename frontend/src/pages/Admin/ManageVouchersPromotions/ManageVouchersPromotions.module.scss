@@ -52,6 +52,71 @@
   }
 }
 
+.rejectBtn {
+  background: #fdecea;
+  color: #c9372c;
+
+  &:hover {
+    background: #f9d6d0;
+  }
+}
+
+.viewBtn {
+  background: #e8f0fe;
+  color: #1a73e8;
+
+  &:hover {
+    background: #d2e3fc;
+  }
+}
+
+.readOnlyBox {
+  min-height: 44px;
+  border: 1px solid #e0e3eb;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #fafbff;
+  font-size: 14px;
+  color: #333;
+}
+
+.detailModalWrapper {
+  width: 100%;
+  max-width: 1100px;
+  background: #fff;
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.2);
+}
+
+.modalOverlay {
+  align-items: flex-start;
+  padding: 60px 20px;
+  overflow-y: auto;
+}
+
+.chipGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #f4f6fb;
+  color: #1f2a37;
+  font-size: 13px;
+  border: 1px solid #e1e7ef;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
 .checkboxGroup {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -78,6 +143,17 @@
 
   span {
     user-select: none;
+  }
+}
+
+.actionStack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-left: 12px;
+
+  button {
+    min-width: 160px;
   }
 }
 

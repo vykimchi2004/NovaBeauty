@@ -1,18 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faSearch,
-  faTrash,
-  faEdit,
-  faPlus,
-  faTimes,
-  faArrowUp,
-  faArrowDown
-} from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faTrash, faCheck, faTimes, faEye } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from './ManageContent.module.scss';
-import { getBanners, deleteBanner, createBanner, updateBanner, updateBannerOrder } from '~/services/banner';
+import { getBanners, deleteBanner, updateBanner } from '~/services/banner';
 import notify from '~/utils/notification';
+import fallbackImage from '~/assets/images/products/image1.jpg';
 
 const cx = classNames.bind(styles);
 
@@ -21,32 +14,37 @@ function ManageContent() {
   const [filteredBanners, setFilteredBanners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('PENDING_APPROVAL');
   const [showModal, setShowModal] = useState(false);
-  const [editingBanner, setEditingBanner] = useState(null);
-  const [formData, setFormData] = useState({
-    title: '',
-    imageUrl: '',
-    linkUrl: '',
-    orderIndex: 0,
-    isActive: true
-  });
-  const [formErrors, setFormErrors] = useState({});
+  const [selectedBanner, setSelectedBanner] = useState(null);
 
   useEffect(() => {
-    fetchBanners();
-  }, []);
-
-  useEffect(() => {
-    filterBanners();
+    applySearchFilter();
   }, [searchTerm, banners]);
 
-  const fetchBanners = async () => {
+  useEffect(() => {
+    fetchBanners(filterStatus);
+  }, [filterStatus]);
+
+  const fetchBanners = async (status = 'all') => {
     try {
       setLoading(true);
       const data = await getBanners();
-      const sorted = (data || []).sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
-      setBanners(sorted);
-      setFilteredBanners(sorted);
+      let filtered = data || [];
+
+      // Filter by status
+      if (status !== 'all') {
+        if (status === 'PENDING_APPROVAL') {
+          filtered = filtered.filter((b) => b.pendingReview === true);
+        } else if (status === 'APPROVED') {
+          filtered = filtered.filter((b) => b.status === true && b.pendingReview === false);
+        } else if (status === 'REJECTED') {
+          filtered = filtered.filter((b) => b.status === false && b.rejectionReason);
+        }
+      }
+
+      setBanners(filtered);
+      setFilteredBanners(filtered);
     } catch (err) {
       console.error('Error fetching banners:', err);
       notify.error('Không thể tải danh sách banner. Vui lòng thử lại.');
@@ -55,13 +53,15 @@ function ManageContent() {
     }
   };
 
-  const filterBanners = () => {
+  const applySearchFilter = () => {
     let filtered = [...banners];
 
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(banner =>
+      filtered = filtered.filter(
+        (banner) =>
         banner.title?.toLowerCase().includes(term) ||
+          banner.description?.toLowerCase().includes(term) ||
         banner.id?.toLowerCase().includes(term)
       );
     }
@@ -69,29 +69,13 @@ function ManageContent() {
     setFilteredBanners(filtered);
   };
 
-  const handleAdd = () => {
-    setEditingBanner(null);
-    setFormData({
-      title: '',
-      imageUrl: '',
-      linkUrl: '',
-      orderIndex: banners.length,
-      isActive: true
-    });
-    setFormErrors({});
-    setShowModal(true);
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedBanner(null);
   };
 
-  const handleEdit = (banner) => {
-    setEditingBanner(banner);
-    setFormData({
-      title: banner.title || '',
-      imageUrl: banner.imageUrl || '',
-      linkUrl: banner.linkUrl || '',
-      orderIndex: banner.orderIndex || 0,
-      isActive: banner.isActive !== false
-    });
-    setFormErrors({});
+  const handleViewDetail = (banner) => {
+    setSelectedBanner(banner);
     setShowModal(true);
   };
 
@@ -107,68 +91,77 @@ function ManageContent() {
 
     try {
       await deleteBanner(bannerId);
-      setBanners(banners.filter(b => b.id !== bannerId));
+      setBanners(banners.filter((b) => b.id !== bannerId));
       notify.success('Xóa banner thành công!');
+      if (selectedBanner?.id === bannerId) {
+        closeModal();
+      }
     } catch (err) {
       console.error('Error deleting banner:', err);
       notify.error('Không thể xóa banner. Vui lòng thử lại.');
     }
   };
 
-  const handleMoveOrder = async (bannerId, direction) => {
-    const banner = banners.find(b => b.id === bannerId);
-    if (!banner) return;
+  const handleApprove = async (bannerId) => {
+    const confirmed = await notify.confirm(
+      'Bạn có chắc muốn duyệt banner này?',
+      'Xác nhận duyệt banner',
+      'Duyệt',
+      'Hủy'
+    );
 
-    const currentIndex = banner.orderIndex || 0;
-    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-
-    if (newIndex < 0 || newIndex >= banners.length) return;
+    if (!confirmed) return;
 
     try {
-      await updateBannerOrder(bannerId, newIndex);
-      fetchBanners();
+      await updateBanner(bannerId, {
+        status: true,
+        rejectionReason: null,
+      });
+      notify.success('Đã duyệt banner thành công!');
+      closeModal();
+      fetchBanners(filterStatus);
     } catch (err) {
-      console.error('Error updating banner order:', err);
-      notify.error('Không thể thay đổi thứ tự. Vui lòng thử lại.');
+      console.error('Error approving banner:', err);
+      notify.error('Không thể duyệt banner. Vui lòng thử lại.');
     }
   };
 
-  const validateForm = () => {
-    const errors = {};
-    if (!formData.title?.trim()) errors.title = 'Tiêu đề không được để trống';
-    if (!formData.imageUrl?.trim()) errors.imageUrl = 'URL hình ảnh không được để trống';
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
+  const handleReject = async (banner) => {
+    const reason = window.prompt('Nhập lý do từ chối', '');
+    if (reason === null) return;
+    const trimmed = reason.trim();
+    if (!trimmed) return;
+    try {
+      await updateBanner(banner.id, {
+        status: false,
+        rejectionReason: trimmed,
+      });
+      notify.success('Đã từ chối banner.');
+      closeModal();
+      fetchBanners(filterStatus);
+    } catch (err) {
+      console.error('Error rejecting banner:', err);
+      notify.error('Không thể từ chối banner. Vui lòng thử lại.');
+    }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
-    try {
-      const submitData = {
-        title: formData.title.trim(),
-        imageUrl: formData.imageUrl.trim(),
-        linkUrl: formData.linkUrl?.trim() || null,
-        orderIndex: formData.orderIndex,
-        isActive: formData.isActive
-      };
-
-      if (editingBanner) {
-        await updateBanner(editingBanner.id, submitData);
-        notify.success('Cập nhật banner thành công!');
-      } else {
-        await createBanner(submitData);
-        notify.success('Thêm banner thành công!');
-      }
-
-      setShowModal(false);
-      fetchBanners();
-    } catch (err) {
-      console.error('Error saving banner:', err);
-      notify.error(err.message || 'Không thể lưu banner. Vui lòng thử lại.');
+  const getStatusBadge = (banner) => {
+    if (banner.pendingReview === true) {
+      return <span className={cx('statusBadge', 'pending')}>Chờ duyệt</span>;
     }
+    if (banner.status === true && banner.pendingReview === false) {
+      return <span className={cx('statusBadge', 'approved')}>Đã duyệt</span>;
+    }
+    if (banner.status === false && banner.rejectionReason) {
+      return <span className={cx('statusBadge', 'rejected')}>Từ chối</span>;
+    }
+    return <span className={cx('statusBadge', 'default')}>-</span>;
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN');
   };
 
   if (loading) {
@@ -187,7 +180,7 @@ function ManageContent() {
           <div className={cx('searchBox')}>
             <input
               type="text"
-              placeholder="Tìm kiếm theo tiêu đề..."
+              placeholder="Tìm kiếm theo tiêu đề, mô tả..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className={cx('searchInput')}
@@ -196,57 +189,88 @@ function ManageContent() {
               <FontAwesomeIcon icon={faSearch} />
             </button>
           </div>
-          <button type="button" className={cx('addBtn')} onClick={handleAdd}>
-            <FontAwesomeIcon icon={faPlus} />
-            Thêm banner
-          </button>
+          <div className={cx('sortGroup')}>
+            <span className={cx('sortLabel')}>Trạng thái:</span>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className={cx('sortSelect')}
+            >
+              <option value="all">Tất cả</option>
+              <option value="PENDING_APPROVAL">Chờ duyệt</option>
+              <option value="APPROVED">Đã duyệt</option>
+              <option value="REJECTED">Từ chối</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      <div className={cx('bannerGrid')}>
+      <div className={cx('tableWrapper')}>
+        <table className={cx('table')}>
+          <thead>
+            <tr>
+              <th>Ảnh</th>
+              <th>Tiêu đề</th>
+              <th>Mô tả</th>
+              <th>Ngày tạo</th>
+              <th>Ngày bắt đầu</th>
+              <th>Ngày kết thúc</th>
+              <th>Trạng thái</th>
+              <th>Sản phẩm</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody>
         {filteredBanners.length === 0 ? (
-          <div className={cx('empty')}>Không có banner nào</div>
-        ) : (
-          filteredBanners.map((banner, index) => (
-            <div key={banner.id} className={cx('bannerCard')}>
-              <div className={cx('bannerImage')}>
-                <img src={banner.imageUrl} alt={banner.title} />
-                <div className={cx('bannerOverlay')}>
-                  <span className={cx('orderBadge')}>#{banner.orderIndex || index + 1}</span>
-                  <span className={cx('statusBadge', banner.isActive ? 'active' : 'inactive')}>
-                    {banner.isActive ? 'Hiển thị' : 'Ẩn'}
+              <tr>
+                <td colSpan="9" className={cx('empty')}>
+                  Không có banner nào
+                </td>
+              </tr>
+            ) : (
+              filteredBanners.map((banner) => (
+                <tr key={banner.id}>
+                  <td>
+                    {banner.imageUrl ? (
+                      <img src={banner.imageUrl} alt={banner.title} className={cx('thumbnail')} />
+                    ) : (
+                      <span className={cx('noImage')}>-</span>
+                    )}
+                  </td>
+                  <td className={cx('titleCell')}>{banner.title}</td>
+                  <td className={cx('descriptionCell')}>
+                    {banner.description ? (
+                      <span title={banner.description}>
+                        {banner.description.length > 50
+                          ? `${banner.description.substring(0, 50)}...`
+                          : banner.description}
+                      </span>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                  <td>{formatDate(banner.createdAt)}</td>
+                  <td>{formatDate(banner.startDate)}</td>
+                  <td>{formatDate(banner.endDate)}</td>
+                  <td>{getStatusBadge(banner)}</td>
+                  <td>
+                    {banner.productNames && banner.productNames.length > 0 ? (
+                      <span title={banner.productNames.join(', ')}>
+                        {banner.productNames.length} sản phẩm
                   </span>
-                </div>
-              </div>
-              <div className={cx('bannerInfo')}>
-                <h4>{banner.title}</h4>
-                {banner.linkUrl && <p className={cx('link')}>{banner.linkUrl}</p>}
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                  <td>
                 <div className={cx('actions')}>
                   <button
                     type="button"
-                    className={cx('actionBtn', 'moveBtn')}
-                    onClick={() => handleMoveOrder(banner.id, 'up')}
-                    disabled={index === 0}
-                    title="Lên"
-                  >
-                    <FontAwesomeIcon icon={faArrowUp} />
-                  </button>
-                  <button
-                    type="button"
-                    className={cx('actionBtn', 'moveBtn')}
-                    onClick={() => handleMoveOrder(banner.id, 'down')}
-                    disabled={index === banners.length - 1}
-                    title="Xuống"
-                  >
-                    <FontAwesomeIcon icon={faArrowDown} />
-                  </button>
-                  <button
-                    type="button"
-                    className={cx('actionBtn', 'editBtn')}
-                    onClick={() => handleEdit(banner)}
-                    title="Sửa"
-                  >
-                    <FontAwesomeIcon icon={faEdit} />
+                        className={cx('actionBtn', 'viewBtn')}
+                        onClick={() => handleViewDetail(banner)}
+                        title="Chi tiết"
+                      >
+                        <FontAwesomeIcon icon={faEye} />
                   </button>
                   <button
                     type="button"
@@ -257,91 +281,102 @@ function ManageContent() {
                     <FontAwesomeIcon icon={faTrash} />
                   </button>
                 </div>
-              </div>
-            </div>
+                  </td>
+                </tr>
           ))
         )}
+          </tbody>
+        </table>
       </div>
 
-      {/* Modal Add/Edit Banner */}
-      {showModal && (
-        <div className={cx('modalOverlay')} onClick={() => setShowModal(false)}>
-          <div className={cx('modal')} onClick={(e) => e.stopPropagation()}>
-            <div className={cx('modalHeader')}>
-              <h3>{editingBanner ? 'Sửa banner' : 'Thêm banner mới'}</h3>
-              <button type="button" className={cx('closeBtn')} onClick={() => setShowModal(false)}>
-                <FontAwesomeIcon icon={faTimes} />
-              </button>
+      {showModal && selectedBanner && (
+        <div className={cx('modalOverlay')} onClick={closeModal}>
+          <div className={cx('detailModalWrapper')} onClick={(e) => e.stopPropagation()}>
+            <div className={cx('detailCard')}>
+              <div className={cx('detailLeft')}>
+                <div className={cx('detailImage')}>
+                  <img
+                    className={cx('detailMainImage')}
+                    src={selectedBanner.imageUrl || fallbackImage}
+                    alt={selectedBanner.title}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = fallbackImage;
+                    }}
+                  />
+                </div>
             </div>
 
-            <form onSubmit={handleSubmit} className={cx('form')}>
-              <div className={cx('formGroup', { error: formErrors.title })}>
-                <label>Tiêu đề *</label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Nhập tiêu đề banner"
-                />
-                {formErrors.title && <span className={cx('errorText')}>{formErrors.title}</span>}
+              <div className={cx('detailRight')}>
+                <div className={cx('detailHeaderBlock')}>
+                  <h3>Chi tiết banner</h3>
+                  <div className={cx('detailStatus')}>{getStatusBadge(selectedBanner)}</div>
               </div>
 
-              <div className={cx('formGroup', { error: formErrors.imageUrl })}>
-                <label>URL hình ảnh *</label>
-                <input
-                  type="url"
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                  placeholder="https://..."
-                />
-                {formErrors.imageUrl && <span className={cx('errorText')}>{formErrors.imageUrl}</span>}
-                {formData.imageUrl && (
-                  <img src={formData.imageUrl} alt="Preview" className={cx('previewImage')} />
+                <div className={cx('detailInfoList')}>
+                  {[
+                    { label: 'Tiêu đề', value: selectedBanner.title || '-' },
+                    { label: 'Mô tả', value: selectedBanner.description || '-' },
+                    { label: 'Ngày tạo', value: formatDate(selectedBanner.createdAt) },
+                    { label: 'Ngày bắt đầu', value: formatDate(selectedBanner.startDate) },
+                    { label: 'Ngày kết thúc', value: formatDate(selectedBanner.endDate) },
+                    {
+                      label: 'Sản phẩm',
+                      value:
+                        selectedBanner.productNames && selectedBanner.productNames.length > 0
+                          ? selectedBanner.productNames.join(', ')
+                          : '-',
+                    },
+                    {
+                      label: 'Người tạo',
+                      value: selectedBanner.createdByName || selectedBanner.createdBy || '-',
+                    },
+                  ].map((item, idx) => (
+                    <div key={idx} className={cx('detailInfoItem')}>
+                      <span className={cx('detailLabel')}>{item.label}:</span>
+                      <span className={cx('detailValue')}>{item.value}</span>
+                    </div>
+                  ))}
+                  {selectedBanner.rejectionReason && (
+                    <div className={cx('detailInfoItem')}>
+                      <span className={cx('detailLabel')}>Lý do từ chối:</span>
+                      <span className={cx('detailValue', 'rejectionReason')}>
+                        {selectedBanner.rejectionReason}
+                      </span>
+                    </div>
                 )}
               </div>
 
-              <div className={cx('formGroup')}>
-                <label>URL liên kết</label>
-                <input
-                  type="url"
-                  value={formData.linkUrl}
-                  onChange={(e) => setFormData({ ...formData, linkUrl: e.target.value })}
-                  placeholder="https://..."
-                />
-              </div>
-
-              <div className={cx('formRow')}>
-                <div className={cx('formGroup')}>
-                  <label>Thứ tự hiển thị</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.orderIndex}
-                    onChange={(e) => setFormData({ ...formData, orderIndex: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-
-                <div className={cx('formGroup')}>
-                  <label>Trạng thái</label>
-                  <select
-                    value={formData.isActive ? 'true' : 'false'}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.value === 'true' })}
-                  >
-                    <option value="true">Hiển thị</option>
-                    <option value="false">Ẩn</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className={cx('formActions')}>
-                <button type="button" className={cx('cancelBtn')} onClick={() => setShowModal(false)}>
-                  Hủy
+                {selectedBanner.pendingReview === true && (
+                  <div className={cx('detailActions')}>
+                    <button
+                      type="button"
+                      className={cx('actionBtn', 'approveBtn')}
+                      onClick={() => handleApprove(selectedBanner.id)}
+                    >
+                      <FontAwesomeIcon icon={faCheck} />
+                      Duyệt
+                    </button>
+                    <button
+                      type="button"
+                      className={cx('actionBtn', 'rejectBtn')}
+                      onClick={() => handleReject(selectedBanner)}
+                    >
+                      <FontAwesomeIcon icon={faTimes} />
+                      Từ chối
                 </button>
-                <button type="submit" className={cx('submitBtn')}>
-                  {editingBanner ? 'Cập nhật' : 'Thêm mới'}
+                    <button
+                      type="button"
+                      className={cx('actionBtn', 'deleteBtn')}
+                      onClick={() => handleDelete(selectedBanner.id)}
+                    >
+                      <FontAwesomeIcon icon={faTrash} />
+                      Xóa
                 </button>
               </div>
-            </form>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

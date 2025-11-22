@@ -38,7 +38,13 @@ function ReportsAnalytics() {
   };
 
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price || 0) + ' ₫';
+    const value = Math.round(Number(price) || 0);
+    return (
+      new Intl.NumberFormat('vi-VN', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(value) + ' ₫'
+    );
   };
 
   return (
