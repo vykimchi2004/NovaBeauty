@@ -12,6 +12,7 @@ import {
   extractReviewHighlights
 } from '~/utils/productPresentation';
 import { createStatusHelpers } from '~/utils/statusHelpers';
+import { normalizeVariantRecords } from '~/utils/colorVariants';
 
 const cx = classNames.bind(styles);
 
@@ -37,6 +38,11 @@ const getProductMediaList = (product) => {
   if (Array.isArray(product.mediaUrls)) {
     product.mediaUrls.forEach(pushIfValid);
   }
+
+  const variantRecords = normalizeVariantRecords(product?.manufacturingLocation);
+  variantRecords.forEach((variant) => {
+    pushIfValid(variant?.imageUrl);
+  });
 
   return urls;
 };

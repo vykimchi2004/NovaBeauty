@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import classNames from 'classnames/bind';
 import styles from './SupportRequestSection.module.scss';
 import notify from '~/utils/notification';
@@ -5,8 +6,23 @@ import notify from '~/utils/notification';
 const cx = classNames.bind(styles);
 
 function SupportRequestSection() {
+  const [phoneError, setPhoneError] = useState('');
+  
   const handleSubmit = (event) => {
     event.preventDefault();
+    setPhoneError('');
+    
+    // Validate số điện thoại
+    const phoneInput = event.target.elements['support-phone'];
+    if (phoneInput && phoneInput.value) {
+      const phoneNumber = phoneInput.value.trim().replace(/[^0-9]/g, '');
+      const phoneRegex = /^0[0-9]{9}$/;
+      if (!phoneRegex.test(phoneNumber)) {
+        setPhoneError('Hãy nhập số điện thoại bắt đầu từ 0 và đủ 10 số');
+        return;
+      }
+    }
+    
     // TODO: integrate API submission
     notify.success('Cảm ơn bạn! Chúng tôi sẽ liên hệ trong thời gian sớm nhất.');
   };
@@ -29,7 +45,29 @@ function SupportRequestSection() {
           </div>
           <div className={cx('field')}>
             <label htmlFor="support-phone">Số điện thoại</label>
-            <input id="support-phone" name="phone" required placeholder="0123 456 789" />
+            <input
+              id="support-phone"
+              name="phone"
+              type="tel"
+              required
+              placeholder="Nhập SĐT (bắt đầu bằng 0, 10 số)"
+              maxLength={10}
+              onChange={(e) => {
+                // Chỉ cho phép nhập số
+                const value = e.target.value.replace(/[^0-9]/g, '');
+                // Giới hạn 10 ký tự
+                const limitedValue = value.slice(0, 10);
+                e.target.value = limitedValue;
+                if (phoneError) setPhoneError('');
+              }}
+              onKeyPress={(e) => {
+                // Chỉ cho phép nhập số
+                if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'Tab' && e.key !== 'Enter') {
+                  e.preventDefault();
+                }
+              }}
+            />
+            {phoneError && <div style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>{phoneError}</div>}
           </div>
         </div>
         <div className={cx('fieldGrid')}>

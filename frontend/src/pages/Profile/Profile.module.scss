@@ -7,11 +7,11 @@
 }
 
 // Theme colors
-$primary: #ff80b5;
-$primary-600: #ff6aa8;
-$primary-700: #ff549b;
-$primary-50: #fff0f6;
-$border-soft: #ffd1e4;
+$primary: #f25f7c;
+$primary-600: #e04d6a;
+$primary-700: #ce3d58;
+$primary-50: #fef0f3;
+$border-soft: #f8c4d0;
 $text-dark: #212529;
 $white: #fff;
 
@@ -23,7 +23,7 @@ $white: #fff;
   border: 1px solid $border-soft;
   border-radius: 16px;
   background: #fff;
-  box-shadow: 0 8px 24px rgba(255, 128, 181, 0.08);
+  box-shadow: 0 8px 24px rgba(242, 95, 124, 0.08);
   padding: 24px 20px;
   display: flex;
   flex-direction: column;
@@ -105,7 +105,7 @@ $white: #fff;
   border-radius: 16px;
   background: #fff;
   padding: 24px;
-  box-shadow: 0 16px 32px rgba(255, 128, 181, 0.12);
+  box-shadow: 0 16px 32px rgba(242, 95, 124, 0.12);
 }
 
 .cardHeader {
@@ -136,7 +136,7 @@ $white: #fff;
 .btnPrimary {
   background: $primary;
   color: $white;
-  box-shadow: 0 2px 6px rgba(255, 128, 181, 0.3);
+  box-shadow: 0 2px 6px rgba(242, 95, 124, 0.3);
 
   &:hover {
     background: $primary-600;
@@ -161,7 +161,7 @@ $white: #fff;
 .btnDark {
   background: $primary-700;
   color: $white;
-  box-shadow: 0 2px 6px rgba(255, 84, 155, 0.25);
+  box-shadow: 0 2px 6px rgba(206, 61, 88, 0.25);
 
   &:hover {
     background: $primary-600;
@@ -185,8 +185,16 @@ $white: #fff;
   &:focus {
     outline: none;
     border-color: $primary;
-    box-shadow: 0 0 0 3px rgba(255, 128, 181, 0.15);
+    box-shadow: 0 0 0 3px rgba(242, 95, 124, 0.15);
   }
+}
+
+.fieldError {
+  color: #dc3545;
+  font-size: 12px;
+  margin-top: 4px;
+  font-weight: 400;
+  line-height: 1.5;
 }
 
 .passwordWrapper {
@@ -194,22 +202,26 @@ $white: #fff;
   width: 90%;
 
   .input {
-    padding-right: 5px;
+    width: 90%;
+    padding-right: 40px;
   }
 
   .eyeBtn {
     position: absolute;
-    right: 0px;
-    top: calc(50% + 3px);
+    right: 1px;
+    top: 50%;
     transform: translateY(-50%);
     background: none;
     border: none;
     cursor: pointer;
     color: #666;
-    padding: 4px 8px;
+    padding: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 1;
+    width: 32px;
+    height: 32px;
 
     &:hover {
       color: $primary-700;
@@ -227,6 +239,22 @@ $white: #fff;
 
 .footerSpace {
   margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  text-align: center;
+  
+  &.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+  }
+  
+  &.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+  }
 }
 
 .ordersCard {
@@ -280,7 +308,7 @@ $white: #fff;
   background: $primary-600;
   color: $white;
   border-color: $primary-600;
-  box-shadow: 0 4px 10px rgba(255, 128, 181, 0.2);
+  box-shadow: 0 4px 10px rgba(242, 95, 124, 0.2);
 }
 
 .ordersFilters {
@@ -334,7 +362,7 @@ $white: #fff;
     &:focus {
       outline: none;
       border-color: $primary;
-      box-shadow: 0 0 0 3px rgba(255, 128, 181, 0.15);
+      box-shadow: 0 0 0 3px rgba(242, 95, 124, 0.15);
     }
   }
 }
@@ -388,7 +416,7 @@ $white: #fff;
 }
 
 .ready {
-  background: #fff0f6;
+  background: #fef0f3;
   color: $primary-700;
 }
 
@@ -469,7 +497,7 @@ $white: #fff;
 
 .orderActionBtn {
   border: none;
-  background: rgba(255, 106, 168, 0.12);
+  background: rgba(224, 77, 106, 0.12);
   color: $primary-700;
   padding: 8px 18px;
   border-radius: 999px;
@@ -830,7 +858,7 @@ $white: #fff;
   background: $primary-600;
   color: $white;
   border-color: $primary-600;
-  box-shadow: 0 4px 10px rgba(255, 128, 181, 0.2);
+  box-shadow: 0 4px 10px rgba(242, 95, 124, 0.2);
 }
 
 .vouchersFilters {
@@ -884,7 +912,7 @@ $white: #fff;
     &:focus {
       outline: none;
       border-color: $primary;
-      box-shadow: 0 0 0 3px rgba(255, 128, 181, 0.15);
+      box-shadow: 0 0 0 3px rgba(242, 95, 124, 0.15);
     }
   }
 }
@@ -900,14 +928,14 @@ $white: #fff;
   border-radius: 16px;
   padding: 20px;
   background: linear-gradient(135deg, #fff 0%, #fff5f8 100%);
-  box-shadow: 0 4px 16px rgba(255, 128, 181, 0.1);
+  box-shadow: 0 4px 16px rgba(242, 95, 124, 0.1);
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
 
   &:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(255, 128, 181, 0.2);
+    box-shadow: 0 8px 24px rgba(242, 95, 124, 0.2);
     border-color: $primary-600;
   }
 
@@ -918,7 +946,7 @@ $white: #fff;
     right: 0;
     width: 80px;
     height: 80px;
-    background: linear-gradient(135deg, rgba(255, 128, 181, 0.1) 0%, rgba(255, 106, 168, 0.05) 100%);
+    background: linear-gradient(135deg, rgba(242, 95, 124, 0.1) 0%, rgba(224, 77, 106, 0.05) 100%);
     border-radius: 50%;
     transform: translate(30%, -30%);
   }
@@ -1090,7 +1118,7 @@ $white: #fff;
   color: $white;
   font-size: 20px;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(255, 106, 168, 0.3);
+  box-shadow: 0 4px 12px rgba(224, 77, 106, 0.3);
 }
 
 @media (max-width: 1024px) {
@@ -1105,6 +1133,217 @@ $white: #fff;
 
   .vouchersList {
     grid-template-columns: 1fr;
+  }
+}
+
+// Promotions Table Styles
+.promotionsTableWrapper {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+
+.promotionsTable {
+  width: 100%;
+  border-collapse: collapse;
+  background: $white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  font-size: 14px;
+
+  thead {
+    background: linear-gradient(135deg, $primary 0%, $primary-600 100%);
+    color: $white;
+
+    th {
+      padding: 16px 12px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+
+      &:first-child {
+        padding-left: 20px;
+      }
+
+      &:last-child {
+        padding-right: 20px;
+        text-align: center;
+      }
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid #f0f0f0;
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background-color: #fff5f8;
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      td {
+        padding: 16px 12px;
+        vertical-align: middle;
+
+        &:first-child {
+          padding-left: 20px;
+        }
+
+        &:last-child {
+          padding-right: 20px;
+          text-align: center;
+        }
+      }
+    }
+  }
+}
+
+.codeCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  strong {
+    color: $primary-700;
+    font-weight: 600;
+  }
+}
+
+.copyBtnInline {
+  background: none;
+  border: none;
+  color: $primary-600;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: $primary-50;
+    color: $primary-700;
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.noCode {
+  color: #999;
+  font-style: italic;
+}
+
+.nameCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .description {
+    font-size: 12px;
+    color: #666;
+    font-style: italic;
+  }
+}
+
+.discountCell {
+  color: $primary-700;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.scopeCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+
+  .categoryNames,
+  .productNames {
+    font-size: 11px;
+    color: #666;
+    font-style: italic;
+    margin-top: 2px;
+  }
+}
+
+.statusBadge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.statusActive {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #81c784;
+}
+
+.statusInactive {
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef5350;
+}
+
+.tableSaveBtn {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: $primary-50;
+    color: $primary-600;
+  }
+
+  &.saved {
+    color: $primary-600;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (max-width: 768px) {
+  .promotionsTableWrapper {
+    overflow-x: scroll;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .promotionsTable {
+    min-width: 800px;
+    font-size: 12px;
+
+    thead th {
+      padding: 12px 8px;
+      font-size: 11px;
+    }
+
+    tbody td {
+      padding: 12px 8px;
+    }
   }
 }
 

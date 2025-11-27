@@ -158,6 +158,7 @@ public class UserService {
                 currentUser.getRole().getName().equals("ADMIN");
         
         boolean isAdmin = isAdminFromAuthorities || isAdminFromRole;
+        boolean isUpdatingOtherUser = isAdmin && !user.getEmail().equals(currentEmail);
         
         // Náº¿u khÃ´ng pháº£i ADMIN vÃ  khÃ´ng pháº£i update chÃ­nh mÃ¬nh â†’ tá»« chá»‘i
         if (!isAdmin && !user.getEmail().equals(currentEmail)) {
@@ -182,8 +183,8 @@ public class UserService {
             }
         }
 
-        // PhoneNumber
-        if (request.getPhoneNumber() != null && !request.getPhoneNumber().isEmpty()) {
+        // PhoneNumber - cho phép cập nhật kể cả khi empty string (để có thể xóa)
+        if (request.getPhoneNumber() != null) {
             user.setPhoneNumber(request.getPhoneNumber());
         }
 
@@ -191,8 +192,8 @@ public class UserService {
         if (request.getFullName() != null && !request.getFullName().isEmpty()) {
             user.setFullName(request.getFullName());
         }
-        // Address
-        if (request.getAddress() != null && !request.getAddress().isEmpty()) {
+        // Address - cho phép cập nhật kể cả khi empty string (để có thể xóa)
+        if (request.getAddress() != null) {
             user.setAddress(request.getAddress());
         }
         // AvatarUrl
@@ -253,6 +254,23 @@ public class UserService {
 
         // Save user vÃ o database
         User savedUser = userRepository.save(user);
+
+        if (isUpdatingOtherUser && savedUser.getRole() != null) {
+            String targetRole = savedUser.getRole().getName();
+            if ("CUSTOMER".equalsIgnoreCase(targetRole)
+                    || "STAFF".equalsIgnoreCase(targetRole)
+                    || "CUSTOMER_SUPPORT".equalsIgnoreCase(targetRole)) {
+                try {
+                    brevoEmailService.sendProfileUpdatedEmail(
+                            savedUser.getEmail(), savedUser.getFullName(), targetRole);
+                } catch (Exception e) {
+                    log.error(
+                            "Failed to send profile updated email to {} - Error: {}",
+                            savedUser.getEmail(),
+                            e.getMessage());
+                }
+            }
+        }
         
         return userMapper.toUserResponse(savedUser);
     }

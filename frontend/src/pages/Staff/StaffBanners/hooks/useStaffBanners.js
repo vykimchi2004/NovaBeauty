@@ -5,6 +5,7 @@ import { getActiveProducts } from '~/services/product';
 import { uploadProductMedia } from '~/services/media';
 import { storage } from '~/services/utils';
 import { STORAGE_KEYS } from '~/services/config';
+import { addStaffNotification, detectDeletionNotifications } from '~/utils/staffNotifications';
 
 const DEFAULT_BANNER_FORM = {
   id: '',
@@ -74,7 +75,28 @@ export function useStaffBannersState() {
       const myBanners = (data || []).filter(
         (banner) => banner.createdBy === userId
       );
+
       setBannerList(myBanners);
+
+      if (userId) {
+        const notifications = detectDeletionNotifications({
+          categoryKey: 'BANNERS',
+          userId,
+          items: myBanners,
+          getItemId: (item) => item?.id,
+          getItemName: (item) => item?.title || item?.id,
+          buildNotification: ({ id, name }) => ({
+            title: 'Banner đã bị xóa',
+            message: `Banner "${name || id}" đã bị xóa khỏi hệ thống (có thể do admin hoặc do bạn xóa).`,
+            type: 'info',
+            targetPath: '/staff/content',
+          }),
+        });
+
+        notifications.forEach((notification) => {
+          addStaffNotification(userId, notification);
+        });
+      }
     } catch (error) {
       console.error('Error fetching banners:', error);
       notify.error('Không thể tải danh sách banner.');

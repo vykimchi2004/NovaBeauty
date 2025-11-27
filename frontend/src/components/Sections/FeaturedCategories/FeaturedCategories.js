@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from './FeaturedCategories.module.scss';
-import sonmoi from '~/assets/images/products/sonmoi.png';
 import { getRootCategories } from '~/services/category';
 
 const cx = classNames.bind(styles);
@@ -51,16 +50,8 @@ function FeaturedCategories() {
               categories.slice(0, 7).map((c) => (
                 <Link key={c.id} to={`/products?category=${c.id}`} className={cx('item')}>
                   <div className={cx('thumb')}>
-                    <img 
-                      src={sonmoi} 
-                      alt={c.name}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = sonmoi;
-                      }}
-                    />
+                    <span className={cx('label')}>{c.name}</span>
                   </div>
-                  <div className={cx('label')}>{c.name}</div>
                 </Link>
               ))
             )}

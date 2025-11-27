@@ -9,6 +9,7 @@ function ProfileSection({
   isSavingProfile,
   profileForm,
   profileMessage,
+  phoneError,
   onCancelEdit,
   onChange,
   onSubmit,
@@ -77,10 +78,26 @@ function ProfileSection({
               className={cx('input')}
               type="tel"
               value={profileForm.phone}
-              onChange={(event) => onChange('phone', event.target.value)}
-              placeholder="Chưa cập nhật"
+              onChange={(event) => {
+                // Chỉ cho phép nhập số
+                const value = event.target.value.replace(/[^0-9]/g, '');
+                // Giới hạn 10 ký tự
+                const limitedValue = value.slice(0, 10);
+                onChange('phone', limitedValue);
+              }}
+              onKeyPress={(e) => {
+                // Chỉ cho phép nhập số
+                if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'Tab' && e.key !== 'Enter') {
+                  e.preventDefault();
+                }
+              }}
+              placeholder="Chưa cập nhật (bắt đầu bằng 0, 10 số)"
               disabled={!isEditingProfile}
+              maxLength={10}
             />
+            {phoneError && (
+              <div className={cx('fieldError')}>{phoneError}</div>
+            )}
           </label>
           <label>
             Địa chỉ

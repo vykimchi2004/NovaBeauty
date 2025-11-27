@@ -8,6 +8,7 @@ import { getProductById } from '~/services/product';
 import { storage } from '~/services/utils';
 import { STORAGE_KEYS } from '~/services/config';
 import notify from '~/utils/notification';
+import { normalizeVariantRecords } from '~/utils/colorVariants';
 
 const TABS = [
   { id: 'description', label: 'Mô tả sản phẩm' },
@@ -166,8 +167,8 @@ function ProductDetail() {
     }
 
     // Kiểm tra nếu sản phẩm có mã màu thì phải chọn màu trước
-    const hasColorCodes = colorCodes && colorCodes.length > 0;
-    if (hasColorCodes && !selectedColorCode) {
+    const hasColorVariants = colorOptions.length > 0;
+    if (hasColorVariants && !selectedColorCode) {
       notify.warning('Vui lòng chọn mã màu trước khi thêm vào giỏ hàng');
       return;
     }
@@ -260,24 +261,65 @@ function ProductDetail() {
     }
   };
 
-  // Parse colorCodes từ manufacturingLocation (lưu dạng JSON)
-  // Phải đặt trước các early return để tuân thủ Rules of Hooks
-  const colorCodes = useMemo(() => {
-    if (!product || !product.manufacturingLocation) return [];
-    try {
-      const parsed = JSON.parse(product.manufacturingLocation);
-      if (Array.isArray(parsed)) return parsed;
-      return [];
-    } catch (e) {
-      // Nếu không phải JSON, thử parse như comma-separated
-      if (product.manufacturingLocation.includes(',')) {
-        return product.manufacturingLocation.split(',').map(c => c.trim()).filter(c => c);
-      } else if (product.manufacturingLocation.trim()) {
-        return [product.manufacturingLocation.trim()];
+  // Chuẩn hóa dữ liệu biến thể màu từ manufacturingLocation (JSON dạng COLOR_VARIANTS_V1)
+  const colorVariants = useMemo(
+    () => normalizeVariantRecords(product?.manufacturingLocation),
+    [product?.manufacturingLocation]
+  );
+
+  const colorOptions = useMemo(() => {
+    if (!colorVariants.length) return [];
+    const seen = new Set();
+    return colorVariants.reduce((acc, variant) => {
+      const code = (variant.code || variant.name || '').trim();
+      if (!code || seen.has(code)) {
+        return acc;
       }
-      return [];
+      seen.add(code);
+      acc.push({
+        code,
+        label: variant.name || variant.code || `Mã màu ${acc.length + 1}`,
+        imageUrl: variant.imageUrl || '',
+        stockQuantity: variant.stockQuantity,
+      });
+      return acc;
+    }, []);
+  }, [colorVariants]);
+
+  const galleryImages = useMemo(() => {
+    const urls = [];
+    const pushIfValid = (url) => {
+      if (url && typeof url === 'string' && !urls.includes(url)) {
+        urls.push(url);
+      }
+    };
+
+    pushIfValid(product?.defaultMediaUrl);
+    if (Array.isArray(product?.mediaUrls)) {
+      product.mediaUrls.forEach(pushIfValid);
     }
-  }, [product?.manufacturingLocation]);
+
+    colorVariants.forEach((variant) => {
+      pushIfValid(variant?.imageUrl);
+    });
+
+    return urls.length ? urls : [image1];
+  }, [product?.defaultMediaUrl, product?.mediaUrls, colorVariants]);
+
+  const isVideoUrl = (url = '') => {
+    const normalized = url?.split('?')[0]?.toLowerCase() || '';
+    const videoExtensions = ['.mp4', '.mov', '.webm', '.avi', '.mkv', '.ogg'];
+    return videoExtensions.some((ext) => normalized.endsWith(ext));
+  };
+
+  const mediaList = useMemo(
+    () =>
+      (galleryImages || []).map((url) => ({
+        url,
+        type: isVideoUrl(url) ? 'VIDEO' : 'IMAGE',
+      })),
+    [galleryImages],
+  );
 
   // Reset selectedColorCode khi product thay đổi
   useEffect(() => {
@@ -347,16 +389,39 @@ function ProductDetail() {
     origin: product.brandOrigin || 'N/A',
     size: product.size || '',
     weight: product.weight || null,
-    images: product.mediaUrls && product.mediaUrls.length > 0 
-      ? product.mediaUrls 
-      : (product.defaultMediaUrl ? [product.defaultMediaUrl] : [image1]),
-    colorCodes: colorCodes,
+    images: galleryImages,
     texture: product.texture || '',
     skinType: product.skinType || '',
     ingredients: product.ingredients || '',
     uses: product.uses || '',
     usageInstructions: product.usageInstructions || '',
     reviewHighlights: product.characteristics || '',
+  };
+
+  const topDescription =
+    displayProduct.description || product.detailedDescription || 'Chưa có mô tả';
+  const isLongTopDescription =
+    typeof topDescription === 'string' && topDescription.length > 180;
+
+  const totalMedia = mediaList.length;
+  const MAX_VISIBLE_THUMBS = 7;
+  const hasThumbnailOverflow = totalMedia > MAX_VISIBLE_THUMBS;
+  const visibleMedia = hasThumbnailOverflow
+    ? mediaList.slice(0, MAX_VISIBLE_THUMBS - 1)
+    : mediaList;
+  const hiddenCount = hasThumbnailOverflow ? totalMedia - (MAX_VISIBLE_THUMBS - 1) : 0;
+
+  const selectedMedia =
+    totalMedia > 0 ? mediaList[selectedImage] || mediaList[0] : { url: image1, type: 'IMAGE' };
+
+  const handlePrevImage = () => {
+    if (!totalMedia) return;
+    setSelectedImage((prev) => (prev - 1 + totalMedia) % totalMedia);
+  };
+
+  const handleNextImage = () => {
+    if (!totalMedia) return;
+    setSelectedImage((prev) => (prev + 1) % totalMedia);
   };
 
   return (
@@ -366,18 +431,68 @@ function ProductDetail() {
         {/* Left: Image Gallery */}
         <div className={cx('image-section')}>
           <div className={cx('main-image')}>
-            <img src={displayProduct.images[selectedImage] || image1} alt={displayProduct.name} />
+            {totalMedia > 1 && (
+              <button
+                type="button"
+                className={cx('image-nav-arrow', 'prev')}
+                onClick={handlePrevImage}
+                aria-label="Ảnh trước"
+              >
+                ‹
+              </button>
+            )}
+            {selectedMedia.type === 'VIDEO' ? (
+              <video
+                className={cx('main-video')}
+                src={selectedMedia.url}
+                controls
+              >
+                Trình duyệt không hỗ trợ video.
+              </video>
+            ) : (
+              <img src={selectedMedia.url || image1} alt={displayProduct.name} />
+            )}
+            {totalMedia > 1 && (
+              <button
+                type="button"
+                className={cx('image-nav-arrow', 'next')}
+                onClick={handleNextImage}
+                aria-label="Ảnh tiếp theo"
+              >
+                ›
+              </button>
+            )}
           </div>
           <div className={cx('thumbnail-list')}>
-            {displayProduct.images.map((img, index) => (
+            {visibleMedia.map((media, index) => (
               <div
                 key={index}
                 className={cx('thumbnail', { active: selectedImage === index })}
                 onClick={() => setSelectedImage(index)}
               >
-                <img src={img || image1} alt={`${displayProduct.name} ${index + 1}`} />
+                {media.type === 'VIDEO' ? (
+                  <div className={cx('video-thumb')}>
+                    <video
+                      className={cx('video-thumb-video')}
+                      src={media.url}
+                      muted
+                      preload="metadata"
+                    />
+                    <span className={cx('video-thumb-badge')}>Video</span>
+                  </div>
+                ) : (
+                  <img src={media.url || image1} alt={`${displayProduct.name} ${index + 1}`} />
+                )}
               </div>
             ))}
+            {hasThumbnailOverflow && (
+              <div
+                className={cx('thumbnail', 'more-thumbnail')}
+                onClick={() => setSelectedImage(MAX_VISIBLE_THUMBS - 1)}
+              >
+                <span className={cx('more-thumbnail-text')}>+{hiddenCount}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -417,22 +532,30 @@ function ProductDetail() {
             <div className={cx('vat-note')}>Giá này đã bao gồm VAT</div>
           </div>
 
-          {displayProduct.colorCodes && displayProduct.colorCodes.length > 0 && (
+          {colorOptions.length > 0 && (
             <div className={cx('color-section')}>
               <label className={cx('color-label')}>
                 Mã màu: <span style={{ color: '#e74c3c', fontSize: '12px' }}>*</span>
               </label>
               <div className={cx('color-codes-list')}>
-                {displayProduct.colorCodes.map((colorCode, index) => (
+                {colorOptions.map((option, index) => (
                   <button
-                    key={index}
+                    key={option.code || index}
                     type="button"
                     className={cx('color-code-badge', 'color-code-button', {
-                      selected: selectedColorCode === colorCode
+                      selected: selectedColorCode === option.code
                     })}
-                    onClick={() => setSelectedColorCode(colorCode)}
+                    onClick={() => {
+                      setSelectedColorCode(option.code);
+                      if (option.imageUrl) {
+                        const imageIndex = galleryImages.findIndex((img) => img === option.imageUrl);
+                        if (imageIndex >= 0) {
+                          setSelectedImage(imageIndex);
+                        }
+                      }
+                    }}
                   >
-                    {colorCode}
+                    {option.label}
                   </button>
                 ))}
               </div>
@@ -461,15 +584,15 @@ function ProductDetail() {
             <button 
               className={cx('btn-cart')} 
               onClick={handleAddToCart}
-              disabled={addingToCart || (colorCodes.length > 0 && !selectedColorCode)}
-              title={colorCodes.length > 0 && !selectedColorCode ? 'Vui lòng chọn mã màu trước' : ''}
+              disabled={addingToCart || (colorOptions.length > 0 && !selectedColorCode)}
+              title={colorOptions.length > 0 && !selectedColorCode ? 'Vui lòng chọn mã màu trước' : ''}
             >
               <span>🛒</span> {addingToCart ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
             </button>
             <button 
               className={cx('btn-buy-now')}
-              disabled={colorCodes.length > 0 && !selectedColorCode}
-              title={colorCodes.length > 0 && !selectedColorCode ? 'Vui lòng chọn mã màu trước' : ''}
+              disabled={colorOptions.length > 0 && !selectedColorCode}
+              title={colorOptions.length > 0 && !selectedColorCode ? 'Vui lòng chọn mã màu trước' : ''}
             >
               MUA NGAY
             </button>
@@ -490,7 +613,16 @@ function ProductDetail() {
 
           <div className={cx('description-section')}>
             <h3>Mô tả sản phẩm</h3>
-            <p>{displayProduct.description || product.detailedDescription || 'Chưa có mô tả'}</p>
+            <p className={cx('short-description')}>{topDescription}</p>
+            {isLongTopDescription && (
+              <button
+                type="button"
+                className={cx('short-description-more')}
+                onClick={() => handleTabClick('description')}
+              >
+                Xem thêm mô tả chi tiết
+              </button>
+            )}
           </div>
         </div>
       </div>

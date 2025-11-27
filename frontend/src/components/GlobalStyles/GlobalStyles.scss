@@ -1,5 +1,5 @@
 @import 'normalize.css';
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 :root {
   --primary: #fe2c55;
 }
@@ -22,6 +22,8 @@ body {
   min-width: 675px;
   width: 100%;
   overflow-x: hidden; /* Khóa độ rộng, không cho phép cuộn ngang */
+  font-family: 'Inter', sans-serif;
+  font-weight: 400;
 }
 
 .main-content {

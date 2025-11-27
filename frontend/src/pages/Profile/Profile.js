@@ -12,9 +12,10 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import styles from './Profile.module.scss';
 import { getMyInfo, updateUser } from '~/services/user';
-import { logout } from '~/services/auth';
-import { storage } from '~/services/utils';
+import { logout, changePassword } from '~/services/auth';
+import { storage, validatePassword } from '~/services/utils';
 import { STORAGE_KEYS } from '~/services/config';
+import notifier from '~/utils/notification';
 import {
   STATUS_CLASS_MAP,
   ORDERS_DATA,
@@ -28,6 +29,13 @@ import VouchersSection from './sections/VouchersSection';
 
 const cx = classNames.bind(styles);
 
+const normalizeUserProfile = (user = {}) => ({
+  fullName: user.fullName || '',
+  email: user.email || '',
+  phone: user.phone ?? user.phoneNumber ?? '',
+  address: user.address || '',
+});
+
 const MENU_ITEMS = [
   { id: 'profile', label: 'Hồ sơ cá nhân', icon: faUser },
   { id: 'orders', label: 'Lịch sử mua hàng', icon: faClipboardList },
@@ -38,6 +46,7 @@ const MENU_ITEMS = [
 
 function ProfilePage() {
   const navigate = useNavigate();
+  const { success } = notifier;
   const [activeSection, setActiveSection] = useState('profile');
   const [profileForm, setProfileForm] = useState({
     fullName: '',
@@ -52,6 +61,7 @@ function ProfilePage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState('');
   const [userId, setUserId] = useState(null);
+  const [phoneError, setPhoneError] = useState('');
 
   const [passwordForm, setPasswordForm] = useState({
     current: '',
@@ -59,6 +69,10 @@ function ProfilePage() {
     confirm: '',
   });
   const [passwordMessage, setPasswordMessage] = useState('');
+  const [oldPasswordError, setOldPasswordError] = useState('');
+  const [newPasswordError, setNewPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const getStatusClass = (status) => STATUS_CLASS_MAP[status] || '';
@@ -83,6 +97,9 @@ function ProfilePage() {
 
   const handleProfileChange = (field, value) => {
     if (!isEditingProfile) return;
+    if (field === 'phone' && phoneError) {
+      setPhoneError('');
+    }
     setProfileForm((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -98,28 +115,42 @@ function ProfilePage() {
     event.preventDefault();
     if (!userId) return;
 
+    setPhoneError('');
+    // Validate số điện thoại nếu có
+    if (profileForm.phone && profileForm.phone.trim()) {
+      const phoneNumber = profileForm.phone.trim();
+      const phoneRegex = /^0[0-9]{9}$/;
+      if (!phoneRegex.test(phoneNumber)) {
+        setPhoneError('Hãy nhập số điện thoại bắt đầu từ 0 và đủ 10 số');
+        return;
+      }
+    }
+
     setIsSavingProfile(true);
     setProfileMessage(null);
 
     try {
       const payload = {
         fullName: profileForm.fullName?.trim() || '',
-        phone: profileForm.phone?.trim() || '',
+        phoneNumber: profileForm.phone?.trim() || '',
         address: profileForm.address?.trim() || '',
       };
 
       const updatedUser = await updateUser(userId, payload);
-      setInitialProfile(updatedUser);
-      setProfileForm({
-        fullName: updatedUser?.fullName || '',
+      const normalizedUpdated = normalizeUserProfile({
+        ...updatedUser,
         email: updatedUser?.email || profileForm.email,
-        phone: updatedUser?.phone || '',
-        address: updatedUser?.address || '',
       });
-      storage.set(STORAGE_KEYS.USER, updatedUser);
-      setProfileMessage({ type: 'success', text: 'Cập nhật thông tin thành công!' });
+      setInitialProfile(normalizedUpdated);
+      setProfileForm(normalizedUpdated);
+      storage.set(STORAGE_KEYS.USER, {
+        ...updatedUser,
+        phone: normalizedUpdated.phone,
+        phoneNumber: normalizedUpdated.phone,
+      });
+      success('Cập nhật thông tin thành công!');
+      setProfileMessage(null);
       setIsEditingProfile(false);
-      setTimeout(() => setProfileMessage(null), 3000);
     } catch (error) {
       setProfileMessage({
         type: 'error',
@@ -132,37 +163,176 @@ function ProfilePage() {
 
   const handleCancelProfileEdit = () => {
     if (initialProfile) {
-      setProfileForm({
-        fullName: initialProfile.fullName || '',
-        email: initialProfile.email || '',
-        phone: initialProfile.phone || '',
-        address: initialProfile.address || '',
-      });
+      setProfileForm({ ...initialProfile });
     }
     setIsEditingProfile(false);
     setProfileMessage(null);
+    setPhoneError('');
   };
 
   const handlePasswordChange = (field, value) => {
     setPasswordForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handlePasswordSubmit = (event) => {
+  const handlePasswordFieldChange = (field) => {
+    // Xóa lỗi khi người dùng bắt đầu nhập lại
+    if (field === 'current') {
+      setOldPasswordError('');
+    } else if (field === 'next') {
+      setNewPasswordError('');
+    } else if (field === 'confirm') {
+      setConfirmPasswordError('');
+    }
+  };
+
+  const handlePasswordSubmit = async (event) => {
     event.preventDefault();
 
-    if (!passwordForm.current || !passwordForm.next || !passwordForm.confirm) {
-      setPasswordMessage('Vui lòng điền đầy đủ thông tin.');
+    // Reset tất cả lỗi
+    setOldPasswordError('');
+    setNewPasswordError('');
+    setConfirmPasswordError('');
+    setPasswordMessage('');
+
+    let hasError = false;
+
+    // Validate mật khẩu hiện tại
+    if (!passwordForm.current || !passwordForm.current.trim()) {
+      setOldPasswordError('Vui lòng nhập mật khẩu hiện tại');
+      hasError = true;
+    }
+
+    // Validate mật khẩu mới
+    if (!passwordForm.next || !passwordForm.next.trim()) {
+      setNewPasswordError('Vui lòng nhập mật khẩu mới');
+      hasError = true;
+    } else {
+      // Validate mật khẩu mới theo quy tắc
+      const passwordValidation = validatePassword(passwordForm.next, passwordForm.confirm);
+      if (!passwordValidation.isValid) {
+        // Nếu lỗi là về khớp mật khẩu, hiển thị ở confirm field
+        if (passwordValidation.error.includes('không khớp')) {
+          setConfirmPasswordError(passwordValidation.error);
+        } else {
+          setNewPasswordError(passwordValidation.error);
+        }
+        hasError = true;
+      }
+    }
+
+    // Validate xác nhận mật khẩu
+    if (!passwordForm.confirm || !passwordForm.confirm.trim()) {
+      setConfirmPasswordError('Vui lòng xác nhận mật khẩu mới');
+      hasError = true;
+    }
+
+    if (hasError) {
       return;
     }
 
-    if (passwordForm.next !== passwordForm.confirm) {
-      setPasswordMessage('Xác nhận mật khẩu chưa khớp.');
-      return;
-    }
+    setIsChangingPassword(true);
 
-    setPasswordMessage('Đổi mật khẩu thành công!');
-    setPasswordForm({ current: '', next: '', confirm: '' });
-    setTimeout(() => setPasswordMessage(''), 3000);
+    try {
+      const result = await changePassword(passwordForm.current, passwordForm.next);
+      
+      // Kiểm tra lại result để đảm bảo không có lỗi
+      if (result && typeof result === 'object' && 'code' in result) {
+        if (result.code !== 200 && result.code !== 201) {
+          const errorMessage = result.message || 'Đổi mật khẩu thất bại';
+          const rawMessage = errorMessage;
+          const lowerMessage = rawMessage.toLowerCase();
+          
+          // Kiểm tra các pattern liên quan đến mật khẩu hiện tại sai
+          const hasCurrentPasswordKeyword = 
+            rawMessage.indexOf('Mật khẩu hiện tại') !== -1 ||
+            rawMessage.indexOf('hiện tại') !== -1 ||
+            lowerMessage.indexOf('mật khẩu hiện tại') !== -1 || 
+            lowerMessage.indexOf('current password') !== -1;
+          
+          const hasIncorrectKeyword = 
+            rawMessage.indexOf('không đúng') !== -1 ||
+            lowerMessage.indexOf('không đúng') !== -1 ||
+            lowerMessage.indexOf('incorrect') !== -1 ||
+            lowerMessage.indexOf('sai') !== -1 ||
+            lowerMessage.indexOf('wrong') !== -1;
+          
+          const isCurrentPasswordError = hasCurrentPasswordKeyword || 
+            (hasIncorrectKeyword && (lowerMessage.indexOf('password') !== -1 && 
+             (lowerMessage.indexOf('current') !== -1 || lowerMessage.indexOf('old') !== -1)));
+          
+          if (isCurrentPasswordError) {
+            setOldPasswordError('Mật khẩu hiện tại không đúng');
+            setNewPasswordError('');
+            setConfirmPasswordError('');
+          } else {
+            setNewPasswordError(errorMessage);
+            setOldPasswordError('');
+            setConfirmPasswordError('');
+          }
+          return;
+        }
+      }
+      
+      success('Cập nhật mật khẩu thành công');
+      setPasswordForm({ current: '', next: '', confirm: '' });
+      setOldPasswordError('');
+      setNewPasswordError('');
+      setConfirmPasswordError('');
+      setPasswordMessage('');
+    } catch (err) {
+      // Xử lý lỗi từ backend
+      console.error('Error changing password:', err);
+      
+      // Lấy message từ nhiều nguồn có thể
+      let errorMessage = '';
+      if (err?.response?.message) {
+        errorMessage = err.response.message;
+      } else if (err?.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      } else {
+        errorMessage = 'Không thể kết nối máy chủ';
+      }
+      
+      const rawMessage = errorMessage;
+      const lowerMessage = rawMessage.toLowerCase();
+      
+      // Kiểm tra các pattern liên quan đến mật khẩu hiện tại sai
+      const hasCurrentPasswordKeyword = 
+        rawMessage.indexOf('Mật khẩu hiện tại') !== -1 ||
+        rawMessage.indexOf('hiện tại') !== -1 ||
+        lowerMessage.indexOf('mật khẩu hiện tại') !== -1 ||
+        lowerMessage.indexOf('current password') !== -1;
+      
+      const hasIncorrectKeyword = 
+        rawMessage.indexOf('không đúng') !== -1 ||
+        lowerMessage.indexOf('không đúng') !== -1 ||
+        lowerMessage.indexOf('incorrect') !== -1 ||
+        lowerMessage.indexOf('sai') !== -1 ||
+        lowerMessage.indexOf('wrong') !== -1 ||
+        lowerMessage.indexOf('invalid') !== -1;
+      
+      const isCurrentPasswordError = hasCurrentPasswordKeyword || 
+        (hasIncorrectKeyword && lowerMessage.indexOf('password') !== -1 && 
+         (lowerMessage.indexOf('current') !== -1 || lowerMessage.indexOf('old') !== -1));
+      
+      if (isCurrentPasswordError) {
+        setOldPasswordError('Mật khẩu hiện tại không đúng');
+        setNewPasswordError('');
+        setConfirmPasswordError('');
+      } else if (lowerMessage.indexOf('mật khẩu mới') !== -1 || lowerMessage.indexOf('new password') !== -1) {
+        setNewPasswordError(errorMessage);
+        setOldPasswordError('');
+        setConfirmPasswordError('');
+      } else {
+        setNewPasswordError(errorMessage);
+        setOldPasswordError('');
+        setConfirmPasswordError('');
+      }
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const handleLogoutClick = () => {
@@ -231,13 +401,9 @@ function ProfilePage() {
         }
 
         setUserId(userInfo.id);
-        setInitialProfile(userInfo);
-        setProfileForm({
-          fullName: userInfo.fullName || '',
-          email: userInfo.email || '',
-          phone: userInfo.phone || '',
-          address: userInfo.address || '',
-        });
+        const normalizedProfile = normalizeUserProfile(userInfo);
+        setInitialProfile(normalizedProfile);
+        setProfileForm(normalizedProfile);
       } catch (error) {
         if (!isMounted) {
           return;
@@ -272,6 +438,10 @@ function ProfilePage() {
           passwordMessage={passwordMessage}
           onChange={handlePasswordChange}
           onSubmit={handlePasswordSubmit}
+          oldPasswordError={oldPasswordError}
+          newPasswordError={newPasswordError}
+          confirmPasswordError={confirmPasswordError}
+          onPasswordFieldChange={handlePasswordFieldChange}
         />
       );
     }
@@ -322,6 +492,7 @@ function ProfilePage() {
         isSavingProfile={isSavingProfile}
         profileForm={profileForm}
         profileMessage={profileMessage}
+        phoneError={phoneError}
         onCancelEdit={handleCancelProfileEdit}
         onChange={handleProfileSectionChange}
         onSubmit={handleProfileSubmit}

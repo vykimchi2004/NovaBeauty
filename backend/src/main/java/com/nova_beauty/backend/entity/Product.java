@@ -47,7 +47,7 @@ public class Product {
     @Column(name = "brand_origin")
     String brandOrigin;
 
-    @Column(name = "manufacturing_location")
+    @Column(name = "manufacturing_location", columnDefinition = "TEXT")
     String manufacturingLocation;
 
     @Column(name = "characteristics", columnDefinition = "TEXT")

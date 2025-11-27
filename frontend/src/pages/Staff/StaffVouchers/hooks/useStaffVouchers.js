@@ -15,6 +15,9 @@ import {
 import { getCategories } from '~/services/category';
 import { getActiveProducts } from '~/services/product';
 import { uploadProductMedia } from '~/services/media';
+import { storage } from '~/services/utils';
+import { STORAGE_KEYS } from '~/services/config';
+import { addStaffNotification, detectStatusNotifications, detectDeletionNotifications } from '~/utils/staffNotifications';
 
 const DEFAULT_VOUCHER_FORM = {
   id: '',
@@ -60,6 +63,9 @@ const getDefaultStartDate = () => {
 };
 
 export function useStaffVouchersState() {
+  const currentUser = storage.get(STORAGE_KEYS.USER);
+  const userId = currentUser?.id;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -118,7 +124,10 @@ export function useStaffVouchersState() {
     try {
       setVoucherLoading(true);
       const data = await getMyVouchers();
-      setVoucherList(data || []);
+      const list = data || [];
+      setVoucherList(list);
+      handleVoucherNotifications(list, 'voucher');
+      handleDeletedVoucherNotifications(list, 'voucher');
     } catch (error) {
       console.error('Error fetching vouchers:', error);
       notify.error('Không thể tải danh sách voucher.');
@@ -132,13 +141,78 @@ export function useStaffVouchersState() {
     try {
       setPromotionLoading(true);
       const data = await getMyPromotions();
-      setPromotionList((data || []).filter((item) => item.applyScope !== 'ORDER'));
+      const filtered = (data || []).filter((item) => item.applyScope !== 'ORDER');
+      setPromotionList(filtered);
+      handleVoucherNotifications(filtered, 'promotion');
+      handleDeletedVoucherNotifications(filtered, 'promotion');
     } catch (error) {
       console.error('Error fetching promotions:', error);
       notify.error('Không thể tải danh sách khuyến mãi.');
     } finally {
       setPromotionLoading(false);
     }
+  };
+
+  const handleVoucherNotifications = (entries = [], type = 'voucher') => {
+    if (!userId || !Array.isArray(entries)) return;
+    const notifications = detectStatusNotifications({
+      categoryKey: type === 'voucher' ? 'VOUCHERS' : 'PROMOTIONS',
+      userId,
+      items: entries,
+      getItemId: (item) => item?.id,
+      getStatus: (item) => item?.status,
+      buildNotification: (item, status) => {
+        if (status === 'APPROVED') {
+          return {
+            title: type === 'voucher' ? 'Voucher được duyệt' : 'Khuyến mãi được duyệt',
+            message: `${type === 'voucher' ? 'Voucher' : 'Khuyến mãi'} "${item.name || item.code}" đã được admin phê duyệt.`,
+            type: 'success',
+            targetPath: '/staff/vouchers',
+          };
+        }
+        if (status === 'REJECTED') {
+          const reason = item.rejectionReason ? ` Lý do: ${item.rejectionReason}` : '';
+          return {
+            title: type === 'voucher' ? 'Voucher bị từ chối' : 'Khuyến mãi bị từ chối',
+            message: `${type === 'voucher' ? 'Voucher' : 'Khuyến mãi'} "${item.name || item.code}" bị từ chối.${reason}`,
+            type: 'warning',
+            targetPath: '/staff/vouchers',
+          };
+        }
+        return null;
+      },
+    });
+
+    notifications.forEach((notification) => {
+      addStaffNotification(userId, notification);
+      if (notification.type === 'success') {
+        notify.success(notification.message);
+      } else {
+        notify.warning(notification.message);
+      }
+    });
+  };
+
+  const handleDeletedVoucherNotifications = (entries = [], type = 'voucher') => {
+    if (!userId || !Array.isArray(entries)) return;
+
+    const notifications = detectDeletionNotifications({
+      categoryKey: type === 'voucher' ? 'VOUCHERS' : 'PROMOTIONS',
+      userId,
+      items: entries,
+      getItemId: (item) => item?.id,
+      getItemName: (item) => item?.name || item?.code || item?.id,
+      buildNotification: ({ id, name }) => ({
+        title: type === 'voucher' ? 'Voucher đã bị xóa' : 'Khuyến mãi đã bị xóa',
+        message: `${type === 'voucher' ? 'Voucher' : 'Khuyến mãi'} "${name || id}" đã bị xóa khỏi hệ thống (có thể do admin hoặc do bạn xóa).`,
+        type: 'info',
+        targetPath: '/staff/vouchers',
+      }),
+    });
+
+    notifications.forEach((notification) => {
+      addStaffNotification(userId, notification);
+    });
   };
 
   const matchesFilters = (item) => {

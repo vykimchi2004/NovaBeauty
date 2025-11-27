@@ -4,6 +4,7 @@ import { faChevronLeft, faXmark, faCheck, faTrash } from '@fortawesome/free-soli
 import classNames from 'classnames/bind';
 import styles from '../ManageProduct.module.scss';
 import fallbackImage from '~/assets/images/products/image1.jpg';
+import { normalizeVariantRecords } from '~/utils/colorVariants';
 
 const cx = classNames.bind(styles);
 
@@ -31,27 +32,51 @@ function ProductDetailView({
   skinTypeInfo,
   reviewHighlights
 }) {
-  // Parse colorCodes từ manufacturingLocation (lưu dạng JSON)
-  const colorCodes = React.useMemo(() => {
-    if (!product?.manufacturingLocation) return [];
-    try {
-      const parsed = JSON.parse(product.manufacturingLocation);
-      if (Array.isArray(parsed)) return parsed;
-      return [];
-    } catch (e) {
-      // Nếu không phải JSON, thử parse như comma-separated
-      if (product.manufacturingLocation.includes(',')) {
-        return product.manufacturingLocation.split(',').map(c => c.trim()).filter(c => c);
-      } else if (product.manufacturingLocation.trim()) {
-        return [product.manufacturingLocation.trim()];
-      }
-      return [];
+  const colorVariants = React.useMemo(
+    () => normalizeVariantRecords(product?.manufacturingLocation),
+    [product?.manufacturingLocation]
+  );
+
+  const handleVariantImageClick = (imageUrl) => {
+    if (!imageUrl || !mediaList || !mediaList.length || !onSelectImage) return;
+    const index = mediaList.findIndex((url) => url === imageUrl);
+    if (index >= 0) {
+      onSelectImage(index);
     }
-  }, [product?.manufacturingLocation]);
-  const formatPriceWithTax = (price) => {
-    if (!price) return '-';
-    const unitPrice = price * 1.08; // Giá hiển thị = giá niêm yết × 1.08
-    return `${formatPrice(price)} (Hiển thị: ${formatPrice(unitPrice)})`;
+  };
+
+  const formatDateTime = (value) => {
+    if (!value) return '-';
+    return new Date(value).toLocaleString('vi-VN');
+  };
+
+  const formatPriceWithTax = (unitPrice, finalPrice) => {
+    if (!unitPrice && !finalPrice) return '-';
+
+    let displayUnitPrice = 0;
+    let displayFinalPrice = 0;
+
+    if (unitPrice && unitPrice > 0) {
+      displayUnitPrice = unitPrice;
+      const expectedPrice = unitPrice * 1.08;
+      if (finalPrice && finalPrice > 0 && Math.abs(finalPrice - expectedPrice) < expectedPrice * 0.1) {
+        displayFinalPrice = finalPrice;
+      } else {
+        displayFinalPrice = Math.round(expectedPrice);
+      }
+    } else if (finalPrice && finalPrice > 0) {
+      displayUnitPrice = Math.round(finalPrice / 1.08);
+      displayFinalPrice = finalPrice;
+    }
+
+    if (displayUnitPrice <= 0 && displayFinalPrice <= 0) {
+      return '-';
+    }
+
+    const formattedUnit = displayUnitPrice > 0 ? formatPrice(displayUnitPrice) : '-';
+    const formattedFinal = displayFinalPrice > 0 ? formatPrice(displayFinalPrice) : '-';
+
+    return `${formattedUnit} (Hiển thị: ${formattedFinal})`;
   };
 
   const infoRows = [
@@ -72,8 +97,20 @@ function ProductDetailView({
     { label: 'Trọng lượng', value: formatWeight(product.weight) },
     { label: 'Kết cấu', value: textureInfo || 'Chưa cập nhật' },
     { label: 'Loại da', value: skinTypeInfo || 'Chưa cập nhật' },
-    { label: 'Ngày gửi', value: formatDate(product.createdAt) }
+    { label: 'Ngày gửi', value: formatDateTime(product.createdAt) }
   );
+
+  if (product.approvedAt) {
+    infoRows.push({ label: 'Ngày duyệt', value: formatDateTime(product.approvedAt) });
+  }
+
+  if (product.approvedByName) {
+    infoRows.push({ label: 'Người duyệt', value: product.approvedByName });
+  }
+
+  if (product.quantitySold !== undefined && product.quantitySold !== null) {
+    infoRows.push({ label: 'Số lượng đã bán', value: product.quantitySold });
+  }
 
 
   return (
@@ -167,16 +204,54 @@ function ProductDetailView({
             <p className={cx('detailParagraph')}>{reviewHighlights || 'Chưa có đánh giá'}</p>
           </div>
 
-          {colorCodes.length > 0 && (
+          {colorVariants.length > 0 && (
             <div className={cx('detailTextGroup')}>
-              <span className={cx('detailInfoLabel')}>Mã màu</span>
-              <div className={cx('colorCodesList')}>
-                {colorCodes.map((colorCode, index) => (
-                  <span key={index} className={cx('colorCodeButton', 'readOnly')}>
-                    {colorCode}
+              <span className={cx('detailInfoLabel')}>Mã màu & tồn kho</span>
+              <div className={cx('variantDetailList')}>
+                {colorVariants.map((variant, index) => (
+                  <div
+                    key={`${variant.code || variant.name || 'variant'}-${index}`}
+                    className={cx('variantDetailCard')}
+                  >
+                    <div
+                      className={cx('variantDetailImage', { clickable: !!variant.imageUrl })}
+                      onClick={() => handleVariantImageClick(variant.imageUrl)}
+                      role={variant.imageUrl ? 'button' : undefined}
+                      tabIndex={variant.imageUrl ? 0 : undefined}
+                      onKeyDown={(e) => {
+                        if (!variant.imageUrl) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleVariantImageClick(variant.imageUrl);
+                        }
+                      }}
+                    >
+                      {variant.imageUrl ? (
+                        <img src={variant.imageUrl} alt={variant.name || variant.code || `Mã màu ${index + 1}`} />
+                      ) : (
+                        <span>Không có ảnh</span>
+                      )}
+                    </div>
+                    <div className={cx('variantDetailInfo')}>
+                      <strong>{variant.name || variant.code || `Mã màu ${index + 1}`}</strong>
+                      <span>Mã: {variant.code || 'Chưa cập nhật'}</span>
+                      <span>
+                        Tồn kho:{' '}
+                        {variant.stockQuantity !== null && variant.stockQuantity !== undefined
+                          ? variant.stockQuantity
+                          : 'Chưa cập nhật'}
                   </span>
+                    </div>
+                  </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {product.rejectionReason && (
+            <div className={cx('detailTextGroup')}>
+              <span className={cx('detailInfoLabel')}>Lý do từ chối</span>
+              <p className={cx('detailParagraph', 'rejectionReason')}>{product.rejectionReason}</p>
             </div>
           )}
 

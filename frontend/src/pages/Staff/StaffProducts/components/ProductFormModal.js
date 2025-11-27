@@ -25,8 +25,12 @@ function ProductFormModal({
   onMediaSelect,
   onRemoveMedia,
   onSetDefaultMedia,
-  onAddColorCode,
-  onRemoveColorCode,
+  onToggleColorVariants,
+  onAddVariant,
+  onRemoveVariant,
+  onVariantChange,
+  onVariantStockChange,
+  onVariantImageChange,
 }) {
   if (!open) return null;
 
@@ -196,22 +200,22 @@ function ProductFormModal({
           </div>
           
           <div className={cx('formGroup', { error: formErrors.mediaFiles })}>
-            <label>Ảnh sản phẩm *</label>
+            <label>Ảnh / video sản phẩm *</label>
             <div className={cx('mediaUploadRow')}>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,video/*"
                 multiple
                 onChange={onMediaSelect}
                 disabled={uploadingMedia || mediaFiles.length >= maxMediaItems}
                 className={cx('mediaFileInput')}
               />
               <small>
-                Bạn có thể tải tối đa {maxMediaItems} tệp. Ảnh đầu tiên sẽ được chọn làm ảnh chính, bạn có thể thay đổi sau khi tải lên.
+                Bạn có thể tải tối đa {maxMediaItems} tệp, bao gồm ảnh và video. Ảnh đầu tiên sẽ được chọn làm ảnh chính (có thể thay đổi sau).
               </small>
             </div>
-            {uploadingMedia && <span className={cx('uploadingText')}>Đang tải ảnh...</span>}
+            {uploadingMedia && <span className={cx('uploadingText')}>Đang tải media...</span>}
             {renderError('mediaFiles')}
 
             {mediaFiles.length > 0 ? (
@@ -252,7 +256,7 @@ function ProductFormModal({
               </div>
             ) : (
               <div className={cx('mediaPlaceholder')}>
-                <span>Chưa có ảnh nào. Vui lòng tải ảnh sản phẩm.</span>
+                <span>Chưa có media nào. Vui lòng tải ảnh hoặc video cho sản phẩm.</span>
               </div>
             )}
           </div>
@@ -269,7 +273,7 @@ function ProductFormModal({
           </div>
 
           <div className={cx('formRow')}>
-            <div className={cx('formGroup')}>
+          <div className={cx('formGroup', { error: formErrors.texture })}>
               <label>Kết cấu</label>
               <input
                 type="text"
@@ -277,9 +281,10 @@ function ProductFormModal({
                 onChange={(e) => onFormDataChange('texture', e.target.value)}
                 placeholder="VD: Dạng lỏng, Dạng kem, Dạng gel..."
               />
+            {renderError('texture')}
             </div>
 
-            <div className={cx('formGroup')}>
+          <div className={cx('formGroup', { error: formErrors.skinType })}>
               <label>Loại da</label>
               <input
                 type="text"
@@ -287,6 +292,7 @@ function ProductFormModal({
                 onChange={(e) => onFormDataChange('skinType', e.target.value)}
                 placeholder="VD: Da dầu, Da khô, Da hỗn hợp, Mọi loại da..."
               />
+            {renderError('skinType')}
             </div>
           </div>
 
@@ -298,57 +304,6 @@ function ProductFormModal({
               onChange={(e) => onFormDataChange('reviewHighlights', e.target.value)}
               placeholder="Nhập các ưu điểm nổi bật của sản phẩm"
             />
-          </div>
-
-          <div className={cx('formGroup')}>
-            <label>Mã màu (nếu có)</label>
-            <div className={cx('colorCodeInputWrapper')}>
-              <input
-                type="text"
-                placeholder="Nhập mã màu (VD: #FF0000, Red, Đỏ...)"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (onAddColorCode) {
-                      onAddColorCode(e.target.value);
-                      e.target.value = '';
-                    }
-                  }
-                }}
-                className={cx('colorCodeInput')}
-              />
-              <button
-                type="button"
-                onClick={(e) => {
-                  const input = e.target.previousElementSibling;
-                  if (onAddColorCode && input.value) {
-                    onAddColorCode(input.value);
-                    input.value = '';
-                  }
-                }}
-                className={cx('addColorCodeBtn')}
-              >
-                Thêm
-              </button>
-            </div>
-            {formData.colorCodes && formData.colorCodes.length > 0 && (
-              <div className={cx('colorCodesList')}>
-                {formData.colorCodes.map((colorCode, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    className={cx('colorCodeButton')}
-                    onClick={() => onRemoveColorCode && onRemoveColorCode(index)}
-                  >
-                    {colorCode}
-                    <FontAwesomeIcon icon={faTimes} className={cx('removeIcon')} />
-                  </button>
-                ))}
-              </div>
-            )}
-            <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-              Nhập mã màu và nhấn Enter hoặc nút "Thêm" để thêm. Click vào mã màu để xóa.
-            </small>
           </div>
 
           <div className={cx('formRow')}>
@@ -383,9 +338,103 @@ function ProductFormModal({
               value={formData.stockQuantity}
               onChange={(e) => onFormDataChange('stockQuantity', e.target.value)}
               placeholder="Nhập số lượng hiện có (nếu cần)"
+              disabled={formData.hasColorVariants}
             />
+            {formData.hasColorVariants && (
+              <small className={cx('hintText')}>
+                Đang sử dụng tồn kho theo mã màu. Giá trị này sẽ bị bỏ qua.
+              </small>
+            )}
             {renderError('stockQuantity')}
           </div>
+
+          <div className={cx('variantToggleRow')}>
+            <label>
+              <input
+                type="checkbox"
+                checked={formData.hasColorVariants}
+                onChange={onToggleColorVariants}
+              />
+              <span>Sản phẩm có mã màu riêng với ảnh & tồn kho riêng</span>
+            </label>
+            <p className={cx('variantHint')}>
+              Khi bật, mỗi mã màu cần tên/mã, tồn kho và ảnh minh họa riêng.
+            </p>
+          </div>
+
+          {formData.hasColorVariants && (
+            <div className={cx('variantSection')}>
+              {(formData.colorVariants || []).map((variant, index) => (
+                <div className={cx('variantCard')} key={variant.id || index}>
+                  <div className={cx('variantCardHeader')}>
+                    <strong>Mã màu {index + 1}</strong>
+                    <button
+                      type="button"
+                      className={cx('variantRemoveBtn')}
+                      onClick={() => onRemoveVariant(index)}
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                  <div className={cx('variantGrid')}>
+                    <div className={cx('formGroup')}>
+                      <label>Tên hiển thị</label>
+                      <input
+                        type="text"
+                        value={variant.name}
+                        onChange={(e) => onVariantChange(index, 'name', e.target.value)}
+                        placeholder="VD: Đỏ Ruby"
+                      />
+                    </div>
+                    <div className={cx('formGroup')}>
+                      <label>Mã màu</label>
+                      <input
+                        type="text"
+                        value={variant.code}
+                        onChange={(e) => onVariantChange(index, 'code', e.target.value)}
+                        placeholder="VD: #FF0000"
+                      />
+                    </div>
+                    <div className={cx('formGroup')}>
+                      <label>Tồn kho</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={variant.stockQuantity}
+                        onChange={(e) => onVariantStockChange(index, e.target.value)}
+                        placeholder="VD: 50"
+                      />
+                    </div>
+                  </div>
+                  <div className={cx('variantMediaRow')}>
+                    <div className={cx('variantImagePreview')}>
+                      {variant.imagePreview ? (
+                        <img src={variant.imagePreview} alt={variant.name || variant.code} />
+                      ) : (
+                        <span>Chưa có ảnh</span>
+                      )}
+                    </div>
+                    <div className={cx('variantMediaActions')}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => onVariantImageChange(index, e.target.files?.[0] || null)}
+                      />
+                      <small>Ảnh hiển thị cho mã màu</small>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <button type="button" className={cx('variantAddBtn')} onClick={onAddVariant}>
+                + Thêm mã màu
+              </button>
+              {formErrors.colorVariants && (
+                <div className={cx('errorText')} style={{ marginTop: '8px' }}>
+                  {formErrors.colorVariants}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className={cx('formGroup', { error: formErrors.usageInstructions })}>
             <label>Cách sử dụng</label>

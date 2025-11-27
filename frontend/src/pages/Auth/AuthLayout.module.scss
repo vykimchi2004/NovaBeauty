@@ -218,10 +218,12 @@ input,
 }
 
 /* OTP input layout */
-.otp {
+.otp,
+.otpWrapper {
   display: flex;
-  
   justify-content: center;
+  align-items: center;
+  gap: 8px;
   margin: 16px 0 20px;
 }
 
@@ -229,15 +231,34 @@ input,
   width: 50px;
   height: 52px;
   text-align: center;
-  font-size: 20px;
-  margin: 4px;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+  padding: 0;
   border: 1px solid #e5e5e5;
   border-radius: 10px;
   outline: none;
+  line-height: 52px;
+  box-sizing: border-box;
+  caret-color: #e5677d;
+  
+  /* Đảm bảo số căn giữa hoàn hảo */
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  
+  /* Căn giữa số trong input */
+  &::placeholder {
+    text-align: center;
+    line-height: 52px;
+  }
 }
 
 .otpItem:focus {
   border-color: #e5677d;
+  border-width: 2px;
 }
 
 .resend {

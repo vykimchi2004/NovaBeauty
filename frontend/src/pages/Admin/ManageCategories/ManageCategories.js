@@ -144,6 +144,8 @@ function ManageCategories() {
     if (!name) return '';
     // Convert Vietnamese to ASCII, remove special chars, uppercase, replace spaces with underscores
     return name
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D')
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
       .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters

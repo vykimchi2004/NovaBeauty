@@ -37,6 +37,7 @@ function ManageStaffAccounts() {
   const [staff, setStaff] = useState([]);
   const [filteredStaff, setFilteredStaff] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showModal, setShowModal] = useState(false);
@@ -251,9 +252,11 @@ function ManageStaffAccounts() {
     
     // Kiểm tra Số điện thoại (nếu có)
     if (formData.phoneNumber && formData.phoneNumber.trim()) {
-      const phoneRegex = /^[0-9]{10,11}$/;
-      if (!phoneRegex.test(formData.phoneNumber.trim())) {
-        errors.phoneNumber = 'Số điện thoại phải có 10-11 chữ số';
+      const phoneNumber = formData.phoneNumber.trim();
+      // Phải bắt đầu bằng 0 và có đúng 10 chữ số
+      const phoneRegex = /^0[0-9]{9}$/;
+      if (!phoneRegex.test(phoneNumber)) {
+        errors.phoneNumber = 'Hãy nhập số điện thoại bắt đầu từ 0 và đủ 10 số';
       }
     }
 
@@ -263,11 +266,43 @@ function ManageStaffAccounts() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSaving) return;
     if (!validateForm()) return;
 
     try {
+      setIsSaving(true);
       if (editingStaff) {
-        await updateUser(editingStaff.id, formData);
+        // Chuyển đổi roleName thành role để match với backend UserUpdateRequest
+        // Chỉ gửi các trường có giá trị hoặc đã thay đổi
+        const updateData = {};
+        
+        // FullName - luôn gửi nếu có giá trị
+        if (formData.fullName && formData.fullName.trim()) {
+          updateData.fullName = formData.fullName.trim();
+        }
+        
+        // PhoneNumber - gửi kể cả khi empty để có thể xóa
+        if (formData.phoneNumber !== undefined) {
+          updateData.phoneNumber = formData.phoneNumber || '';
+        }
+        
+        // Address - gửi kể cả khi empty để có thể xóa
+        if (formData.address !== undefined) {
+          updateData.address = formData.address || '';
+        }
+        
+        // Role - chuyển đổi roleName thành role
+        if (formData.roleName) {
+          updateData.role = formData.roleName;
+        }
+        
+        // isActive - luôn gửi khi đang edit
+        if (formData.isActive !== undefined) {
+          updateData.isActive = formData.isActive;
+        }
+        
+        console.log('[ManageStaffAccounts] Updating staff with data:', updateData);
+        await updateUser(editingStaff.id, updateData);
         notify.success('Cập nhật tài khoản nhân viên thành công!');
       } else {
         // Thêm tài khoản nhân viên mới
@@ -277,13 +312,12 @@ function ManageStaffAccounts() {
           isActive: true // Luôn true cho tài khoản mới
         };
         console.log('[ManageStaffAccounts] Creating staff with data:', staffData);
-        const createdStaff = await createStaff(staffData);
-        console.log('[ManageStaffAccounts] Staff created:', createdStaff);
+        await createStaff(staffData);
         notify.success('Thêm tài khoản nhân viên thành công! Mật khẩu tạm thời đã được gửi qua email cho nhân viên.');
       }
 
       setShowModal(false);
-      fetchStaff();
+      await fetchStaff();
     } catch (err) {
       console.error('[ManageStaffAccounts] Error saving staff:', err);
       console.error('[ManageStaffAccounts] Error details:', {
@@ -317,6 +351,8 @@ function ManageStaffAccounts() {
       }
       
       notify.error(errorMessage);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -488,14 +524,28 @@ function ManageStaffAccounts() {
               </div>
 
               <div className={cx('formRow')}>
-                <div className={cx('formGroup')}>
+                <div className={cx('formGroup', { error: formErrors.phoneNumber })}>
                   <label>Số điện thoại</label>
                   <input
                     type="tel"
                     value={formData.phoneNumber}
-                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                    placeholder="Nhập SĐT"
+                    onChange={(e) => {
+                      // Chỉ cho phép nhập số
+                      const value = e.target.value.replace(/[^0-9]/g, '');
+                      // Giới hạn 10 ký tự
+                      const limitedValue = value.slice(0, 10);
+                      setFormData({ ...formData, phoneNumber: limitedValue });
+                    }}
+                    onKeyPress={(e) => {
+                      // Chỉ cho phép nhập số
+                      if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'Tab' && e.key !== 'Enter') {
+                        e.preventDefault();
+                      }
+                    }}
+                    placeholder="Nhập SĐT (bắt đầu bằng 0, 10 số)"
+                    maxLength={10}
                   />
+                  {formErrors.phoneNumber && <span className={cx('errorText')}>{formErrors.phoneNumber}</span>}
                 </div>
 
                 <div className={cx('formGroup', { error: formErrors.roleName })}>
@@ -539,8 +589,8 @@ function ManageStaffAccounts() {
                 <button type="button" className={cx('cancelBtn')} onClick={() => setShowModal(false)}>
                   Hủy
                 </button>
-                <button type="submit" className={cx('submitBtn')}>
-                  {editingStaff ? 'Cập nhật' : 'Lưu nhân viên'}
+                <button type="submit" className={cx('submitBtn')} disabled={isSaving}>
+                  {isSaving ? 'Đang lưu...' : editingStaff ? 'Cập nhật' : 'Lưu nhân viên'}
                 </button>
               </div>
             </form>

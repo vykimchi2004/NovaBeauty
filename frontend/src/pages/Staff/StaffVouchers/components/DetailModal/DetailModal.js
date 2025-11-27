@@ -7,7 +7,25 @@ import { getActiveProducts } from '~/services/product';
 
 const cx = classNames.bind(styles);
 
-function DetailModal({ item, onClose, formatScope }) {
+const resolveType = (entry = {}) => {
+  const normalizedType =
+    entry.itemType?.toLowerCase() ||
+    entry.__type?.toLowerCase() ||
+    entry.sourceType?.toLowerCase() ||
+    (typeof entry.type === 'string' ? entry.type.toLowerCase() : '');
+
+  if (normalizedType === 'voucher' || normalizedType === 'promotion') {
+    return normalizedType;
+  }
+
+  if (typeof entry.isVoucher === 'boolean') {
+    return entry.isVoucher ? 'voucher' : 'promotion';
+  }
+
+  return entry.applyScope === 'ORDER' ? 'voucher' : 'promotion';
+};
+
+function DetailModal({ item, onClose, formatScope, resolveItemType }) {
   const [activeProductNames, setActiveProductNames] = useState([]);
 
   useEffect(() => {
@@ -42,7 +60,9 @@ function DetailModal({ item, onClose, formatScope }) {
   }, [item]);
 
   if (!item) return null;
-  const isVoucher = item.applyScope === 'ORDER' || item.__type === 'voucher';
+  const itemType = (resolveItemType ? resolveItemType(item) : resolveType(item)) || 'promotion';
+  const isVoucher = itemType === 'voucher';
+  const scopeLabel = formatScope ? formatScope(item) : '';
 
   const formatDate = (value) => {
     if (!value) return '-';
@@ -81,7 +101,7 @@ function DetailModal({ item, onClose, formatScope }) {
           </div>
           <div className={cx('detailRow')}>
             <span>Loại:</span>
-            <strong>{isVoucher ? 'Voucher (áp dụng toàn đơn)' : formatScope(item.applyScope)}</strong>
+            <strong>{scopeLabel || (isVoucher ? 'Voucher' : 'Khuyến mãi')}</strong>
           </div>
           <div className={cx('detailRow')}>
             <span>Giảm giá:</span>
@@ -113,13 +133,13 @@ function DetailModal({ item, onClose, formatScope }) {
             <span>Đơn hàng tối thiểu:</span>
             <p>{item.minOrderValue || 'Không yêu cầu'}</p>
           </div>
-          {!isVoucher && item.categoryNames?.length > 0 && (
+          {item.categoryNames?.length > 0 && (
             <div className={cx('detailRow')}>
               <span>Danh mục:</span>
               <p>{item.categoryNames.join(', ')}</p>
             </div>
           )}
-          {!isVoucher && activeProductNames.length > 0 && (
+          {activeProductNames.length > 0 && (
             <div className={cx('detailRow', 'productRow')}>
               <span>Sản phẩm:</span>
               <div className={cx('productList')}>
