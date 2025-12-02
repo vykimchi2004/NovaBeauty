@@ -480,13 +480,15 @@ public class PromotionService {
 
         for (Product product : products) {
             double unitPrice = product.getUnitPrice() != null ? product.getUnitPrice() : 0.0;
-            double tax = product.getTax() != null ? product.getTax() : 0.0; // tax lÃ  pháº§n trÄƒm (0.1 = 10%)
+            double tax = product.getTax() != null ? product.getTax() : 0.0; // tax lÃ  pháº§n trÄƒm (0.1 = 10%)
             
-            // TÃ­nh discountValue tá»« promotion
-            double discountAmount = calculateDiscountAmount(promotion, unitPrice);
+            // TÃ­nh giá có tax trước
+            double priceWithTax = unitPrice * (1 + tax);
+            // TÃ­nh discountValue tá»« promotion (từ giá đã có tax để đảm bảo phần trăm hiển thị chính xác)
+            double discountAmount = calculateDiscountAmount(promotion, priceWithTax);
             
             // TÃ­nh price = unitPrice * (1 + tax) - discountValue
-            double finalPrice = Math.max(0, unitPrice * (1 + tax) - discountAmount);
+            double finalPrice = Math.max(0, priceWithTax - discountAmount);
 
             product.setDiscountValue(discountAmount);
             product.setPrice(finalPrice);
@@ -531,8 +533,10 @@ public class PromotionService {
             
             if (nextPromotion != null) {
                 // Ãp dá»¥ng promotion káº¿ tiáº¿p
-                double discountAmount = calculateDiscountAmount(nextPromotion, unitPrice);
-                double finalPrice = Math.max(0, unitPrice + (tax * unitPrice) - discountAmount);
+                double priceWithTax = unitPrice * (1 + tax);
+                // Calculate discount from price with tax to ensure accurate percentage display
+                double discountAmount = calculateDiscountAmount(nextPromotion, priceWithTax);
+                double finalPrice = Math.max(0, priceWithTax - discountAmount);
                 
                 product.setDiscountValue(discountAmount);
                 product.setPrice(finalPrice);

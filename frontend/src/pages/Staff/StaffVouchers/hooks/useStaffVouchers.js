@@ -49,7 +49,6 @@ const DEFAULT_PROMOTION_FORM = {
   minOrderValue: '',
   startDate: '',
   expiryDate: '',
-  usageLimit: '',
   applyScope: 'CATEGORY',
   categoryIds: [],
   productIds: [],
@@ -318,7 +317,6 @@ export function useStaffVouchersState() {
       code: '',
       startDate: getDefaultStartDate(),
       expiryDate: '',
-      usageLimit: '',
       applyScope: 'CATEGORY',
       discountValueType: 'PERCENTAGE',
     });
@@ -346,7 +344,6 @@ export function useStaffVouchersState() {
       minOrderValue: promotion.minOrderValue?.toString() || '',
       startDate: promotion.startDate || '',
       expiryDate: promotion.expiryDate || '',
-      usageLimit: promotion.usageLimit?.toString() || '',
       applyScope: promotion.applyScope || 'CATEGORY',
       categoryIds: promotion.categoryIds || [],
       productIds: promotion.productIds || [],
@@ -490,8 +487,16 @@ export function useStaffVouchersState() {
     const errors = {};
     if (!voucherForm.name?.trim()) errors.name = 'Tên voucher không được để trống';
     if (!voucherForm.code?.trim()) errors.code = 'Mã voucher không được để trống';
-    if (!voucherForm.discountValue || Number(voucherForm.discountValue) <= 0) {
+    const discountValue = Number(voucherForm.discountValue);
+    if (!voucherForm.discountValue || Number.isNaN(discountValue) || discountValue <= 0) {
       errors.discountValue = 'Giá trị giảm không hợp lệ';
+    } else if (voucherForm.discountValueType === 'PERCENTAGE') {
+      if (discountValue > 100 || discountValue <= 0) {
+        errors.discountValue = 'Phần trăm giảm phải nằm trong khoảng 0 - 100';
+      }
+      if (!voucherForm.maxDiscountValue || Number(voucherForm.maxDiscountValue) <= 0) {
+        errors.maxDiscountValue = 'Vui lòng nhập mức giảm tối đa khi dùng %';
+      }
     }
     if (!voucherForm.startDate) errors.startDate = 'Chọn ngày bắt đầu';
     if (!voucherForm.expiryDate) errors.expiryDate = 'Chọn ngày kết thúc';
@@ -524,9 +529,6 @@ export function useStaffVouchersState() {
     }
     if (!promotionForm.startDate) errors.startDate = 'Chọn ngày bắt đầu';
     if (!promotionForm.expiryDate) errors.expiryDate = 'Chọn ngày kết thúc';
-    if (!promotionForm.usageLimit || Number(promotionForm.usageLimit) <= 0) {
-      errors.usageLimit = 'Giới hạn sử dụng phải lớn hơn 0';
-    }
     if (!promotionForm.imageUrl && !promotionImageFile) {
       errors.imageUrl = 'Vui lòng chọn hình khuyến mãi';
     }
@@ -619,7 +621,6 @@ export function useStaffVouchersState() {
       minOrderValue: promotionForm.minOrderValue ? Number(promotionForm.minOrderValue) : null,
       startDate: promotionForm.startDate,
       expiryDate: promotionForm.expiryDate,
-      usageLimit: promotionForm.usageLimit ? Number(promotionForm.usageLimit) : null,
       discountValueType: promotionForm.discountValueType || 'PERCENTAGE',
       applyScope: promotionForm.applyScope,
       categoryIds: promotionForm.applyScope === 'CATEGORY' && promotionForm.categoryIds.length

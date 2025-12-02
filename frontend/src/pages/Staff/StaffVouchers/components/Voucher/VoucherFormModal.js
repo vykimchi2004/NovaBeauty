@@ -167,17 +167,70 @@ function VoucherFormModal({
             {formErrors.imageUrl && <span className={cx('errorText')}>{formErrors.imageUrl}</span>}
           </div>
 
-          <div className={cx('formGroup', { error: formErrors.discountValue })}>
-            <label>Giảm giá (%) *</label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={formData.discountValue}
-              onChange={(e) => onChange('discountValue', e.target.value)}
-              placeholder="Nhập phần trăm giảm giá"
-            />
-            {formErrors.discountValue && <span className={cx('errorText')}>{formErrors.discountValue}</span>}
+          <div className={cx('formGroup')}>
+            <label>Loại giảm giá *</label>
+            <div className={cx('scopeToggle')}>
+              <button
+                type="button"
+                className={cx({ active: formData.discountValueType === 'PERCENTAGE' })}
+                onClick={() => onChange('discountValueType', 'PERCENTAGE')}
+              >
+                Theo %
+              </button>
+              <button
+                type="button"
+                className={cx({ active: formData.discountValueType === 'AMOUNT' })}
+                onClick={() => onChange('discountValueType', 'AMOUNT')}
+              >
+                Theo số tiền
+              </button>
+            </div>
+          </div>
+
+          <div className={cx('formRow')}>
+            <div className={cx('formGroup', { error: formErrors.discountValue })}>
+              <label>
+                {formData.discountValueType === 'AMOUNT' ? 'Giảm giá (đồng) *' : 'Giảm giá (%) *'}
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                max={formData.discountValueType === 'PERCENTAGE' ? 100 : undefined}
+                value={formData.discountValue}
+                onChange={(e) => onChange('discountValue', e.target.value)}
+                placeholder={
+                  formData.discountValueType === 'AMOUNT'
+                    ? 'Nhập số tiền giảm'
+                    : 'Nhập phần trăm giảm giá'
+                }
+              />
+              {formErrors.discountValue && <span className={cx('errorText')}>{formErrors.discountValue}</span>}
+            </div>
+
+            <div
+              className={cx('formGroup', {
+                error: formErrors.maxDiscountValue,
+                disabledField: formData.discountValueType !== 'PERCENTAGE',
+              })}
+            >
+              <label>
+                Mức giảm tối đa
+                {formData.discountValueType === 'PERCENTAGE' && ' *'}
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={formData.maxDiscountValue}
+                onChange={(e) => onChange('maxDiscountValue', e.target.value)}
+                placeholder="Nhập số tiền tối đa"
+                disabled={formData.discountValueType !== 'PERCENTAGE'}
+              />
+              {formErrors.maxDiscountValue && (
+                <span className={cx('errorText')}>{formErrors.maxDiscountValue}</span>
+              )}
+            </div>
           </div>
 
           <div className={cx('formRow')}>

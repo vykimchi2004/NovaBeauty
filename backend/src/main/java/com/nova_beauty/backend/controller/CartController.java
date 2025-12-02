@@ -50,4 +50,13 @@ public class CartController {
                 .result(cartMapper.toResponse(cart))
                 .build();
     }
+
+    @DeleteMapping("/voucher")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    ApiResponse<CartResponse> clearVoucher() {
+        var cart = cartService.clearVoucher();
+        return ApiResponse.<CartResponse>builder()
+                .result(cartMapper.toResponse(cart))
+                .build();
+    }
 }

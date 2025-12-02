@@ -86,6 +86,18 @@ const cartService = {
     },
 
     /**
+     * Xóa voucher khỏi giỏ hàng
+     */
+    async clearVoucher() {
+        try {
+            return await apiClient.delete(API_ENDPOINTS.CART.CLEAR_VOUCHER);
+        } catch (error) {
+            console.error('[Cart Service] clearVoucher error:', error);
+            throw error;
+        }
+    },
+
+    /**
      * Lấy số lượng sản phẩm trong giỏ hàng (để hiển thị badge)
      */
     async getCartCount() {

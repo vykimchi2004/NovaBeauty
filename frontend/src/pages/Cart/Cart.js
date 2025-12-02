@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrash, faMinus, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faTrash, faMinus, faPlus, faTimes } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from './Cart.module.scss';
 import cartService from '~/services/cart';
@@ -37,6 +37,22 @@ function Cart() {
       window.removeEventListener('cartUpdated', handleCartUpdated);
     };
   }, []);
+
+  // Tự động xóa voucher khi user rời khỏi trang giỏ hàng (component unmount)
+  useEffect(() => {
+    return () => {
+      // Chỉ xóa voucher nếu có voucher đang được áp dụng
+      if (appliedVoucherCode) {
+        console.log('[Cart] Clearing voucher on unmount:', appliedVoucherCode);
+        cartService.clearVoucher().catch(error => {
+          // Không hiển thị lỗi nếu user đã đăng xuất hoặc có lỗi network
+          if (error.code !== 401 && error.code !== 403 && error.status !== 401 && error.status !== 403) {
+            console.error('[Cart] Error clearing voucher on unmount:', error);
+          }
+        });
+      }
+    };
+  }, [appliedVoucherCode]);
 
   const loadCart = async (skipEventDispatch = false) => {
     try {
@@ -99,6 +115,59 @@ function Cart() {
     }
   };
 
+  // Load cart mà không set loading state (để tránh nháy màn hình)
+  const loadCartWithoutLoading = async (skipEventDispatch = false) => {
+    try {
+      setIsUnauthenticated(false);
+      
+      // Kiểm tra token trước khi gọi API
+      const token = storage.get(STORAGE_KEYS.TOKEN);
+      if (!token) {
+        setIsUnauthenticated(true);
+        setCartItems([]);
+        setSubtotal(0);
+        setTotal(0);
+        return;
+      }
+      
+      const cartData = await cartService.getCart();
+      
+      // Map dữ liệu từ API sang format hiển thị
+      const items = (cartData.items || []).map(item => ({
+        id: item.id,
+        productId: item.productId,
+        name: item.productName,
+        currentPrice: item.unitPrice,
+        originalPrice: item.unitPrice,
+        quantity: item.quantity,
+        selected: true,
+        finalPrice: item.finalPrice,
+        colorCode: item.colorCode || null,
+      }));
+
+      setCartItems(items);
+      setSubtotal(cartData.subtotal || 0);
+      setAppliedDiscount(cartData.voucherDiscount || 0);
+      setAppliedVoucherCode(cartData.appliedVoucherCode);
+      setTotal(cartData.totalAmount || 0);
+      setIsUnauthenticated(false);
+
+      // Chỉ dispatch event nếu không phải từ event listener (tránh loop)
+      if (!skipEventDispatch) {
+        window.dispatchEvent(new CustomEvent('cartUpdated'));
+      }
+    } catch (error) {
+      console.error('Error loading cart:', error);
+      // Nếu lỗi do chưa đăng nhập
+      if (error.code === 401 || error.code === 403 || error.status === 401 || error.status === 403) {
+        setIsUnauthenticated(true);
+        setCartItems([]);
+        setSubtotal(0);
+        setTotal(0);
+      }
+    }
+  };
+
   const formatPrice = (price) => {
     const value = Math.round(Number(price) || 0);
     return (
@@ -130,13 +199,67 @@ function Cart() {
         return;
       }
       
-      // Sử dụng addItem với delta để tăng/giảm số lượng
-      // Backend sẽ tự động cộng thêm delta vào quantity hiện tại
-      // Nếu quantity về 0 hoặc âm, backend sẽ tự động xóa item
+      // Optimistic update: cập nhật UI ngay lập tức
+      const updatedItems = cartItems.map(i => {
+        if (i.id === id) {
+          const updatedQuantity = i.quantity + delta;
+          if (updatedQuantity <= 0) {
+            return null; // Sẽ filter ra sau
+          }
+          return {
+            ...i,
+            quantity: updatedQuantity,
+            finalPrice: i.currentPrice * updatedQuantity
+          };
+        }
+        return i;
+      }).filter(Boolean); // Xóa item nếu quantity <= 0
+      
+      setCartItems(updatedItems);
+      
+      // Tính lại subtotal tạm thời
+      const tempSubtotal = updatedItems.reduce((sum, i) => sum + (i.finalPrice || i.currentPrice * i.quantity), 0);
+      setSubtotal(tempSubtotal);
+      
+      // Tính lại total dựa trên subtotal mới và voucher discount hiện tại
+      // Backend sẽ tự động tính lại voucher discount, nhưng để tránh nháy, ta tính tạm thời
+      const tempTotal = Math.max(0, tempSubtotal - appliedDiscount);
+      setTotal(tempTotal);
+      
+      // Gọi API để cập nhật backend
       await cartService.addItem(item.productId, delta, item.colorCode || null);
-      await loadCart();
+      
+      // Chỉ update những phần cần thiết từ backend, không update voucher để tránh nháy
+      const cartData = await cartService.getCart();
+      
+      // Chỉ update cartItems, subtotal, total - giữ nguyên voucher discount và code
+      const items = (cartData.items || []).map(item => ({
+        id: item.id,
+        productId: item.productId,
+        name: item.productName,
+        currentPrice: item.unitPrice,
+        originalPrice: item.unitPrice,
+        quantity: item.quantity,
+        selected: true,
+        finalPrice: item.finalPrice,
+        colorCode: item.colorCode || null,
+      }));
+
+      setCartItems(items);
+      setSubtotal(cartData.subtotal || 0);
+      // Chỉ update voucher discount nếu thực sự thay đổi
+      if (cartData.voucherDiscount !== appliedDiscount) {
+        setAppliedDiscount(cartData.voucherDiscount || 0);
+      }
+      // Chỉ update voucher code nếu thực sự thay đổi
+      if (cartData.appliedVoucherCode !== appliedVoucherCode) {
+        setAppliedVoucherCode(cartData.appliedVoucherCode);
+      }
+      setTotal(cartData.totalAmount || 0);
     } catch (error) {
       console.error('Error updating quantity:', error);
+      // Nếu có lỗi, reload lại cart để khôi phục state
+      await loadCartWithoutLoading();
       notify.error(error.message || 'Không thể cập nhật số lượng. Vui lòng thử lại.');
     }
   };
@@ -151,17 +274,55 @@ function Cart() {
       
       console.log('[Cart] Removing item:', { id, productId: item.productId, quantity: item.quantity });
       
+      // Optimistic update: xóa item ngay lập tức
+      const updatedItems = cartItems.filter(i => i.id !== id);
+      setCartItems(updatedItems);
+      
+      // Tính lại subtotal tạm thời
+      const tempSubtotal = updatedItems.reduce((sum, i) => sum + (i.finalPrice || i.currentPrice * i.quantity), 0);
+      setSubtotal(tempSubtotal);
+      
+      // Tính lại total dựa trên subtotal mới và voucher discount hiện tại
+      const tempTotal = Math.max(0, tempSubtotal - appliedDiscount);
+      setTotal(tempTotal);
+      
       // Xóa bằng cách thêm với quantity âm bằng với số lượng hiện tại
       // Backend sẽ tự động xóa item khi quantity về 0 hoặc âm
       await cartService.addItem(item.productId, -item.quantity, item.colorCode || null);
       
-      // Reload cart để cập nhật UI
-      await loadCart();
+      // Chỉ update những phần cần thiết từ backend, không update voucher để tránh nháy
+      const cartData = await cartService.getCart();
+      
+      const items = (cartData.items || []).map(item => ({
+        id: item.id,
+        productId: item.productId,
+        name: item.productName,
+        currentPrice: item.unitPrice,
+        originalPrice: item.unitPrice,
+        quantity: item.quantity,
+        selected: true,
+        finalPrice: item.finalPrice,
+        colorCode: item.colorCode || null,
+      }));
+
+      setCartItems(items);
+      setSubtotal(cartData.subtotal || 0);
+      // Chỉ update voucher discount nếu thực sự thay đổi
+      if (cartData.voucherDiscount !== appliedDiscount) {
+        setAppliedDiscount(cartData.voucherDiscount || 0);
+      }
+      // Chỉ update voucher code nếu thực sự thay đổi
+      if (cartData.appliedVoucherCode !== appliedVoucherCode) {
+        setAppliedVoucherCode(cartData.appliedVoucherCode);
+      }
+      setTotal(cartData.totalAmount || 0);
       
       // Dispatch event để cập nhật cart count trong header
       window.dispatchEvent(new CustomEvent('cartUpdated'));
     } catch (error) {
       console.error('[Cart] Error removing item:', error);
+      // Nếu có lỗi, reload lại cart để khôi phục state
+      await loadCartWithoutLoading();
       notify.error(error.message || 'Không thể xóa sản phẩm. Vui lòng thử lại.');
     }
   };
@@ -177,11 +338,24 @@ function Cart() {
       setAppliedDiscount(cartData.voucherDiscount || 0);
       setAppliedVoucherCode(cartData.appliedVoucherCode);
       setTotal(cartData.totalAmount || 0);
-      notify.success('Áp dụng mã giảm giá thành công!');
+      setDiscountCode(''); // Clear input after applying
       await loadCart();
     } catch (error) {
       console.error('Error applying voucher:', error);
       notify.error(error.message || 'Không thể áp dụng mã giảm giá. Vui lòng thử lại.');
+    }
+  };
+
+  const handleClearVoucher = async () => {
+    try {
+      await cartService.clearVoucher();
+      setAppliedDiscount(0);
+      setAppliedVoucherCode(null);
+      setDiscountCode('');
+      await loadCart();
+    } catch (error) {
+      console.error('Error clearing voucher:', error);
+      notify.error(error.message || 'Không thể xóa mã giảm giá. Vui lòng thử lại.');
     }
   };
 
@@ -338,7 +512,17 @@ function Cart() {
           </div>
           {appliedVoucherCode && (
             <div className={cx('appliedVoucher')}>
-              Đã áp dụng: <strong>{appliedVoucherCode}</strong>
+              <span className={cx('appliedVoucherText')}>
+                Đã áp dụng: <strong>{appliedVoucherCode}</strong>
+              </span>
+              <button
+                type="button"
+                className={cx('removeVoucherBtn')}
+                onClick={handleClearVoucher}
+                title="Xóa mã giảm giá"
+              >
+                <FontAwesomeIcon icon={faTimes} />
+              </button>
             </div>
           )}
         </div>

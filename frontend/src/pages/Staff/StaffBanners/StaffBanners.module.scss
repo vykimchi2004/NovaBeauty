@@ -105,6 +105,36 @@
   text-align: center;
 }
 
+.radioGroup {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: #30374b;
+    cursor: pointer;
+  }
+}
+
+.selectionSummary {
+  border: 1px dashed #e5e7f1;
+  border-radius: 10px;
+  padding: 12px;
+  background: #fff8fb;
+  color: #7a8091;
+  font-size: 14px;
+  line-height: 1.5;
+
+  strong {
+    color: #e5677d;
+    margin: 0 4px;
+  }
+}
+
 // Add button styling
 .addBtn {
   background: #e5677d;

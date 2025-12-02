@@ -105,26 +105,14 @@ function PromotionFormModal({
             {formErrors.discountValue && <span className={cx('errorText')}>{formErrors.discountValue}</span>}
           </div>
 
-          <div className={cx('formRow')}>
-            <div className={cx('formGroup')}>
-              <label>Đơn hàng tối thiểu</label>
-              <input
-                type="number"
-                min="0"
-                value={formData.minOrderValue}
-                onChange={(e) => onChange('minOrderValue', e.target.value)}
-              />
-            </div>
-            <div className={cx('formGroup', { error: formErrors.usageLimit })}>
-              <label>Giới hạn sử dụng *</label>
-              <input
-                type="number"
-                min="1"
-                value={formData.usageLimit}
-                onChange={(e) => onChange('usageLimit', e.target.value)}
-              />
-              {formErrors.usageLimit && <span className={cx('errorText')}>{formErrors.usageLimit}</span>}
-            </div>
+          <div className={cx('formGroup')}>
+            <label>Đơn hàng tối thiểu</label>
+            <input
+              type="number"
+              min="0"
+              value={formData.minOrderValue}
+              onChange={(e) => onChange('minOrderValue', e.target.value)}
+            />
           </div>
 
           <div className={cx('formRow')}>

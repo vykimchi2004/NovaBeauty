@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from './Promo.module.scss';
 import image1 from '~/assets/images/products/image1.jpg';
-import { getActivePromotions } from '~/services/promotion';
+
 import { getActiveProducts } from '~/services/product';
 import { scrollToTop } from '~/services/utils';
 
@@ -12,6 +12,20 @@ const cx = classNames.bind(styles);
 function Promo() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
+
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const filterProductIds = useMemo(() => {
+    const raw = searchParams.get('products');
+    if (!raw) return [];
+    return raw
+      .split(',')
+      .map((id) => id.trim())
+      .filter(Boolean);
+  }, [searchParams]);
+
+  const headingParam = searchParams.get('heading');
+  const filterProductSet = useMemo(() => new Set(filterProductIds), [filterProductIds]);
 
   useEffect(() => {
     const fetchPromoProducts = async () => {
@@ -67,7 +81,12 @@ function Promo() {
           })));
         }
 
-        setProducts(promoProducts);
+        const filteredProducts =
+          filterProductSet.size > 0
+            ? promoProducts.filter((product) => filterProductSet.has(product.id))
+            : promoProducts;
+
+        setProducts(filteredProducts);
       } catch (error) {
         console.error('[Promo] Error fetching promo products:', error);
         console.error('[Promo] Error details:', {
@@ -83,7 +102,7 @@ function Promo() {
     };
 
     fetchPromoProducts();
-  }, []);
+  }, [filterProductSet]);
 
   const formatPrice = (price) => {
     const value = Math.round(Number(price) || 0);
@@ -117,12 +136,16 @@ function Promo() {
     <div className={cx('promo-page')}>
       {/* --- Nội dung: Sản phẩm khuyến mãi --- */}
       <div className={cx('content')}>
-        <h1 className={cx('title')}>Khuyến mãi hot</h1>
+        <h1 className={cx('title')}>{headingParam || 'Khuyến mãi hot'}</h1>
 
         {loading ? (
           <div className={cx('loading')}>Đang tải sản phẩm...</div>
         ) : products.length === 0 ? (
-          <div className={cx('empty')}>Chưa có sản phẩm khuyến mãi nào</div>
+          <div className={cx('empty')}>
+            {filterProductSet.size > 0
+              ? 'Banner này hiện chưa có sản phẩm khả dụng.'
+              : 'Chưa có sản phẩm khuyến mãi nào'}
+          </div>
         ) : (
         <div className={cx('product-grid')}>
             {products.map((p) => {
@@ -135,7 +158,7 @@ function Promo() {
                   className={cx('product-card')} 
                   onClick={() => scrollToTop()}
                 >
-              <div className={cx('img-wrap')}>
+                  <div className={cx('img-wrap')}>
                     <img 
                       src={getProductImage(p)} 
                       alt={p.name}
@@ -144,12 +167,16 @@ function Promo() {
                         e.target.src = image1;
                       }}
                     />
-                <span className={cx('freeship')}>HOT DEAL</span>
-              </div>
-              <div className={cx('info')}>
-                <h4>{p.name}</h4>
-                    <p className={cx('desc')}>{p.description || 'Sản phẩm chất lượng cao'}</p>
-                <div className={cx('price-section')}>
+                    <span className={cx('freeship')}>HOT DEAL</span>
+                  </div>
+                  <div className={cx('info')}>
+                    <h4 className={cx('name')}>{p.name}</h4>
+                    <p className={cx('desc')} title={p.description}>
+                      {p.description
+                        ? `${p.description.slice(0, 80)}${p.description.length > 80 ? '…' : ''}`
+                        : 'Sản phẩm chất lượng cao'}
+                    </p>
+                    <div className={cx('price-section')}>
                       {discountPercent ? (
                         <>
                           <span className={cx('old-price')}>{formatPrice(originalPrice)}</span>
@@ -159,8 +186,8 @@ function Promo() {
                       ) : (
                         <span className={cx('price')}>{formatPrice(p.price)}</span>
                       )}
-                </div>
-              </div>
+                    </div>
+                  </div>
                 </Link>
               );
             })}

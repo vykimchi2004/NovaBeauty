@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from '../Categories/Makeup/Category.module.scss';
@@ -22,13 +22,16 @@ const PRICE_RANGES = [
 function Products() {
   const [searchParams] = useSearchParams();
   const categoryId = searchParams.get('category');
+  const brandParam = searchParams.get('brand');
+  const headingParam = searchParams.get('heading');
   const [allProducts, setAllProducts] = useState([]); // Tất cả products từ API
   const [products, setProducts] = useState([]); // Products sau khi filter
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState([]);
   const [selectedPriceRanges, setSelectedPriceRanges] = useState([]); // Các price ranges được chọn
-  const [selectedBrands, setSelectedBrands] = useState([]); // Các brands được chọn
+  const [selectedBrands, setSelectedBrands] = useState(() => (brandParam ? [brandParam] : [])); // Các brands được chọn
   const [brandSearchTerm, setBrandSearchTerm] = useState(''); // Từ khóa tìm kiếm brand
+  const brandParamRef = useRef(brandParam);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -103,6 +106,12 @@ function Products() {
     setProducts(filtered);
   }, [allProducts, selectedPriceRanges, selectedBrands]);
 
+  useEffect(() => {
+    if (brandParamRef.current === brandParam) return;
+    brandParamRef.current = brandParam;
+    setSelectedBrands(brandParam ? [brandParam] : []);
+  }, [brandParam]);
+
   const formatPrice = (price) => {
     const safePrice = Number(price) || 0;
     return (
@@ -112,6 +121,28 @@ function Products() {
       }).format(safePrice) + ' ₫'
     );
   };
+
+  const selectedCategoryName = useMemo(() => {
+    if (!categoryId) return null;
+    const category = categories.find((c) => c.id === categoryId);
+    return category?.name || null;
+  }, [categories, categoryId]);
+
+  const primaryBrand = useMemo(() => {
+    if (brandParam) return brandParam;
+    if (selectedBrands.length === 1) return selectedBrands[0];
+    return null;
+  }, [brandParam, selectedBrands]);
+
+  const pageTitle = useMemo(() => {
+    if (headingParam) return headingParam;
+    if (selectedCategoryName && primaryBrand) {
+      return `${selectedCategoryName} • ${primaryBrand}`;
+    }
+    if (selectedCategoryName) return selectedCategoryName;
+    if (primaryBrand) return `Thương hiệu: ${primaryBrand}`;
+    return 'Tất cả sản phẩm';
+  }, [selectedCategoryName, primaryBrand]);
 
   // Calculate discount percentage from promotion
   const calculateDiscountPercentage = (product) => {
@@ -260,11 +291,7 @@ function Products() {
       </aside>
       {/* Content: all products grid */}
       <div className={cx('content')}>
-        <h1 className={cx('title')}>
-          {categoryId 
-            ? categories.find(c => c.id === categoryId)?.name || 'Sản phẩm'
-            : 'Tất cả sản phẩm'}
-        </h1>
+        <h1 className={cx('title')}>{pageTitle}</h1>
         {loading ? (
           <div className={cx('loading')}>Đang tải sản phẩm...</div>
         ) : products.length === 0 ? (
@@ -274,15 +301,14 @@ function Products() {
             {products.map((p) => (
               <Link key={p.id} to={`/product/${p.id}`} className={cx('product-card')} onClick={() => scrollToTop()}>
                 <div className={cx('img-wrap')}>
-                  <img 
-                    src={getProductImage(p)} 
+                  <img
+                    src={getProductImage(p)}
                     alt={p.name}
                     onError={(e) => {
                       e.target.onerror = null;
                       e.target.src = image1;
                     }}
                   />
-                  <span className={cx('freeship')}>FREESHIP</span>
                 </div>
                 <div className={cx('info')}>
                   <h4>{p.name}</h4>

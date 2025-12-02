@@ -190,11 +190,9 @@ function HotPromotions() {
     return productImg;
   };
 
-  const showCarousel = products.length > 5;
-
   useEffect(() => {
     const track = trackRef.current;
-    if (!track || !showCarousel) {
+    if (!track) {
       setCanScrollLeft(false);
       setCanScrollRight(false);
       return;
@@ -212,7 +210,7 @@ function HotPromotions() {
       track.removeEventListener('scroll', check);
       window.removeEventListener('resize', check);
     };
-  }, [showCarousel, products.length]);
+  }, [products.length]);
 
   const scrollBy = (dir = 1) => {
     const track = trackRef.current;
@@ -237,77 +235,17 @@ function HotPromotions() {
           </h2>
         </div>
 
-        {showCarousel ? (
-          <div className={cx('carousel')}>
-            <button
-              className={cx('arrow', 'left')}
-              onClick={() => scrollBy(-1)}
-              disabled={!canScrollLeft}
-              aria-label="Previous products"
-            >
-              &#10094;
-            </button>
+        <div className={cx('carousel')}>
+          <button
+            className={cx('arrow', 'left')}
+            onClick={() => scrollBy(-1)}
+            disabled={!canScrollLeft}
+            aria-label="Previous products"
+          >
+            &#10094;
+          </button>
 
-            <div className={cx('track')} ref={trackRef}>
-              {loading ? (
-                <div className={cx('loading')}>Đang tải...</div>
-              ) : products.length === 0 ? (
-                <div className={cx('empty')}>Chưa có sản phẩm khuyến mãi</div>
-              ) : (
-                products.map((p) => {
-                  const discountPercent = calculateDiscountPercentage(p);
-                  const originalPrice = (p.price || 0) + (p.discountValue || 0);
-                  return (
-                    <div key={p.id} className={cx('card-wrapper')}>
-                      <Link to={`/product/${p.id}`} className={cx('card')} onClick={() => scrollToTop()}>
-                        <div className={cx('img-wrap')}>
-                          <img 
-                            src={getProductImage(p)} 
-                            alt={p.name}
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = productImg;
-                            }}
-                          />
-                          <span className={cx('hot-badge')}>HOT DEAL</span>
-                        </div>
-                        <div className={cx('info')}>
-                          <h4 className={cx('name')}>{p.name}</h4>
-                          <p className={cx('desc')}>{p.description || 'Sản phẩm chất lượng cao'}</p>
-                          <div className={cx('price-section')}>
-                            {discountPercent ? (
-                              <>
-                                <span className={cx('old-price')}>
-                                  {formatPrice(originalPrice)}
-                                </span>
-                                <span className={cx('price')}>{formatPrice(p.price)}</span>
-                                <span className={cx('discount')}>
-                                  -{discountPercent}%
-                                </span>
-                              </>
-                            ) : (
-                              <span className={cx('price')}>{formatPrice(p.price)}</span>
-                            )}
-                          </div>
-                        </div>
-                      </Link>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            <button
-              className={cx('arrow', 'right')}
-              onClick={() => scrollBy(1)}
-              disabled={!canScrollRight}
-              aria-label="Next products"
-            >
-              &#10095;
-            </button>
-          </div>
-        ) : (
-          <div className={cx('grid')}>
+          <div className={cx('track')} ref={trackRef}>
             {loading ? (
               <div className={cx('loading')}>Đang tải...</div>
             ) : products.length === 0 ? (
@@ -317,43 +255,62 @@ function HotPromotions() {
                 const discountPercent = calculateDiscountPercentage(p);
                 const originalPrice = (p.price || 0) + (p.discountValue || 0);
                 return (
-                  <Link key={p.id} to={`/product/${p.id}`} className={cx('card')} onClick={() => scrollToTop()}>
-                    <div className={cx('img-wrap')}>
-                      <img 
-                        src={getProductImage(p)} 
-                        alt={p.name}
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = productImg;
-                        }}
-                      />
-                      <span className={cx('hot-badge')}>HOT DEAL</span>
-                    </div>
-                    <div className={cx('info')}>
-                      <h4 className={cx('name')}>{p.name}</h4>
-                      <p className={cx('desc')}>{p.description || 'Sản phẩm chất lượng cao'}</p>
-                      <div className={cx('price-section')}>
-                        {discountPercent ? (
-                          <>
-                            <span className={cx('old-price')}>
-                              {formatPrice(originalPrice)}
-                            </span>
-                            <span className={cx('price')}>{formatPrice(p.price)}</span>
-                            <span className={cx('discount')}>
-                              -{discountPercent}%
-                            </span>
-                          </>
-                        ) : (
-                          <span className={cx('price')}>{formatPrice(p.price)}</span>
-                        )}
+                  <div key={p.id} className={cx('card-wrapper')}>
+                    <Link to={`/product/${p.id}`} className={cx('card')} onClick={() => scrollToTop()}>
+                      <div className={cx('img-wrap')}>
+                        <img
+                          src={getProductImage(p)}
+                          alt={p.name}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = productImg;
+                          }}
+                        />
+                        <span className={cx('hot-badge')}>HOT DEAL</span>
                       </div>
-                    </div>
-                  </Link>
+                      <div className={cx('info')}>
+                        <h4 className={cx('name')}>{p.name}</h4>
+                        <p className={cx('desc')} title={p.description}>
+                          {p.description ? `${p.description.slice(0, 70)}${p.description.length > 70 ? '…' : ''}` : 'Sản phẩm chất lượng cao'}
+                        </p>
+                        <div className={cx('price-section')}>
+                          {discountPercent ? (
+                            <>
+                              <span className={cx('old-price')}>
+                                {formatPrice(originalPrice)}
+                              </span>
+                              <span className={cx('price')}>{formatPrice(p.price)}</span>
+                              <span className={cx('discount')}>
+                                -{discountPercent}%
+                              </span>
+                            </>
+                          ) : (
+                            <span className={cx('price')}>{formatPrice(p.price)}</span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  </div>
                 );
               })
             )}
           </div>
-        )}
+
+          <button
+            className={cx('arrow', 'right')}
+            onClick={() => scrollBy(1)}
+            disabled={!canScrollRight}
+            aria-label="Next products"
+          >
+            &#10095;
+          </button>
+        </div>
+
+        <div className={cx('controls')}>
+          <Link to="/promo" className={cx('viewAll')} onClick={() => scrollToTop()}>
+            Xem tất cả
+          </Link>
+        </div>
       </div>
     </section>
   );

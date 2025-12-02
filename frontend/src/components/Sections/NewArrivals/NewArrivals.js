@@ -151,7 +151,6 @@ function NewArrivals() {
                             e.target.src = productImg;
                           }}
                         />
-                        <span className={cx('freeship')}>FREESHIP</span>
                       </div>
                       <div className={cx('info')}>
                         <h4 className={cx('name')}>{p.name}</h4>
@@ -210,7 +209,6 @@ function NewArrivals() {
                         e.target.src = productImg;
                       }}
                     />
-                    <span className={cx('freeship')}>FREESHIP</span>
                   </div>
                   <div className={cx('info')}>
                     <h4 className={cx('name')}>{p.name}</h4>

@@ -69,15 +69,21 @@ public class CartService {
     @Transactional
     @PreAuthorize("hasRole('CUSTOMER')")
     public Cart addItem(String productId, int quantity, String colorCode) {
-        if (quantity <= 0) {
-            throw new AppException(ErrorCode.OUT_OF_STOCK);
-        }
-
         Cart cart = getOrCreateCartForCurrentCustomer();
 
         Product product = productRepository
                 .findById(productId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
+
+        // Kiểm tra product status - chỉ cho phép thêm sản phẩm đã được duyệt
+        if (product.getStatus() != com.nova_beauty.backend.enums.ProductStatus.APPROVED) {
+            throw new AppException(ErrorCode.PRODUCT_NOT_EXISTED);
+        }
+
+        // Kiểm tra product price - phải có giá và > 0
+        if (product.getPrice() == null || product.getPrice() <= 0) {
+            throw new AppException(ErrorCode.PRODUCT_NOT_EXISTED);
+        }
 
         // Tìm cartItem theo productId và colorCode (nếu có)
         CartItem cartItem = null;
@@ -96,8 +102,8 @@ public class CartService {
                     .orElse(null);
         }
 
-        // Nếu quantity âm và không có item, không làm gì
-        if (quantity < 0 && cartItem == null) {
+        // Nếu quantity <= 0 và không có item, không làm gì (cho phép quantity âm để giảm/xóa item đã có)
+        if (quantity <= 0 && cartItem == null) {
             return cart;
         }
 
@@ -176,10 +182,88 @@ public class CartService {
         // Làm tròn subtotal về đơn vị đồng
         subtotal = Math.round(subtotal);
         cart.setSubtotal(subtotal);
-        double voucherDiscount = cart.getVoucherDiscount() != null ? cart.getVoucherDiscount() : 0.0;
+        
+        // Nếu có voucher đang được áp dụng, tính lại voucher discount dựa trên subtotal mới
+        double voucherDiscount = 0.0;
+        if (cart.getAppliedVoucherCode() != null && !cart.getAppliedVoucherCode().isEmpty()) {
+            voucherDiscount = recalculateVoucherDiscount(cart, subtotal);
+            cart.setVoucherDiscount(voucherDiscount);
+        } else {
+            // Nếu không có voucher, set voucherDiscount về 0
+            cart.setVoucherDiscount(0.0);
+        }
+        
         double total = Math.max(0.0, subtotal - voucherDiscount);
         cart.setTotalAmount(total);
         cartRepository.save(cart);
+    }
+    
+    // Tính lại voucher discount khi số lượng sản phẩm thay đổi
+    private double recalculateVoucherDiscount(Cart cart, double subtotal) {
+        try {
+            // Lấy voucher từ database
+            var voucher = voucherRepository.findByCode(cart.getAppliedVoucherCode())
+                    .orElse(null);
+            
+            // Nếu voucher không tồn tại hoặc không active, xóa voucher khỏi cart
+            if (voucher == null || !voucher.getIsActive() || voucher.getStatus() != com.nova_beauty.backend.enums.VoucherStatus.APPROVED) {
+                cart.setAppliedVoucherCode(null);
+                return 0.0;
+            }
+            
+            // Kiểm tra voucher còn hiệu lực không
+            LocalDate today = LocalDate.now();
+            if ((voucher.getStartDate() != null && today.isBefore(voucher.getStartDate()))
+                    || (voucher.getExpiryDate() != null && today.isAfter(voucher.getExpiryDate()))) {
+                cart.setAppliedVoucherCode(null);
+                return 0.0;
+            }
+            
+            // Refresh cart để đảm bảo cartItems được load
+            cart = cartRepository.findById(cart.getId()).orElse(cart);
+            // Force load cartItems
+            if (cart.getCartItems() != null) {
+                cart.getCartItems().size(); // Trigger lazy loading
+            }
+            
+            // Tính tổng giá trị đơn hàng có thể áp dụng voucher
+            double applicableSubtotal = calculateApplicableSubtotal(cart, voucher);
+            
+            // Kiểm tra minOrderValue
+            if (voucher.getMinOrderValue() != null && voucher.getMinOrderValue() > 0 
+                    && applicableSubtotal < voucher.getMinOrderValue()) {
+                // Nếu không đủ điều kiện, xóa voucher khỏi cart
+                cart.setAppliedVoucherCode(null);
+                return 0.0;
+            }
+            
+            // Tính giá trị giảm giá dựa trên loại giảm giá của voucher
+            double discountValue = voucher.getDiscountValue();
+            double discount;
+            if (voucher.getDiscountValueType() == DiscountValueType.PERCENTAGE) {
+                discount = applicableSubtotal * (discountValue / 100.0);
+            } else {
+                discount = discountValue;
+            }
+            
+            // Áp dụng maxDiscountValue nếu có
+            if (voucher.getMaxDiscountValue() != null && voucher.getMaxDiscountValue() > 0) {
+                discount = Math.min(discount, voucher.getMaxDiscountValue());
+            }
+            
+            // Giới hạn discount không được vượt quá giá trị đơn hàng
+            if (voucher.getApplyScope() == null || voucher.getApplyScope() == DiscountApplyScope.ORDER) {
+                discount = Math.min(discount, subtotal);
+            } else {
+                discount = Math.min(discount, applicableSubtotal);
+            }
+            
+            return discount;
+        } catch (Exception e) {
+            // Nếu có lỗi, xóa voucher khỏi cart và trả về 0
+            cart.setAppliedVoucherCode(null);
+            return 0.0;
+        }
     }
 
     @Transactional
@@ -237,6 +321,9 @@ public class CartService {
             throw new AppException(ErrorCode.INVALID_VOUCHER_MINIUM);
         }
 
+        // Lấy tổng giá trị đơn hàng để tính toán cuối cùng
+        double fullSubtotal = cart.getSubtotal();
+        
         // Tính giá trị giảm giá dựa trên loại giảm giá của voucher
         double discountValue = voucher.getDiscountValue();
         double discount;
@@ -251,11 +338,16 @@ public class CartService {
             discount = Math.min(discount, voucher.getMaxDiscountValue());
         }
         
-        // Nếu giá trị giảm giá vượt quá giá trị đơn hàng có thể áp dụng voucher, set giá trị giảm giá tối đa của voucher
-        discount = Math.min(discount, applicableSubtotal);
-        
-        // Lấy tổng giá trị đơn hàng để tính toán cuối cùng
-        double fullSubtotal = cart.getSubtotal();
+        // Giới hạn discount không được vượt quá giá trị đơn hàng
+        // Nếu voucher áp dụng cho toàn bộ đơn hàng (ORDER), giới hạn bởi fullSubtotal để đảm bảo maxDiscountValue được áp dụng đúng
+        // Nếu voucher áp dụng cho sản phẩm/category cụ thể, giới hạn bởi applicableSubtotal
+        if (voucher.getApplyScope() == null || voucher.getApplyScope() == DiscountApplyScope.ORDER) {
+            // Với voucher áp dụng cho toàn bộ đơn hàng, giới hạn bởi fullSubtotal để đảm bảo maxDiscountValue được áp dụng đúng
+            discount = Math.min(discount, fullSubtotal);
+        } else {
+            // Với voucher áp dụng cho sản phẩm/category cụ thể, giới hạn bởi applicableSubtotal
+            discount = Math.min(discount, applicableSubtotal);
+        }
 
         cart.setAppliedVoucherCode(voucher.getCode());
         cart.setVoucherDiscount(discount);
@@ -301,10 +393,6 @@ public class CartService {
     @Transactional
     @PreAuthorize("hasRole('CUSTOMER')")
     public Cart updateCartItemQuantity(String cartItemId, int quantity) {
-        if (quantity <= 0) {
-            throw new AppException(ErrorCode.OUT_OF_STOCK);
-        }
-
         Cart cart = getOrCreateCartForCurrentCustomer();
         CartItem cartItem = cartItemRepository.findById(cartItemId)
                 .orElseThrow(() -> new AppException(ErrorCode.CART_ITEM_NOT_EXISTED));
@@ -314,11 +402,18 @@ public class CartService {
             throw new AppException(ErrorCode.CART_ITEM_NOT_EXISTED);
         }
 
-        cartItem.setQuantity(quantity);
-        double finalPrice = cartItem.getQuantity() * cartItem.getUnitPrice();
-        cartItem.setFinalPrice(finalPrice);
+        // Nếu quantity <= 0, xóa item thay vì throw error
+        if (quantity <= 0) {
+            cartItemRepository.delete(cartItem);
+            cartRepository.flush();
+            cart = cartRepository.findById(cart.getId()).orElse(cart);
+        } else {
+            cartItem.setQuantity(quantity);
+            double finalPrice = cartItem.getQuantity() * cartItem.getUnitPrice();
+            cartItem.setFinalPrice(finalPrice);
+            cartItemRepository.save(cartItem);
+        }
 
-        cartItemRepository.save(cartItem);
         recalcCartTotals(cart);
         return cart;
     }

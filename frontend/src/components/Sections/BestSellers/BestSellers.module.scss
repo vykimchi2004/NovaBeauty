@@ -117,28 +117,15 @@
 }
 
 .slide {
-  min-width: 240px;
-  max-width: 280px;
+  width: 240px;
   flex: 0 0 auto;
-  width: calc(25% - 21px); // Hiển thị 4 sản phẩm cùng lúc trên desktop
-  
-  @media (max-width: 1200px) {
-    width: calc(33.333% - 19px); // 3 sản phẩm trên tablet lớn
-  }
-  
+
   @media (max-width: 992px) {
-    width: calc(33.333% - 14px); // 3 sản phẩm trên tablet
+    width: 200px;
   }
-  
-  @media (max-width: 768px) {
-    width: calc(50% - 8px); // 2 sản phẩm trên mobile
-    min-width: 160px;
-    max-width: none;
-  }
-  
+
   @media (max-width: 480px) {
-    width: calc(50% - 8px); // 2 sản phẩm trên mobile nhỏ
-    min-width: 150px;
+    width: 180px;
   }
 }
 
@@ -223,17 +210,6 @@
   transition: transform 0.4s ease;
 }
 
-.freeship {
-  position: absolute;
-  bottom: 8px;
-  left: 8px;
-  background: #ff80b5;
-  color: #fff;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 8px;
-  font-size: 12px;
-}
 
 .info {
   padding: 12px;
