@@ -25,11 +25,24 @@ function VoucherFormModal({
 }) {
   // Hooks must be called before early return
   const [productDropdownOpen, setProductDropdownOpen] = useState(false);
+  const [productSearchTerm, setProductSearchTerm] = useState('');
   const toggleProductDropdown = () => setProductDropdownOpen((prev) => !prev);
   const previewLabel = useMemo(() => {
     if (formData.productIds?.length === 0) return 'Chọn sản phẩm';
     return `Đã chọn ${formData.productIds?.length || 0} sản phẩm`;
   }, [formData.productIds?.length]);
+
+  const filteredProducts = useMemo(() => {
+    if (!productSearchTerm) return products.slice(0, 50);
+    const searchLower = productSearchTerm.toLowerCase();
+    return products.filter(p => 
+      p.name?.toLowerCase().includes(searchLower)
+    ).slice(0, 50);
+  }, [products, productSearchTerm]);
+
+  const selectedProducts = useMemo(() => {
+    return products.filter(p => formData.productIds?.includes(p.id));
+  }, [products, formData.productIds]);
 
   if (!open) return null;
 
@@ -77,19 +90,6 @@ function VoucherFormModal({
               <small className={cx('helperText')} style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
                 Chỉ được nhập chữ hoa, số, dấu gạch ngang (-) và gạch dưới (_)
               </small>
-            </div>
-          </div>
-
-          <div className={cx('formRow')}>
-            <div className={cx('formGroup')}>
-              <label>Loại giảm giá</label>
-              <select
-                value={formData.discountValueType}
-                onChange={(e) => onChange('discountValueType', e.target.value)}
-              >
-                <option value="PERCENTAGE">Phần trăm</option>
-                <option value="AMOUNT">Số tiền</option>
-              </select>
             </div>
           </div>
 
@@ -167,26 +167,69 @@ function VoucherFormModal({
             {formErrors.imageUrl && <span className={cx('errorText')}>{formErrors.imageUrl}</span>}
           </div>
 
+          <div className={cx('formGroup')}>
+            <label>Loại giảm giá *</label>
+            <div className={cx('scopeToggle')}>
+              <button
+                type="button"
+                className={cx({ active: formData.discountValueType === 'PERCENTAGE' })}
+                onClick={() => onChange('discountValueType', 'PERCENTAGE')}
+              >
+                Theo %
+              </button>
+              <button
+                type="button"
+                className={cx({ active: formData.discountValueType === 'AMOUNT' })}
+                onClick={() => onChange('discountValueType', 'AMOUNT')}
+              >
+                Theo số tiền
+              </button>
+            </div>
+          </div>
+
           <div className={cx('formRow')}>
             <div className={cx('formGroup', { error: formErrors.discountValue })}>
-              <label>Giảm giá (%) *</label>
+              <label>
+                {formData.discountValueType === 'AMOUNT' ? 'Giảm giá (đồng) *' : 'Giảm giá (%) *'}
+              </label>
               <input
                 type="number"
                 min="0"
-                max="100"
+                step="1"
+                max={formData.discountValueType === 'PERCENTAGE' ? 100 : undefined}
                 value={formData.discountValue}
                 onChange={(e) => onChange('discountValue', e.target.value)}
+                placeholder={
+                  formData.discountValueType === 'AMOUNT'
+                    ? 'Nhập số tiền giảm'
+                    : 'Nhập phần trăm giảm giá'
+                }
               />
               {formErrors.discountValue && <span className={cx('errorText')}>{formErrors.discountValue}</span>}
             </div>
-            <div className={cx('formGroup')}>
-              <label>Giảm tối đa</label>
+
+            <div
+              className={cx('formGroup', {
+                error: formErrors.maxDiscountValue,
+                disabledField: formData.discountValueType !== 'PERCENTAGE',
+              })}
+            >
+              <label>
+                Mức giảm tối đa
+                {formData.discountValueType === 'PERCENTAGE' && ' *'}
+              </label>
               <input
                 type="number"
                 min="0"
+                step="1"
                 value={formData.maxDiscountValue}
                 onChange={(e) => onChange('maxDiscountValue', e.target.value)}
+                placeholder="Nhập số tiền tối đa"
+                disabled={formData.discountValueType !== 'PERCENTAGE'}
               />
+              {formErrors.maxDiscountValue && (
+                <span className={cx('errorText')}>{formErrors.maxDiscountValue}</span>
+              )}
             </div>
           </div>
 
@@ -264,30 +307,78 @@ function VoucherFormModal({
           {formData.applyScope === 'PRODUCT' && (
             <div className={cx('formGroup', { error: formErrors.productIds })}>
               <label>Sản phẩm áp dụng *</label>
+              
+              {/* Selected products display */}
+              {selectedProducts.length > 0 && (
+                <div className={cx('selectedProducts')}>
+                  <div className={cx('selectedHeader')}>
+                    <span>Đã chọn ({selectedProducts.length}):</span>
+                  </div>
+                  <div className={cx('selectedList')}>
+                    {selectedProducts.map((prod) => (
+                      <div key={prod.id} className={cx('selectedItem')}>
+                        <span>{prod.name}</span>
+                        <button
+                          type="button"
+                          className={cx('removeSelected')}
+                          onClick={() => onToggleProduct(prod.id)}
+                          aria-label="Xóa"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Product selector */}
               <div className={cx('dropdownSelect', { open: productDropdownOpen })}>
                 <button
                   type="button"
                   className={cx('dropdownToggle')}
                   onClick={toggleProductDropdown}
                 >
-                  <span className={cx('dropdownLabel')}>{previewLabel}</span>
+                  <span className={cx('dropdownLabel')}>
+                    {productDropdownOpen ? 'Đóng danh sách' : previewLabel}
+                  </span>
                   <span className={cx('chevron', { open: productDropdownOpen })}>⌄</span>
                 </button>
                 {productDropdownOpen && (
                   <div className={cx('dropdownMenu')}>
-                    {products.slice(0, 50).map((prod) => (
-                      <label key={prod.id}>
-                        <input
-                          type="checkbox"
-                          checked={formData.productIds?.includes(prod.id)}
-                          onChange={() => onToggleProduct(prod.id)}
-                        />
-                        <span>{prod.name}</span>
-                      </label>
-                    ))}
-                    {products.length === 0 && (
-                      <div className={cx('helperText')}>Không có sản phẩm.</div>
-                    )}
+                    {/* Search box */}
+                    <div className={cx('productSearch')}>
+                      <input
+                        type="text"
+                        placeholder="Tìm kiếm sản phẩm..."
+                        value={productSearchTerm}
+                        onChange={(e) => setProductSearchTerm(e.target.value)}
+                        className={cx('searchInput')}
+                      />
+                    </div>
+                    
+                    {/* Product list */}
+                    <div className={cx('productList')}>
+                      {filteredProducts.length > 0 ? (
+                        filteredProducts.map((prod) => {
+                          const isSelected = formData.productIds?.includes(prod.id);
+                          return (
+                            <label key={prod.id} className={cx('productCheckbox', { selected: isSelected })}>
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => onToggleProduct(prod.id)}
+                              />
+                              <span>{prod.name}</span>
+                            </label>
+                          );
+                        })
+                      ) : (
+                        <div className={cx('emptyState')}>
+                          {productSearchTerm ? 'Không tìm thấy sản phẩm' : 'Không có sản phẩm'}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

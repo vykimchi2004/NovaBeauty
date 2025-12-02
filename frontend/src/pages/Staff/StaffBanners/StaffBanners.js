@@ -48,10 +48,14 @@ function StaffBanners() {
     openEditBanner,
     closeBannerModal,
     handleBannerFormChange,
+    handleTargetTypeChange,
     handleBannerImageChange,
     submitBanner,
-    toggleBannerProduct,
-    products,
+    handleBannerCategorySelect,
+    handleBannerBrandSelect,
+    categories,
+    brandOptions,
+    loadingCategories,
   } = useStaffBannersState();
 
   const formatDate = (dateString) => {
@@ -220,12 +224,16 @@ function StaffBanners() {
         formErrors={bannerErrors}
         previewUrl={bannerImagePreview}
         uploadingImage={uploadingBannerImage}
-        products={products}
+        categories={categories}
+        brandOptions={brandOptions}
+        loadingCategories={loadingCategories}
         onClose={closeBannerModal}
         onChange={handleBannerFormChange}
         onSubmit={submitBanner}
         onFileChange={handleBannerImageChange}
-        onToggleProduct={toggleBannerProduct}
+        onSelectCategory={handleBannerCategorySelect}
+        onSelectBrand={handleBannerBrandSelect}
+        onSelectTargetType={handleTargetTypeChange}
       />
 
       {/* Detail Modal */}

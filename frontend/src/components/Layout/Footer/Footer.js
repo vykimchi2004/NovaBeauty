@@ -5,6 +5,8 @@ import { faPhone, faEnvelope, faMapMarkerAlt } from "@fortawesome/free-solid-svg
 import { faInstagram, faFacebookF, faYoutube, faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { Link } from "react-router-dom";
 import { scrollToTop } from "~/services/utils";
+import { useEffect, useState } from "react";
+import { getRootCategories } from "~/services/category";
 
 const cx = classNames.bind(styles);
 
@@ -15,6 +17,23 @@ const handleScrollToTop = () => {
 };
 
 function Footer() {
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await getRootCategories();
+        const activeCategories = (data || []).filter(cat => cat.status !== false);
+        setCategories(activeCategories);
+      } catch (error) {
+        console.error('Error fetching categories for footer:', error);
+        setCategories([]);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
   return (
     <footer className={cx("wrapper")}>
       <div className={cx("inner")}>
@@ -47,11 +66,19 @@ function Footer() {
         <div className={cx("col")}>
           <h4>DANH MỤC</h4>
           <div className={cx('links-list')}>
-            <Link to='/makeup' onClick={handleScrollToTop}>Trang điểm</Link>
-            <Link to='/skincare' onClick={handleScrollToTop}>Chăm sóc da</Link>
-            <Link to='/personal-care' onClick={handleScrollToTop}>Chăm sóc cơ thể</Link>
-            <Link to='/haircare' onClick={handleScrollToTop}>Chăm sóc tóc</Link>
-            <Link to='/perfume' onClick={handleScrollToTop}>Tool & Brushes</Link>
+            {categories.length === 0 ? (
+              <span>Danh mục đang được cập nhật...</span>
+            ) : (
+              categories.map((category) => (
+                <Link
+                  key={category.id}
+                  to={`/products?category=${category.id}`}
+                  onClick={handleScrollToTop}
+                >
+                  {category.name}
+                </Link>
+              ))
+            )}
           </div>
         </div>
 

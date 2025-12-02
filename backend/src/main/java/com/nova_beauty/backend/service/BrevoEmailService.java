@@ -205,6 +205,70 @@ public class BrevoEmailService {
         }
     }
 
+    public void sendProfileUpdatedEmail(String toEmail, String userName, String roleName) {
+        if (toEmail == null || toEmail.isBlank()) {
+            return;
+        }
+
+        try {
+            log.info("Sending profile updated notification email via Brevo API to: {}", toEmail);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("api-key", apiKey);
+
+            String roleDisplayName = "Người dùng";
+            if (roleName != null) {
+                switch (roleName.toUpperCase()) {
+                    case "STAFF":
+                        roleDisplayName = "Nhân viên";
+                        break;
+                    case "CUSTOMER_SUPPORT":
+                        roleDisplayName = "Nhân viên chăm sóc khách hàng";
+                        break;
+                    case "CUSTOMER":
+                        roleDisplayName = "Khách hàng";
+                        break;
+                    default:
+                        roleDisplayName = "Người dùng";
+                }
+            }
+
+            String emailContent = String.format(
+                    "Xin chào %s,\n\n"
+                            + "Thông tin tài khoản %s của bạn tại NovaBeauty vừa được quản trị viên cập nhật.\n"
+                            + "Nếu bạn không yêu cầu thay đổi này, vui lòng liên hệ với chúng tôi để được hỗ trợ.\n\n"
+                            + "Trân trọng,\n"
+                            + "Đội ngũ NovaBeauty",
+                    userName != null && !userName.isBlank() ? userName : "Quý khách",
+                    roleDisplayName);
+
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("sender", Map.of("email", senderEmail, "name", "NovaBeauty Admin"));
+            requestBody.put("to", new Object[] {Map.of("email", toEmail, "name", userName != null ? userName : "User")});
+            requestBody.put("subject", "Thông báo cập nhật tài khoản - NovaBeauty");
+            requestBody.put("textContent", emailContent);
+            requestBody.put("htmlContent", emailContent.replace("\n", "<br>"));
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+
+            @SuppressWarnings("rawtypes")
+            ResponseEntity<Map> response = restTemplate.postForEntity(BREVO_API_URL, request, Map.class);
+
+            if (response.getStatusCode() == HttpStatus.CREATED) {
+                log.info("Profile updated notification email sent to {}", toEmail);
+            } else {
+                log.error("Failed to send profile updated email via Brevo API. Status: {}", response.getStatusCode());
+            }
+        } catch (Exception e) {
+            log.error(
+                    "Failed to send profile updated email via Brevo API to: {} - Error: {}",
+                    toEmail,
+                    e.getMessage(),
+                    e);
+        }
+    }
+
     public void sendOrderConfirmationEmail(Order order) {
         if (order == null || order.getUser() == null || order.getUser().getEmail() == null) {
             return;

@@ -5,7 +5,7 @@
 }
 
 .codeCell {
-  font-family: monospace;
+  font-family: 'Inter', sans-serif;
   font-weight: 600;
   color: #e5677d;
 }
@@ -185,19 +185,6 @@
   color: #ff80b5;
   border-bottom-color: #ff80b5;
   font-weight: 600;
-}
-
-.tableHeader {
-  margin-bottom: 16px;
-  padding: 12px 0;
-  border-bottom: 2px solid #e9ecef;
-
-  h3 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: #212529;
-  }
 }
 
 .typeBadge {

@@ -8,9 +8,6 @@ import { getActiveProducts } from '~/services/product';
 
 const cx = classNames.bind(styles);
 
-// Luôn dùng grid layout, không dùng carousel
-const USE_CAROUSEL = false;
-
 function BestSellers() {
   console.log('BestSellers component is rendering!');
   const [products, setProducts] = useState([]);
@@ -52,8 +49,6 @@ function BestSellers() {
     fetchProducts();
   }, []);
 
-  const isCarousel = USE_CAROUSEL && products.length > 20;
-
   const formatPrice = (price) => {
     if (price === null || price === undefined || price === '') return '0 ₫';
     const value = Math.round(Number(price) || 0);
@@ -91,8 +86,7 @@ function BestSellers() {
 
   useEffect(() => {
     const track = trackRef.current;
-    if (!track || !isCarousel) {
-      // if no track (carousel not mounted), reset scroll state
+    if (!track) {
       setCanScrollLeft(false);
       setCanScrollRight(false);
       return;
@@ -110,7 +104,7 @@ function BestSellers() {
       track.removeEventListener('scroll', check);
       window.removeEventListener('resize', check);
     };
-  }, [isCarousel, products.length]);
+  }, [products.length]);
 
   const scrollBy = (dir = 1) => {
     const track = trackRef.current;
@@ -130,131 +124,77 @@ function BestSellers() {
           </h2>
         </div>
 
-        {isCarousel ? (
-          <div className={cx('carousel')}>
-            <button
-              className={cx('arrow', 'left')}
-              onClick={() => scrollBy(-1)}
-              disabled={!canScrollLeft}
-              aria-label="Previous products"
-            >
-              &#10094;
-            </button>
+        <div className={cx('carousel')}>
+          <button
+            className={cx('arrow', 'left')}
+            onClick={() => scrollBy(-1)}
+            disabled={!canScrollLeft}
+            aria-label="Previous products"
+          >
+            &#10094;
+          </button>
 
-            <div className={cx('track')} ref={trackRef}>
-              {loading ? (
-                <div className={cx('loading')}>Đang tải...</div>
-              ) : products.length === 0 ? (
-                <div className={cx('empty')}>Chưa có sản phẩm nào</div>
-              ) : (
-                products.slice(0, 4).map((p) => (
-                  <div key={p.id} className={cx('slide')}>
-                    <Link to={`/product/${p.id}`} className={cx('card')} onClick={() => scrollToTop()}>
-                      <div className={cx('img-wrap')}>
-                        <img 
-                          src={getProductImage(p)} 
-                          alt={p.name}
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = productImg;
-                          }}
-                        />
-                        <span className={cx('freeship')}>FREESHIP</span>
-                      </div>
-                      <div className={cx('info')}>
-                        <h4 className={cx('name')}>{p.name}</h4>
-                        <p className={cx('desc')}>{p.description || 'Sản phẩm chất lượng cao'}</p>
-                        <div className={cx('price-section')}>
-                          {(() => {
-                            if (!p || !p.id) {
-                              return <span className={cx('price')}>{formatPrice(p?.price)}</span>;
-                            }
-                            const discountPercent = calculateDiscountPercentage(p);
-                            if (!discountPercent) {
-                              return <span className={cx('price')}>{formatPrice(p?.price)}</span>;
-                            }
-                            const originalPrice = (p.price || 0) + (p.discountValue || 0);
-                            return (
-                              <>
-                                <span className={cx('old-price')}>
-                                  {formatPrice(originalPrice)}
-                                </span>
-                                <span className={cx('price')}>{formatPrice(p?.price)}</span>
-                                <span className={cx('discount')}>
-                                  -{discountPercent}%
-                                </span>
-                              </>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                    </Link>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <button
-              className={cx('arrow', 'right')}
-              onClick={() => scrollBy(1)}
-              disabled={!canScrollRight}
-              aria-label="Next products"
-            >
-              &#10095;
-            </button>
-          </div>
-        ) : (
-          <div className={cx('grid')}>
+          <div className={cx('track')} ref={trackRef}>
             {loading ? (
               <div className={cx('loading')}>Đang tải...</div>
             ) : products.length === 0 ? (
               <div className={cx('empty')}>Chưa có sản phẩm nào</div>
             ) : (
-              products.slice(0, 4).map((p) => (
-                <Link key={p.id} to={`/product/${p.id}`} className={cx('card')} onClick={() => scrollToTop()}>
-                  <div className={cx('img-wrap')}>
-                    <img 
-                      src={getProductImage(p)} 
-                      alt={p.name}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = productImg;
-                      }}
-                    />
-                    <span className={cx('freeship')}>FREESHIP</span>
-                  </div>
-                  <div className={cx('info')}>
-                    <h4 className={cx('name')}>{p.name}</h4>
-                    <p className={cx('desc')}>{p.description || 'Sản phẩm chất lượng cao'}</p>
-                    <div className={cx('price-section')}>
-                      {(() => {
-                        if (!p || !p.id) {
-                          return <span className={cx('price')}>{formatPrice(p?.price)}</span>;
-                        }
-                        const discountPercent = calculateDiscountPercentage(p);
-                        if (!discountPercent) {
-                          return <span className={cx('price')}>{formatPrice(p?.price)}</span>;
-                        }
-                        const originalPrice = (p.price || 0) + (p.discountValue || 0);
-                        return (
-                          <>
-                            <span className={cx('old-price')}>
-                              {formatPrice(originalPrice)}
-                            </span>
-                            <span className={cx('price')}>{formatPrice(p?.price)}</span>
-                            <span className={cx('discount')}>
-                              -{discountPercent}%
-                            </span>
-                          </>
-                        );
-                      })()}
+              products.slice(0, 8).map((p) => (
+                <div key={p.id} className={cx('slide')}>
+                  <Link to={`/product/${p.id}`} className={cx('card')} onClick={() => scrollToTop()}>
+                    <div className={cx('img-wrap')}>
+                      <img
+                        src={getProductImage(p)}
+                        alt={p.name}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = productImg;
+                        }}
+                      />
                     </div>
-                  </div>
-                </Link>
+                    <div className={cx('info')}>
+                      <h4 className={cx('name')}>{p.name}</h4>
+                      <p className={cx('desc')}>{p.description || 'Sản phẩm chất lượng cao'}</p>
+                      <div className={cx('price-section')}>
+                        {(() => {
+                          if (!p || !p.id) {
+                            return <span className={cx('price')}>{formatPrice(p?.price)}</span>;
+                          }
+                          const discountPercent = calculateDiscountPercentage(p);
+                          if (!discountPercent) {
+                            return <span className={cx('price')}>{formatPrice(p?.price)}</span>;
+                          }
+                          const originalPrice = (p.price || 0) + (p.discountValue || 0);
+                          return (
+                            <>
+                              <span className={cx('old-price')}>
+                                {formatPrice(originalPrice)}
+                              </span>
+                              <span className={cx('price')}>{formatPrice(p?.price)}</span>
+                              <span className={cx('discount')}>
+                                -{discountPercent}%
+                              </span>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </Link>
+                </div>
               ))
             )}
           </div>
-        )}
+
+          <button
+            className={cx('arrow', 'right')}
+            onClick={() => scrollBy(1)}
+            disabled={!canScrollRight}
+            aria-label="Next products"
+          >
+            &#10095;
+          </button>
+        </div>
 
         <div className={cx('controls')}>
           <Link to="/best-sellers" className={cx('viewAll')} onClick={() => scrollToTop()}>

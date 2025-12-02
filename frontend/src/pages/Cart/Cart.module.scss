@@ -236,8 +236,14 @@ $white: #fff;
 .discountCard {
   background: $white;
   border-radius: 16px;
-  padding: 20px;
+  padding: 24px;
   box-shadow: 0 4px 16px rgba(255, 128, 181, 0.08);
+  border: 1px solid rgba(255, 128, 181, 0.1);
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 6px 20px rgba(255, 128, 181, 0.12);
+  }
 }
 
 .discountTitle {
@@ -254,16 +260,22 @@ $white: #fff;
 
 .discountInput {
   flex: 1;
-  padding: 10px 12px;
-  border: 1px solid $border-soft;
-  border-radius: 8px;
+  padding: 12px 16px;
+  border: 2px solid $border-soft;
+  border-radius: 10px;
   font-size: 14px;
   outline: none;
-  transition: border-color 0.15s ease;
+  transition: all 0.2s ease;
+  background: #fafafa;
 
   &:focus {
     border-color: $primary;
-    box-shadow: 0 0 0 3px rgba(255, 128, 181, 0.15);
+    background: $white;
+    box-shadow: 0 0 0 4px rgba(255, 128, 181, 0.1);
+  }
+
+  &::placeholder {
+    color: #adb5bd;
   }
 }
 
@@ -277,19 +289,24 @@ $white: #fff;
 }
 
 .btnApply {
-  background: $primary-700;
+  background: linear-gradient(135deg, $primary-700 0%, #ff80b5 100%);
   color: $white;
-  padding: 10px 20px;
+  padding: 12px 24px;
   white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(255, 84, 155, 0.25);
+  box-shadow: 0 3px 10px rgba(255, 84, 155, 0.3);
+  border-radius: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
 
   &:hover {
-    background: $primary-600;
-    box-shadow: 0 4px 12px rgba(255, 84, 155, 0.35);
+    background: linear-gradient(135deg, #d4566f 0%, #ff6ba3 100%);
+    box-shadow: 0 5px 15px rgba(255, 84, 155, 0.4);
+    transform: translateY(-1px);
   }
 
   &:active {
-    transform: translateY(1px);
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(255, 84, 155, 0.3);
   }
 }
 
@@ -506,14 +523,77 @@ $white: #fff;
 
 .appliedVoucher {
   margin-top: 12px;
-  padding: 8px 12px;
-  background: $primary-50;
-  border-radius: 8px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(229, 103, 125, 0.1) 0%, rgba(255, 128, 181, 0.08) 100%);
+  border: 1px solid rgba(229, 103, 125, 0.2);
+  border-radius: 10px;
   font-size: 14px;
   color: $text-dark;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all 0.2s ease;
+  animation: slideIn 0.3s ease;
+
+  &:hover {
+    background: linear-gradient(135deg, rgba(229, 103, 125, 0.15) 0%, rgba(255, 128, 181, 0.12) 100%);
+    border-color: rgba(229, 103, 125, 0.3);
+    box-shadow: 0 2px 8px rgba(229, 103, 125, 0.1);
+  }
 
   strong {
     color: $primary-700;
+    font-weight: 700;
+  }
+}
+
+.appliedVoucherText {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.removeVoucherBtn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: rgba(229, 103, 125, 0.15);
+  color: $primary-700;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  font-size: 12px;
+
+  &:hover {
+    background: rgba(229, 103, 125, 0.25);
+    color: #c94d63;
+    transform: scale(1.1);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 

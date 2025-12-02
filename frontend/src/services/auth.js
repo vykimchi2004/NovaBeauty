@@ -133,10 +133,25 @@ export async function resetPassword(email, otp, newPassword) {
 // Change password (requires authentication)
 export async function changePassword(currentPassword, newPassword) {
   try {
-    return await apiClient.post(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, {
+    const response = await apiClient.post(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, {
       currentPassword,
       newPassword,
     });
+    
+    // Backend có thể trả về HTTP 200 nhưng ApiResponse có code 400
+    // Cần kiểm tra response để đảm bảo không phải lỗi
+    // Nếu response là object và có code, kiểm tra code
+    if (response && typeof response === 'object' && 'code' in response) {
+      if (response.code !== 200 && response.code !== 201) {
+        const error = new Error(response.message || 'Đổi mật khẩu thất bại');
+        error.code = response.code;
+        error.response = response;
+        throw error;
+      }
+      return response.result || response;
+    }
+    
+    return response;
   } catch (error) {
     console.error('[Auth Service] changePassword error:', error);
     throw error;

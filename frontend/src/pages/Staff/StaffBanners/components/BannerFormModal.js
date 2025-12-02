@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimes, faUpload } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
@@ -13,44 +13,28 @@ function BannerFormModal({
   formErrors,
   previewUrl,
   uploadingImage,
-  products,
+  categories,
+  brandOptions,
+  loadingCategories,
   onClose,
   onChange,
   onSubmit,
   onFileChange,
-  onToggleProduct,
+  onSelectCategory,
+  onSelectBrand,
+  onSelectTargetType,
 }) {
-  const [productDropdownOpen, setProductDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setProductDropdownOpen(false);
-      }
-    };
-
-    if (productDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [productDropdownOpen]);
 
   if (!open) return null;
 
   const title = mode === 'edit' ? 'Sửa banner' : 'Thêm banner';
   const hasImage = Boolean(previewUrl || formData.imageUrl);
-
-  const selectedProducts = products.filter((p) => formData.productIds?.includes(p.id));
-  const previewLabel =
-    selectedProducts.length === 0
-      ? 'Chọn sản phẩm...'
-      : selectedProducts.length === 1
-        ? selectedProducts[0].name
-        : `Đã chọn ${selectedProducts.length} sản phẩm`;
+  const selectedCategory = categories?.find((cat) => cat.id === formData.categoryId);
+  const selectedBrand = formData.brand?.trim();
+  const hasValidSelection =
+    formData.targetType === 'all' ||
+    (formData.targetType === 'category' && formData.categoryId) ||
+    (formData.targetType === 'brand' && selectedBrand);
 
   return (
     <div className={cx('modalOverlay')} onClick={onClose}>
@@ -145,36 +129,120 @@ function BannerFormModal({
             </div>
           </div>
 
-          <div className={cx('formGroup')}>
-            <label>Danh sách sản phẩm</label>
-            <div className={cx('dropdownSelect', { open: productDropdownOpen })} ref={dropdownRef}>
-              <button
-                type="button"
-                className={cx('dropdownToggle')}
-                onClick={() => setProductDropdownOpen(!productDropdownOpen)}
+          <div className={cx('formGroup', { error: formErrors.targetType })}>
+            <label>Áp dụng theo *</label>
+            <div className={cx('radioGroup')}>
+              <label>
+                <input
+                  type="radio"
+                  name="bannerTargetType"
+                  value="all"
+                  checked={formData.targetType === 'all'}
+                  onChange={() => onSelectTargetType('all')}
+                />
+                Tất cả sản phẩm
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="bannerTargetType"
+                  value="category"
+                  checked={formData.targetType === 'category'}
+                  onChange={() => onSelectTargetType('category')}
+                />
+                Danh mục
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="bannerTargetType"
+                  value="brand"
+                  checked={formData.targetType === 'brand'}
+                  onChange={() => onSelectTargetType('brand')}
+                />
+                Thương hiệu
+              </label>
+            </div>
+            {formErrors.targetType && (
+              <span className={cx('errorText')}>{formErrors.targetType}</span>
+            )}
+          </div>
+
+          {formData.targetType === 'category' && (
+            <div className={cx('formGroup', { error: formErrors.categoryId })}>
+              <label>Danh mục *</label>
+              <select
+                value={formData.categoryId}
+                onChange={(e) => onSelectCategory(e.target.value)}
               >
-                <span className={cx('dropdownLabel')}>{previewLabel}</span>
-                <span className={cx('chevron', { open: productDropdownOpen })}>⌄</span>
-              </button>
-              {productDropdownOpen && (
-                <div className={cx('dropdownMenu')}>
-                  {products.length === 0 ? (
-                    <span className={cx('helperText')}>Đang tải danh sách sản phẩm...</span>
-                  ) : (
-                    products.slice(0, 50).map((product) => (
-                      <label key={product.id}>
-                        <input
-                          type="checkbox"
-                          checked={formData.productIds?.includes(product.id) || false}
-                          onChange={() => onToggleProduct(product.id)}
-                        />
-                        <span>{product.name}</span>
-                      </label>
-                    ))
+                <option value="">
+                  {loadingCategories ? 'Đang tải danh mục...' : 'Chọn danh mục'}
+                </option>
+                {(categories || []).map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              {formErrors.categoryId && (
+                <span className={cx('errorText')}>{formErrors.categoryId}</span>
                   )}
                 </div>
+          )}
+
+          {formData.targetType === 'brand' && (
+            <div className={cx('formGroup', { error: formErrors.brand })}>
+              <label>Thương hiệu *</label>
+              <select
+                value={formData.brand}
+                onChange={(e) => onSelectBrand(e.target.value)}
+                disabled={(brandOptions || []).length === 0}
+              >
+                <option value="">
+                  {(brandOptions || []).length === 0
+                    ? 'Không có thương hiệu khả dụng'
+                    : 'Chọn thương hiệu'}
+                </option>
+                {(brandOptions || []).map((brand) => (
+                  <option key={brand} value={brand}>
+                    {brand}
+                  </option>
+                ))}
+              </select>
+              {formErrors.brand && <span className={cx('errorText')}>{formErrors.brand}</span>}
+            </div>
+          )}
+
+          <div className={cx('formGroup', { error: formErrors.productIds })}>
+            <label>Sản phẩm áp dụng</label>
+            <div className={cx('selectionSummary')}>
+              {!formData.targetType ? (
+                'Vui lòng chọn áp dụng theo danh mục, thương hiệu hoặc tất cả sản phẩm.'
+              ) : !hasValidSelection ? (
+                formData.targetType === 'category'
+                  ? 'Chưa chọn danh mục áp dụng.'
+                  : formData.targetType === 'brand'
+                    ? 'Chưa chọn thương hiệu áp dụng.'
+                    : 'Chưa chọn phạm vi áp dụng.'
+              ) : formData.productIds?.length > 0 ? (
+                <>
+                  Banner sẽ áp dụng cho <strong>{formData.productIds.length}</strong> sản phẩm thuộc{' '}
+                  <strong>
+                    {formData.targetType === 'category'
+                      ? selectedCategory?.name || 'danh mục đã chọn'
+                      : formData.targetType === 'brand'
+                        ? selectedBrand || 'thương hiệu đã chọn'
+                        : 'tất cả sản phẩm'}
+                  </strong>
+                  .
+                </>
+              ) : (
+                'Không tìm thấy sản phẩm nào phù hợp với lựa chọn này.'
               )}
             </div>
+            {formErrors.productIds && (
+              <span className={cx('errorText')}>{formErrors.productIds}</span>
+            )}
           </div>
 
           <div className={cx('formActions')}>

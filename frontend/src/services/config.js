@@ -106,6 +106,7 @@ export const API_ENDPOINTS = {
         GET: '/cart',
         ADD_ITEM: '/cart/items',
         APPLY_VOUCHER: '/cart/apply-voucher',
+        CLEAR_VOUCHER: '/cart/voucher',
         REMOVE_ITEM: (itemId) => `/cart/items/${itemId}`,
         UPDATE_ITEM: (itemId) => `/cart/items/${itemId}`,
     },

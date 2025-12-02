@@ -70,6 +70,40 @@ function StaffVouchers() {
     products,
   } = useStaffVouchersState();
 
+  const resolveItemType = (entry = {}) => {
+    const normalizedType =
+      entry.itemType?.toLowerCase() ||
+      entry.__type?.toLowerCase() ||
+      entry.sourceType?.toLowerCase() ||
+      (typeof entry.type === 'string' ? entry.type.toLowerCase() : '');
+
+    if (normalizedType === 'voucher' || normalizedType === 'promotion') {
+      return normalizedType;
+    }
+
+    if (typeof entry.isVoucher === 'boolean') {
+      return entry.isVoucher ? 'voucher' : 'promotion';
+    }
+
+    return entry.applyScope === 'ORDER' ? 'voucher' : 'promotion';
+  };
+
+  const getScopeLabel = (entry = {}) => {
+    const itemType = resolveItemType(entry);
+    const scope = entry.applyScope || 'ORDER';
+    const baseLabel = itemType === 'voucher' ? 'Voucher' : 'Khuyến mãi';
+
+    switch (scope) {
+      case 'PRODUCT':
+        return `${baseLabel} sản phẩm`;
+      case 'CATEGORY':
+        return `${baseLabel} danh mục`;
+      case 'ORDER':
+      default:
+        return `${baseLabel} toàn đơn`;
+    }
+  };
+
   return (
     <div className={cx('wrapper')}>
       <div className={cx('pageHeader')}>
@@ -155,7 +189,10 @@ function StaffVouchers() {
                 </tr>
               ) : (
                 combinedEntries.map((item) => {
-                  const isVoucher = item.__type === 'voucher' || item.applyScope === 'ORDER';
+                  const itemType = resolveItemType(item);
+                  const typedItem = { ...item, itemType };
+                  const isVoucher = itemType === 'voucher';
+                  const scopeLabel = getScopeLabel(typedItem);
                   return (
                     <tr key={item.id}>
                       <td className={cx('codeCell')}>{item.code}</td>
@@ -163,13 +200,7 @@ function StaffVouchers() {
                         <div>{item.name}</div>
                         <p className={cx('desc')}>{item.description || '-'}</p>
                       </td>
-                      <td>
-                        {isVoucher
-                          ? 'Voucher'
-                          : item.applyScope === 'PRODUCT'
-                          ? 'Khuyến mãi sản phẩm'
-                          : 'Khuyến mãi danh mục'}
-                      </td>
+                      <td>{scopeLabel}</td>
                       <td>
                         {item.discountValue}
                         {item.discountValueType === 'AMOUNT' ? ' ₫' : '%'}
@@ -191,7 +222,7 @@ function StaffVouchers() {
                           <button
                             type="button"
                             className={cx('actionBtn', 'primary')}
-                            onClick={() => setDetailItem(item)}
+                            onClick={() => setDetailItem(typedItem)}
                           >
                             Chi tiết
                           </button>
@@ -263,7 +294,8 @@ function StaffVouchers() {
       <DetailModal
         item={detailItem}
         onClose={() => setDetailItem(null)}
-        formatScope={(scope) => (scope === 'PRODUCT' ? 'Khuyến mãi sản phẩm' : 'Khuyến mãi danh mục')}
+        formatScope={getScopeLabel}
+        resolveItemType={resolveItemType}
       />
     </div>
   );

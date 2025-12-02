@@ -4,7 +4,8 @@ import styles from './Home.module.scss';
 import classNames from 'classnames/bind';
 import BestSellers from '../../components/Sections/BestSellers/BestSellers';
 import Vouchers from '../../components/Sections/Vouchers/Vouchers';
-import FeaturedCategories from '../../components/Sections/FeaturedCategories/FeaturedCategories';
+import NewArrivals from '../../components/Sections/NewArrivals/NewArrivals';
+import HotPromotions from '../../components/Sections/HotPromotions/HotPromotions';
 
 const Home = () => {
   console.log('Home component is rendering!');
@@ -15,7 +16,8 @@ const Home = () => {
     <div className={cx('home')}>
       <Vouchers />
       <BestSellers />
-      <FeaturedCategories />
+      <HotPromotions />
+      <NewArrivals />
       <Hero />
       {/* other home sections can be added here */}
     </div>

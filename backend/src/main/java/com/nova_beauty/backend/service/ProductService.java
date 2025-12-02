@@ -287,18 +287,8 @@ public class ProductService {
         Product product = productRepository
                 .findByIdWithRelations(productId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
-        
 
-        Promotion activePromotion = findActivePromotionForProduct(product);
-        
-
-        if (activePromotion != null) {
-            product.setPromotion(activePromotion);
-        } else {
-
-            product.setPromotion(null);
-        }
-        
+        applyActivePromotionToProduct(product);
         return productMapper.toResponse(product);
     }
 
@@ -322,8 +312,21 @@ public class ProductService {
         }
 
         if (product.getCategory() != null && product.getCategory().getId() != null) {
-            List<Promotion> categoryPromotions = promotionRepository.findActiveByCategoryId(product.getCategory().getId(), today);
-            activePromotions.addAll(categoryPromotions);
+            Category currentCategory = product.getCategory();
+            while (currentCategory != null) {
+                if (currentCategory.getId() != null) {
+                    List<Promotion> categoryPromotions =
+                            promotionRepository.findActiveByCategoryId(currentCategory.getId(), today);
+                    activePromotions.addAll(categoryPromotions);
+                }
+
+                Category parent = currentCategory.getParentCategory();
+                if (parent != null && parent.getId() != null) {
+                    currentCategory = categoryRepository.findById(parent.getId()).orElse(null);
+                } else {
+                    currentCategory = null;
+                }
+            }
         }
         
 
@@ -371,10 +374,13 @@ public class ProductService {
             // Calculate discountValue from promotion
             double unitPrice = product.getUnitPrice() != null ? product.getUnitPrice() : 0.0;
             double tax = product.getTax() != null ? product.getTax() : 0.0;
-            double discountAmount = calculateDiscountAmount(activePromotion, unitPrice);
+            // Calculate price with tax first
+            double priceWithTax = unitPrice * (1 + tax);
+            // Calculate discount from price with tax to ensure accurate percentage display
+            double discountAmount = calculateDiscountAmount(activePromotion, priceWithTax);
 
             // Calculate final price = unitPrice * (1 + tax) - discountAmount
-            double finalPrice = Math.max(0, unitPrice * (1 + tax) - discountAmount);
+            double finalPrice = Math.max(0, priceWithTax - discountAmount);
 
             product.setDiscountValue(discountAmount);
             product.setPrice(finalPrice);

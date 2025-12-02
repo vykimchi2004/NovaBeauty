@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import com.nova_beauty.backend.dto.request.ApiResponse;
 import com.nova_beauty.backend.dto.request.ChangePasswordRequest;
 import com.nova_beauty.backend.dto.request.ResetPasswordRequest;
+import com.nova_beauty.backend.exception.AppException;
 import com.nova_beauty.backend.service.PasswordService;
 
 import lombok.AccessLevel;
@@ -49,30 +50,21 @@ public class PasswordController {
     @PostMapping("/change-password")
     public ApiResponse<String> changePassword(
             @AuthenticationPrincipal Jwt jwt, @RequestBody @Valid ChangePasswordRequest request) {
-        try {
-            if (jwt == null) {
-                return ApiResponse.<String>builder()
-                        .code(401)
-                        .message("Unauthenticated")
-                        .result(null)
-                        .build();
-            }
-            String email = jwt.getSubject();
-            passwordService.changePasswordByEmail(
-                    email, request.getCurrentPassword(), request.getNewPassword());
+        if (jwt == null) {
             return ApiResponse.<String>builder()
-                    .code(200)
-                    .message("Password changed successfully")
-                    .result("OK")
-                    .build();
-        } catch (Exception e) {
-            log.error(
-                    "Error changing password for user: {}", jwt != null ? jwt.getSubject() : "unknown", e);
-            return ApiResponse.<String>builder()
-                    .code(400)
-                    .message(e.getMessage())
+                    .code(401)
+                    .message("Unauthenticated")
                     .result(null)
                     .build();
         }
+        String email = jwt.getSubject();
+        // AppException sẽ được xử lý bởi GlobalExceptionHandler
+        passwordService.changePasswordByEmail(
+                email, request.getCurrentPassword(), request.getNewPassword());
+        return ApiResponse.<String>builder()
+                .code(200)
+                .message("Password changed successfully")
+                .result("OK")
+                .build();
     }
 }

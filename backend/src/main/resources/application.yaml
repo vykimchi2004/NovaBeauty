@@ -5,7 +5,7 @@ server:
   servlet:
     context-path: /nova_beauty
   tomcat:
-    max-swallow-size: 100MB
+    max-swallow-size: 200MB
 
 #  Config cau hinh database
 spring:
@@ -24,8 +24,8 @@ spring:
   # update : Hibernate so sanh entity va DB → tu dong them hoac chinh sua bang/cot de khop. Tuy nhien, no khong xoa cac cot cu.
   servlet:
     multipart:
-      max-file-size: 50MB
-      max-request-size: 100MB
+      max-file-size: 100MB
+      max-request-size: 200MB
 
 #  Brevo Email Configuration
 brevo:

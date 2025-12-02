@@ -15,6 +15,9 @@ import {
 import { getCategories } from '~/services/category';
 import { getActiveProducts } from '~/services/product';
 import { uploadProductMedia } from '~/services/media';
+import { storage } from '~/services/utils';
+import { STORAGE_KEYS } from '~/services/config';
+import { addStaffNotification, detectStatusNotifications, detectDeletionNotifications } from '~/utils/staffNotifications';
 
 const DEFAULT_VOUCHER_FORM = {
   id: '',
@@ -46,7 +49,6 @@ const DEFAULT_PROMOTION_FORM = {
   minOrderValue: '',
   startDate: '',
   expiryDate: '',
-  usageLimit: '',
   applyScope: 'CATEGORY',
   categoryIds: [],
   productIds: [],
@@ -60,6 +62,9 @@ const getDefaultStartDate = () => {
 };
 
 export function useStaffVouchersState() {
+  const currentUser = storage.get(STORAGE_KEYS.USER);
+  const userId = currentUser?.id;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -118,7 +123,10 @@ export function useStaffVouchersState() {
     try {
       setVoucherLoading(true);
       const data = await getMyVouchers();
-      setVoucherList(data || []);
+      const list = data || [];
+      setVoucherList(list);
+      handleVoucherNotifications(list, 'voucher');
+      handleDeletedVoucherNotifications(list, 'voucher');
     } catch (error) {
       console.error('Error fetching vouchers:', error);
       notify.error('Không thể tải danh sách voucher.');
@@ -132,13 +140,78 @@ export function useStaffVouchersState() {
     try {
       setPromotionLoading(true);
       const data = await getMyPromotions();
-      setPromotionList((data || []).filter((item) => item.applyScope !== 'ORDER'));
+      const filtered = (data || []).filter((item) => item.applyScope !== 'ORDER');
+      setPromotionList(filtered);
+      handleVoucherNotifications(filtered, 'promotion');
+      handleDeletedVoucherNotifications(filtered, 'promotion');
     } catch (error) {
       console.error('Error fetching promotions:', error);
       notify.error('Không thể tải danh sách khuyến mãi.');
     } finally {
       setPromotionLoading(false);
     }
+  };
+
+  const handleVoucherNotifications = (entries = [], type = 'voucher') => {
+    if (!userId || !Array.isArray(entries)) return;
+    const notifications = detectStatusNotifications({
+      categoryKey: type === 'voucher' ? 'VOUCHERS' : 'PROMOTIONS',
+      userId,
+      items: entries,
+      getItemId: (item) => item?.id,
+      getStatus: (item) => item?.status,
+      buildNotification: (item, status) => {
+        if (status === 'APPROVED') {
+          return {
+            title: type === 'voucher' ? 'Voucher được duyệt' : 'Khuyến mãi được duyệt',
+            message: `${type === 'voucher' ? 'Voucher' : 'Khuyến mãi'} "${item.name || item.code}" đã được admin phê duyệt.`,
+            type: 'success',
+            targetPath: '/staff/vouchers',
+          };
+        }
+        if (status === 'REJECTED') {
+          const reason = item.rejectionReason ? ` Lý do: ${item.rejectionReason}` : '';
+          return {
+            title: type === 'voucher' ? 'Voucher bị từ chối' : 'Khuyến mãi bị từ chối',
+            message: `${type === 'voucher' ? 'Voucher' : 'Khuyến mãi'} "${item.name || item.code}" bị từ chối.${reason}`,
+            type: 'warning',
+            targetPath: '/staff/vouchers',
+          };
+        }
+        return null;
+      },
+    });
+
+    notifications.forEach((notification) => {
+      addStaffNotification(userId, notification);
+      if (notification.type === 'success') {
+        notify.success(notification.message);
+      } else {
+        notify.warning(notification.message);
+      }
+    });
+  };
+
+  const handleDeletedVoucherNotifications = (entries = [], type = 'voucher') => {
+    if (!userId || !Array.isArray(entries)) return;
+
+    const notifications = detectDeletionNotifications({
+      categoryKey: type === 'voucher' ? 'VOUCHERS' : 'PROMOTIONS',
+      userId,
+      items: entries,
+      getItemId: (item) => item?.id,
+      getItemName: (item) => item?.name || item?.code || item?.id,
+      buildNotification: ({ id, name }) => ({
+        title: type === 'voucher' ? 'Voucher đã bị xóa' : 'Khuyến mãi đã bị xóa',
+        message: `${type === 'voucher' ? 'Voucher' : 'Khuyến mãi'} "${name || id}" đã bị xóa khỏi hệ thống (có thể do admin hoặc do bạn xóa).`,
+        type: 'info',
+        targetPath: '/staff/vouchers',
+      }),
+    });
+
+    notifications.forEach((notification) => {
+      addStaffNotification(userId, notification);
+    });
   };
 
   const matchesFilters = (item) => {
@@ -244,7 +317,6 @@ export function useStaffVouchersState() {
       code: '',
       startDate: getDefaultStartDate(),
       expiryDate: '',
-      usageLimit: '',
       applyScope: 'CATEGORY',
       discountValueType: 'PERCENTAGE',
     });
@@ -272,7 +344,6 @@ export function useStaffVouchersState() {
       minOrderValue: promotion.minOrderValue?.toString() || '',
       startDate: promotion.startDate || '',
       expiryDate: promotion.expiryDate || '',
-      usageLimit: promotion.usageLimit?.toString() || '',
       applyScope: promotion.applyScope || 'CATEGORY',
       categoryIds: promotion.categoryIds || [],
       productIds: promotion.productIds || [],
@@ -416,8 +487,16 @@ export function useStaffVouchersState() {
     const errors = {};
     if (!voucherForm.name?.trim()) errors.name = 'Tên voucher không được để trống';
     if (!voucherForm.code?.trim()) errors.code = 'Mã voucher không được để trống';
-    if (!voucherForm.discountValue || Number(voucherForm.discountValue) <= 0) {
+    const discountValue = Number(voucherForm.discountValue);
+    if (!voucherForm.discountValue || Number.isNaN(discountValue) || discountValue <= 0) {
       errors.discountValue = 'Giá trị giảm không hợp lệ';
+    } else if (voucherForm.discountValueType === 'PERCENTAGE') {
+      if (discountValue > 100 || discountValue <= 0) {
+        errors.discountValue = 'Phần trăm giảm phải nằm trong khoảng 0 - 100';
+      }
+      if (!voucherForm.maxDiscountValue || Number(voucherForm.maxDiscountValue) <= 0) {
+        errors.maxDiscountValue = 'Vui lòng nhập mức giảm tối đa khi dùng %';
+      }
     }
     if (!voucherForm.startDate) errors.startDate = 'Chọn ngày bắt đầu';
     if (!voucherForm.expiryDate) errors.expiryDate = 'Chọn ngày kết thúc';
@@ -450,9 +529,6 @@ export function useStaffVouchersState() {
     }
     if (!promotionForm.startDate) errors.startDate = 'Chọn ngày bắt đầu';
     if (!promotionForm.expiryDate) errors.expiryDate = 'Chọn ngày kết thúc';
-    if (!promotionForm.usageLimit || Number(promotionForm.usageLimit) <= 0) {
-      errors.usageLimit = 'Giới hạn sử dụng phải lớn hơn 0';
-    }
     if (!promotionForm.imageUrl && !promotionImageFile) {
       errors.imageUrl = 'Vui lòng chọn hình khuyến mãi';
     }
@@ -545,7 +621,6 @@ export function useStaffVouchersState() {
       minOrderValue: promotionForm.minOrderValue ? Number(promotionForm.minOrderValue) : null,
       startDate: promotionForm.startDate,
       expiryDate: promotionForm.expiryDate,
-      usageLimit: promotionForm.usageLimit ? Number(promotionForm.usageLimit) : null,
       discountValueType: promotionForm.discountValueType || 'PERCENTAGE',
       applyScope: promotionForm.applyScope,
       categoryIds: promotionForm.applyScope === 'CATEGORY' && promotionForm.categoryIds.length

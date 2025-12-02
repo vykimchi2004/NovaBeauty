@@ -119,6 +119,19 @@ function BestSellers() {
     return image1;
   };
 
+  // Tính % giảm giá giống trang danh mục / tất cả sản phẩm
+  const calculateDiscountPercentage = (product) => {
+    if (!product.promotionId || !product.promotionName) return null;
+    if (!product.discountValue || product.discountValue <= 0) return null;
+    if (!product.price || product.price <= 0) return null;
+
+    const originalPrice = product.price + product.discountValue;
+    if (originalPrice <= 0) return null;
+
+    const percentage = Math.round((product.discountValue / originalPrice) * 100);
+    return percentage > 0 ? percentage : null;
+  };
+
   return (
     <div className={cx('makeup-page')}>
       {/* Sidebar filters */}
@@ -223,23 +236,16 @@ function BestSellers() {
                   <p className={cx('desc')}>{p.description || 'Sản phẩm chất lượng cao'}</p>
                   <div className={cx('price-section')}>
                     {(() => {
-                      if (!p.promotionId || !p.promotionName || !p.discountValue || p.discountValue <= 0 || !p.price || p.price <= 0) {
+                      const discountPercent = calculateDiscountPercentage(p);
+                      if (!discountPercent) {
                         return <span className={cx('price')}>{formatPrice(p.price)}</span>;
                       }
-                      const originalPrice = p.price + p.discountValue;
-                      const discountPercent = Math.round((p.discountValue / originalPrice) * 100);
-                      if (discountPercent <= 0) {
-                        return <span className={cx('price')}>{formatPrice(p.price)}</span>;
-                      }
+                      const originalPrice = (p.price || 0) + (p.discountValue || 0);
                       return (
                         <>
-                          <span className={cx('old-price')}>
-                            {formatPrice(originalPrice)}
-                          </span>
+                          <span className={cx('old-price')}>{formatPrice(originalPrice)}</span>
                           <span className={cx('price')}>{formatPrice(p.price)}</span>
-                          <span className={cx('discount')}>
-                            -{discountPercent}%
-                          </span>
+                          <span className={cx('discount')}>-{discountPercent}%</span>
                         </>
                       );
                     })()}

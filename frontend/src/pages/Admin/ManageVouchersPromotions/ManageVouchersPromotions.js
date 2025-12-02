@@ -353,13 +353,6 @@ function ManageVouchersPromotions() {
       </div>
 
       <div className={cx('tableWrapper')}>
-        <div className={cx('tableHeader')}>
-          <h3>
-            {activeTab === 'voucher' 
-              ? `Danh sách Voucher (${filteredItems.length})` 
-              : `Danh sách Khuyến mãi (${filteredItems.length})`}
-          </h3>
-        </div>
         <table className={cx('table')}>
           <thead>
             <tr>

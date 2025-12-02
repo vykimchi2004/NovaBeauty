@@ -34,6 +34,7 @@ function ManageCustomerAccounts() {
     address: '',
     isActive: true
   });
+  const [phoneError, setPhoneError] = useState('');
 
   // Fetch customers from API
   useEffect(() => {
@@ -170,6 +171,17 @@ function ManageCustomerAccounts() {
 
   const handleSaveEdit = async () => {
     if (!editingCustomer) return;
+
+    // Validate số điện thoại nếu có
+    setPhoneError('');
+    if (editForm.phoneNumber && editForm.phoneNumber.trim()) {
+      const phoneNumber = editForm.phoneNumber.trim();
+      const phoneRegex = /^0[0-9]{9}$/;
+      if (!phoneRegex.test(phoneNumber)) {
+        setPhoneError('Hãy nhập số điện thoại bắt đầu từ 0 và đủ 10 số');
+        return;
+      }
+    }
 
     try {
       // Chỉ gửi các field có giá trị và đã thay đổi
@@ -475,15 +487,30 @@ function ManageCustomerAccounts() {
                   placeholder="Nhập email"
                 />
               </div>
-              <div className={cx('formGroup')}>
+              <div className={cx('formGroup', { error: phoneError })}>
                 <label className={cx('formLabel')}>Số điện thoại</label>
                 <input
                   type="tel"
                   className={cx('formInput')}
                   value={editForm.phoneNumber}
-                  onChange={(e) => setEditForm({ ...editForm, phoneNumber: e.target.value })}
-                  placeholder="Nhập số điện thoại"
+                  onChange={(e) => {
+                    // Chỉ cho phép nhập số
+                    const value = e.target.value.replace(/[^0-9]/g, '');
+                    // Giới hạn 10 ký tự
+                    const limitedValue = value.slice(0, 10);
+                    setEditForm({ ...editForm, phoneNumber: limitedValue });
+                    if (phoneError) setPhoneError('');
+                  }}
+                  onKeyPress={(e) => {
+                    // Chỉ cho phép nhập số
+                    if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'Tab' && e.key !== 'Enter') {
+                      e.preventDefault();
+                    }
+                  }}
+                  placeholder="Nhập SĐT (bắt đầu bằng 0, 10 số)"
+                  maxLength={10}
                 />
+                {phoneError && <span className={cx('errorText')} style={{ color: 'red', fontSize: '12px', marginTop: '4px', display: 'block' }}>{phoneError}</span>}
               </div>
               <div className={cx('formGroup')}>
                 <label className={cx('formLabel')}>Địa chỉ</label>

@@ -15,6 +15,8 @@ public enum ErrorCode {
     INVALID_KEY(1001, "Uncategorized error", HttpStatus.BAD_REQUEST),
     USER_EXISTED(1002, "User existed", HttpStatus.BAD_REQUEST),
     INVALID_PASSWORD(1003, "INVALID_PASSWORD", HttpStatus.BAD_REQUEST),
+    CURRENT_PASSWORD_INCORRECT(1012, "Mật khẩu hiện tại không đúng", HttpStatus.BAD_REQUEST),
+    ACCOUNT_LOCKED(1013, "Tài khoản đã bị khóa", HttpStatus.FORBIDDEN),
     USER_NOT_EXISTED(1004, "User không tồn tại", HttpStatus.NOT_FOUND),
     UNAUTHENTICATED(1005, "Unauthenticated", HttpStatus.UNAUTHORIZED),
     UNAUTHORIZED(1006, "You do not have permission", HttpStatus.FORBIDDEN),
@@ -22,6 +24,7 @@ public enum ErrorCode {
     EMAIL_SEND_FAILED(1008, "Failed to send email", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_OTP(1009, "Mã OTP không đúng, yêu cầu nhập lại", HttpStatus.BAD_REQUEST),
     TICKET_NOT_EXISTED(1010, "Ticket không tồn tại", HttpStatus.NOT_FOUND),
+    INVALID_PHONE_NUMBER(1011, "Số điện thoại phải bắt đầu bằng 0 và gồm đúng 10 chữ số", HttpStatus.BAD_REQUEST),
 
     // Promotion
     PROMOTION_NOT_EXISTED(2001, "Khuyến mãi không tồn tại", HttpStatus.NOT_FOUND),
