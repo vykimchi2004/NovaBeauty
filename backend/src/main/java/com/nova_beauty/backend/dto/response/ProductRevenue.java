@@ -11,5 +11,6 @@ import lombok.experimental.FieldDefaults;
 public class ProductRevenue {
     String productId;
     String productName;
+    Long quantity;
     Double total;
 }

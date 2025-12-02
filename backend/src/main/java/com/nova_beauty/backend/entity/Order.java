@@ -6,6 +6,7 @@ import java.util.List;
 
 import jakarta.persistence.*;
 
+import com.nova_beauty.backend.enums.CancellationSource;
 import com.nova_beauty.backend.enums.OrderStatus;
 import com.nova_beauty.backend.enums.PaymentMethod;
 import com.nova_beauty.backend.enums.PaymentStatus;
@@ -43,7 +44,15 @@ public class Order {
     @Column(name = "order_code", unique = true)
     String code;
 
+    @Column(columnDefinition = "TEXT")
     String note;
+
+    @Column(name = "cancellation_reason", columnDefinition = "TEXT")
+    String cancellationReason;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cancellation_source", length = 32)
+    CancellationSource cancellationSource;
     String shippingAddress;
     LocalDate orderDate;
 
@@ -80,4 +89,75 @@ public class Order {
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     List<OrderItem> items;
+
+    // Refund/Return request fields
+    @Column(name = "refund_reason_type", length = 50)
+    String refundReasonType; // 'store' or 'customer'
+
+    @Column(name = "refund_description", columnDefinition = "TEXT")
+    String refundDescription;
+
+    @Column(name = "refund_email", length = 255)
+    String refundEmail;
+
+    @Column(name = "refund_return_address", columnDefinition = "TEXT")
+    String refundReturnAddress;
+
+    @Column(name = "refund_method", length = 100)
+    String refundMethod;
+
+    @Column(name = "refund_bank", length = 100)
+    String refundBank;
+
+    @Column(name = "refund_account_number", length = 50)
+    String refundAccountNumber;
+
+    @Column(name = "refund_account_holder", length = 255)
+    String refundAccountHolder;
+
+    @Column(name = "refund_amount")
+    Double refundAmount;
+
+    @Column(name = "refund_return_fee")
+    Double refundReturnFee; // Phí trả hàng (10% giá trị sản phẩm nếu lý do là customer, 0 nếu lý do là store)
+
+    @Column(name = "refund_second_shipping_fee")
+    Double refundSecondShippingFee;
+
+    @Column(name = "refund_penalty_amount")
+    Double refundPenaltyAmount;
+
+    @Column(name = "refund_total_paid")
+    Double refundTotalPaid;
+
+    // Staff confirmed values
+    @Column(name = "refund_confirmed_amount")
+    Double refundConfirmedAmount;
+
+    @Column(name = "refund_confirmed_penalty")
+    Double refundConfirmedPenalty;
+
+    @Column(name = "refund_confirmed_second_shipping_fee")
+    Double refundConfirmedSecondShippingFee;
+
+    @Column(name = "refund_selected_product_ids", columnDefinition = "TEXT")
+    String refundSelectedProductIds; // JSON array of product IDs
+
+    @Column(name = "refund_media_urls", columnDefinition = "TEXT")
+    String refundMediaUrls; // JSON array of media URLs (images/videos)
+
+    @Column(name = "refund_rejection_reason", columnDefinition = "TEXT")
+    String refundRejectionReason; // Lý do từ chối hoàn tiền từ CSKH
+
+    @Column(name = "refund_rejection_source", length = 50)
+    String refundRejectionSource; // Ai đã từ chối: CSKH / STAFF
+
+    @Column(name = "return_checked_date")
+    LocalDate returnCheckedDate;
+
+    @Column(name = "staff_inspection_result", columnDefinition = "TEXT")
+    String staffInspectionResult;
+
+    @Column(name = "admin_processing_note", columnDefinition = "TEXT")
+    String adminProcessingNote;
 }

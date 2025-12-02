@@ -275,4 +275,28 @@ public class BrevoEmailService {
             log.error("Failed to send order confirmation email", e);
         }
     }
+
+    // ===== Stub methods for return/refund flow (ported from LuminaBook, simplified) =====
+
+    public void sendReturnRejectedEmail(Order order) {
+        if (order == null || order.getUser() == null || order.getUser().getEmail() == null) {
+            return;
+        }
+        log.info("sendReturnRejectedEmail stub called for order {}", order.getId());
+        // Bạn có thể triển khai gửi email chi tiết sau nếu muốn
+    }
+
+    public void sendReturnCsConfirmedEmail(Order order) {
+        if (order == null || order.getUser() == null || order.getUser().getEmail() == null) {
+            return;
+        }
+        log.info("sendReturnCsConfirmedEmail stub called for order {}", order.getId());
+    }
+
+    public void sendReturnStaffInspectionEmail(Order order) {
+        if (order == null || order.getUser() == null || order.getUser().getEmail() == null) {
+            return;
+        }
+        log.info("sendReturnStaffInspectionEmail stub called for order {}", order.getId());
+    }
 }

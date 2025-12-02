@@ -11,19 +11,33 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.nova_beauty.backend.dto.request.CreateOrderRequest;
+import com.nova_beauty.backend.dto.request.DirectCheckoutRequest;
 import com.nova_beauty.backend.dto.request.MomoIpnRequest;
+import com.nova_beauty.backend.dto.request.RejectRefundRequest;
+import com.nova_beauty.backend.dto.request.ReturnProcessRequest;
+import com.nova_beauty.backend.dto.request.ReturnRequestRequest;
 import com.nova_beauty.backend.dto.response.CreateMomoResponse;
+import com.nova_beauty.backend.dto.response.OrderStatistics;
 import com.nova_beauty.backend.entity.Address;
 import com.nova_beauty.backend.entity.Cart;
 import com.nova_beauty.backend.entity.CartItem;
 import com.nova_beauty.backend.entity.Order;
 import com.nova_beauty.backend.entity.OrderItem;
+import com.nova_beauty.backend.entity.Product;
 import com.nova_beauty.backend.entity.User;
+import com.nova_beauty.backend.enums.CancellationSource;
 import com.nova_beauty.backend.enums.OrderStatus;
 import com.nova_beauty.backend.enums.PaymentMethod;
 import com.nova_beauty.backend.enums.PaymentStatus;
@@ -34,8 +48,8 @@ import com.nova_beauty.backend.repository.OrderItemRepository;
 import com.nova_beauty.backend.repository.OrderRepository;
 import com.nova_beauty.backend.repository.ProductRepository;
 import com.nova_beauty.backend.repository.UserRepository;
-import com.nova_beauty.backend.entity.Product;
-import com.nova_beauty.backend.dto.request.DirectCheckoutRequest;
+import com.nova_beauty.backend.service.FinancialService;
+import com.nova_beauty.backend.service.ShipmentService;
 import com.nova_beauty.backend.util.SecurityUtil;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -43,10 +57,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @Slf4j
 @Service
@@ -62,6 +72,8 @@ public class OrderService {
     BrevoEmailService brevoEmailService;
     ProductRepository productRepository;
     UserRepository userRepository;
+    ShipmentService shipmentService;
+    FinancialService financialService;
 
     ObjectMapper objectMapper = new ObjectMapper();
 
@@ -537,6 +549,18 @@ public class OrderService {
     @Transactional(readOnly = true)
     @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
     public List<Order> getAllOrders() {
+        List<Order> orders = orderRepository.findAll();
+        // Đồng bộ trạng thái từ GHN cho các đơn có shipment
+        for (Order order : orders) {
+            if (order.getShipment() != null && order.getShipment().getOrderCode() != null) {
+                try {
+                    shipmentService.syncOrderStatusFromGhn(order.getId());
+                } catch (Exception e) {
+                    log.warn("Không thể đồng bộ trạng thái từ GHN cho order: {}", order.getId(), e);
+                }
+            }
+        }
+        // Reload để lấy status mới nhất
         return orderRepository.findAll();
     }
 
@@ -558,58 +582,68 @@ public class OrderService {
 
     /**
      * Lấy chi tiết một đơn hàng theo id, đảm bảo:
-     * - STAFF / ADMIN có thể xem mọi đơn
+     * - STAFF / ADMIN / CUSTOMER_SUPPORT có thể xem mọi đơn
      * - CUSTOMER chỉ được xem đơn của chính mình
      */
     @Transactional(readOnly = true)
-    @PreAuthorize("hasAnyRole('CUSTOMER','STAFF','ADMIN')")
+    @PreAuthorize("hasAnyRole('CUSTOMER','CUSTOMER_SUPPORT','STAFF','ADMIN')")
     public Order getOrderByIdForCurrentUser(String orderId) {
-        // Try to find by ID (UUID) first, then by code (order code like NVB20251121-ABC123)
-        Order order = orderRepository.findById(orderId)
-                .orElseGet(() -> {
-                    // If not found by ID, try to find by code
-                    return orderRepository.findByCode(orderId)
-                            .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXISTED));
-                });
+        // Đồng bộ trạng thái từ GHN
+        try {
+            shipmentService.syncOrderStatusFromGhn(orderId);
+        } catch (Exception e) {
+            log.warn("Không thể đồng bộ trạng thái từ GHN cho order: {}", orderId, e);
+        }
+
+        // Tìm đơn hàng theo id
+        Order order =
+                orderRepository
+                        .findById(orderId)
+                        .orElseGet(
+                                () ->
+                                        orderRepository
+                                                .findByCode(orderId)
+                                                .orElseThrow(
+                                                        () ->
+                                                                new AppException(
+                                                                        ErrorCode.ORDER_NOT_EXISTED)));
 
         var auth = SecurityUtil.getAuthentication();
-        boolean isStaffOrAdmin = auth.getAuthorities().stream()
-                .anyMatch(a -> {
-                    String role = a.getAuthority();
-                    return "ROLE_STAFF".equals(role) || "ROLE_ADMIN".equals(role);
-                });
+        boolean isStaffOrAdminOrSupport =
+                auth.getAuthorities().stream()
+                        .anyMatch(
+                                a -> {
+                                    String role = a.getAuthority();
+                                    return "ROLE_STAFF".equals(role)
+                                            || "ROLE_ADMIN".equals(role)
+                                            || "ROLE_CUSTOMER_SUPPORT".equals(role);
+                                });
 
-        if (!isStaffOrAdmin) {
+        if (!isStaffOrAdminOrSupport) {
             String email = auth.getName();
-            if (order.getUser() == null || order.getUser().getEmail() == null
+            if (order.getUser() == null
+                    || order.getUser().getEmail() == null
                     || !order.getUser().getEmail().equalsIgnoreCase(email)) {
                 throw new AppException(ErrorCode.UNAUTHORIZED);
             }
         }
 
-        // Force load items to avoid lazy loading issues
-        // @EntityGraph should have loaded items, but we ensure it here
+        // Load items để tránh vấn đề lazy loading
         if (order.getItems() != null) {
-            int itemsCount = order.getItems().size(); // Force load collection
-            log.debug("Order {} has {} items", orderId, itemsCount);
-            
-            order.getItems().forEach(item -> {
-                if (item.getProduct() != null) {
-                    // Load product name to ensure product is loaded
-                    String productName = item.getProduct().getName();
-                    log.debug("Item {} has product: {}", item.getId(), productName);
-                    
-                    // Load product media
-                    if (item.getProduct().getDefaultMedia() != null) {
-                        item.getProduct().getDefaultMedia().getMediaUrl();
-                    }
-                    if (item.getProduct().getMediaList() != null) {
-                        item.getProduct().getMediaList().size();
-                    }
-                }
-            });
-        } else {
-            log.warn("Order {} has null items collection", orderId);
+            order.getItems().size();
+            order.getItems()
+                    .forEach(
+                            item -> {
+                                if (item.getProduct() != null) {
+                                    item.getProduct().getName();
+                                    if (item.getProduct().getDefaultMedia() != null) {
+                                        item.getProduct().getDefaultMedia().getMediaUrl();
+                                    }
+                                    if (item.getProduct().getMediaList() != null) {
+                                        item.getProduct().getMediaList().size();
+                                    }
+                                }
+                            });
         }
 
         return order;
@@ -621,10 +655,13 @@ public class OrderService {
     @Transactional
     @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
     public Order confirmOrder(String orderId) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXISTED));
+        Order order =
+                orderRepository
+                        .findById(orderId)
+                        .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXISTED));
 
-        if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.DELIVERED) {
+        if (order.getStatus() == OrderStatus.CANCELLED
+                || order.getStatus() == OrderStatus.DELIVERED) {
             return order;
         }
 
@@ -634,6 +671,684 @@ public class OrderService {
         }
 
         return order;
+    }
+
+    // Thống kê đơn hàng theo khoảng thời gian
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasRole('ADMIN')")
+    public OrderStatistics getOrderStatistics(LocalDate start, LocalDate end) {
+        LocalDateTime startDateTime = start.atStartOfDay();
+        LocalDateTime endDateTime = end.atTime(23, 59, 59, 999999999);
+
+        Long totalOrders =
+                orderRepository.countByOrderDateTimeBetween(startDateTime, endDateTime);
+        Long cancelledOrders =
+                orderRepository.countCancelledOrdersByOrderDateTimeBetween(
+                        startDateTime, endDateTime);
+        Long refundedOrders =
+                orderRepository.countRefundedOrdersByOrderDateTimeBetween(
+                        startDateTime, endDateTime);
+
+        return OrderStatistics.builder()
+                .totalOrders(totalOrders)
+                .cancelledOrders(cancelledOrders)
+                .refundedOrders(refundedOrders)
+                .build();
+    }
+
+    // Lấy danh sách đơn hàng trong khoảng thời gian với pagination
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    public Page<Order> getOrdersByDateRangePage(
+            LocalDate start, LocalDate end, int page, int size) {
+        LocalDateTime startDateTime = start.atStartOfDay();
+        LocalDateTime endDateTime = end.atTime(23, 59, 59, 999999999);
+
+        Pageable pageable = PageRequest.of(page, size);
+        return orderRepository.findByOrderDateTimeBetween(startDateTime, endDateTime, pageable);
+    }
+
+    // Danh sách các yêu cầu trả hàng/hoàn tiền.
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAnyRole('CUSTOMER_SUPPORT','STAFF','ADMIN')")
+    public List<Order> getReturnRequests() {
+        List<OrderStatus> returnStatuses =
+                List.of(
+                        OrderStatus.RETURN_REQUESTED,
+                        OrderStatus.RETURN_CS_CONFIRMED,
+                        OrderStatus.RETURN_STAFF_CONFIRMED,
+                        OrderStatus.RETURN_REJECTED);
+        return orderRepository.findByStatusIn(returnStatuses);
+    }
+
+    @Transactional
+    public Order requestReturn(String orderId, ReturnRequestRequest request) {
+        log.info("Processing request return for order: {}", orderId);
+        try {
+            Order order =
+                    orderRepository
+                            .findById(orderId)
+                            .orElseThrow(
+                                    () -> {
+                                        log.error("Order not found: {}", orderId);
+                                        return new AppException(ErrorCode.ORDER_NOT_EXISTED);
+                                    });
+
+            log.info("Order found: {}, current status: {}", orderId, order.getStatus());
+
+            // Đồng bộ trạng thái từ GHN trước khi kiểm tra điều kiện request return
+            // Để đảm bảo status được cập nhật mới nhất từ GHN
+            try {
+                shipmentService.syncOrderStatusFromGhn(orderId);
+                // Reload order để lấy status mới nhất sau khi sync
+                order =
+                        orderRepository
+                                .findById(orderId)
+                                .orElseThrow(
+                                        () -> new AppException(ErrorCode.ORDER_NOT_EXISTED));
+                log.info(
+                        "Order status after sync from GHN: {}, status: {}",
+                        orderId,
+                        order.getStatus());
+            } catch (Exception e) {
+                log.warn(
+                        "Failed to sync order status from GHN for order {}: {}",
+                        orderId,
+                        e.getMessage());
+                // Tiếp tục với status hiện tại nếu sync thất bại
+            }
+
+            // Cho phép yêu cầu trả hàng từ DELIVERED hoặc gửi lại từ RETURN_REJECTED
+            if (order.getStatus() != OrderStatus.DELIVERED
+                    && order.getStatus() != OrderStatus.RETURN_REJECTED) {
+                log.warn(
+                        "Invalid order status for return request: orderId={}, status={}",
+                        orderId,
+                        order.getStatus());
+                throw new AppException(
+                        ErrorCode.UNCATEGORIZED_EXCEPTION,
+                        String.format(
+                                "Chỉ có thể yêu cầu trả hàng cho đơn hàng đã giao (DELIVERED) hoặc đơn hàng đã bị từ chối hoàn tiền (RETURN_REJECTED). Trạng thái hiện tại: %s",
+                                order.getStatus() != null
+                                        ? order.getStatus().name()
+                                        : "null"));
+            }
+
+            // Force load items để tránh LazyInitializationException
+            if (order.getItems() != null) {
+                order.getItems().size(); // Trigger lazy loading
+                log.info("Loaded {} items for order: {}", order.getItems().size(), orderId);
+            }
+
+            order.setStatus(OrderStatus.RETURN_REQUESTED);
+
+            // Save refund request information to dedicated fields
+            if (request != null) {
+                order.setRefundReasonType(request.getReasonType());
+                order.setRefundDescription(request.getDescription());
+                order.setRefundEmail(request.getEmail());
+                order.setRefundReturnAddress(request.getReturnAddress());
+                order.setRefundMethod(request.getRefundMethod());
+                order.setRefundBank(request.getBank());
+                order.setRefundAccountNumber(request.getAccountNumber());
+                order.setRefundAccountHolder(request.getAccountHolder());
+
+                // Save selected product IDs as JSON array
+                if (request.getSelectedProductIds() != null
+                        && !request.getSelectedProductIds().isEmpty()) {
+                    try {
+                        String productIdsJson =
+                                objectMapper.writeValueAsString(
+                                        request.getSelectedProductIds());
+                        order.setRefundSelectedProductIds(productIdsJson);
+                    } catch (Exception e) {
+                        log.warn("Failed to serialize selected product IDs to JSON", e);
+                        order.setRefundSelectedProductIds(null);
+                    }
+                }
+
+                // Save media URLs as JSON array
+                if (request.getMediaUrls() != null && !request.getMediaUrls().isEmpty()) {
+                    try {
+                        String mediaUrlsJson =
+                                objectMapper.writeValueAsString(request.getMediaUrls());
+                        order.setRefundMediaUrls(mediaUrlsJson);
+                    } catch (Exception e) {
+                        log.warn("Failed to serialize media URLs to JSON", e);
+                        order.setRefundMediaUrls(null);
+                    }
+                }
+
+                // Calculate and save refund amount and return fee
+                if (order.getItems() != null && request.getSelectedProductIds() != null) {
+                    try {
+                        double productValue =
+                                order.getItems().stream()
+                                        .filter(
+                                                item ->
+                                                        request.getSelectedProductIds()
+                                                                .contains(item.getId()))
+                                        .mapToDouble(
+                                                item ->
+                                                        item.getFinalPrice() != null
+                                                                ? item.getFinalPrice()
+                                                                : 0.0)
+                                        .sum();
+
+                        double shippingFee =
+                                order.getShippingFee() != null ? order.getShippingFee() : 0.0;
+                        double totalPaid =
+                                order.getTotalAmount() != null
+                                        ? order.getTotalAmount()
+                                        : productValue + shippingFee;
+
+                        double computedReturnFee = 0.0;
+                        try {
+                            computedReturnFee =
+                                    shipmentService.estimateReturnShippingFee(order);
+                        } catch (Exception e) {
+                            log.warn(
+                                    "Failed to estimate return shipping fee for order {}: {}",
+                                    orderId,
+                                    e.getMessage());
+                            // Continue with fallback calculation
+                        }
+
+                        boolean isStoreReason =
+                                "store".equalsIgnoreCase(request.getReasonType());
+                        double fallbackReturnFee =
+                                isStoreReason
+                                        ? shippingFee
+                                        : Math.round(productValue * 0.1);
+                        double secondShippingFee =
+                                computedReturnFee > 0
+                                        ? Math.round(computedReturnFee)
+                                        : Math.max(0.0, fallbackReturnFee);
+
+                        double penaltyAmount =
+                                !isStoreReason
+                                        ? Math.max(0.0, Math.round(productValue * 0.1))
+                                        : 0.0;
+
+                        double customerRefundAmount =
+                                isStoreReason
+                                        ? totalPaid + secondShippingFee
+                                        : Math.max(
+                                                0.0, totalPaid - secondShippingFee - penaltyAmount);
+
+                        order.setRefundAmount(customerRefundAmount);
+                        order.setRefundReturnFee(secondShippingFee);
+                        order.setRefundSecondShippingFee(secondShippingFee);
+                        order.setRefundPenaltyAmount(penaltyAmount);
+                        order.setRefundTotalPaid(totalPaid);
+                        // Initialize confirmed values to match customer request, can be adjusted by staff
+                        // later
+                        order.setRefundConfirmedAmount(customerRefundAmount);
+                        order.setRefundConfirmedPenalty(penaltyAmount);
+                        order.setRefundConfirmedSecondShippingFee(secondShippingFee);
+                    } catch (Exception e) {
+                        log.error(
+                                "Error calculating refund amount for order {}: {}",
+                                orderId,
+                                e.getMessage(),
+                                e);
+                        // Set default values to allow request to proceed
+                        double shippingFee =
+                                order.getShippingFee() != null ? order.getShippingFee() : 0.0;
+                        double totalPaid =
+                                order.getTotalAmount() != null ? order.getTotalAmount() : 0.0;
+                        order.setRefundAmount(totalPaid);
+                        order.setRefundReturnFee(shippingFee);
+                        order.setRefundSecondShippingFee(shippingFee);
+                        order.setRefundPenaltyAmount(0.0);
+                        order.setRefundTotalPaid(totalPaid);
+                        order.setRefundConfirmedAmount(totalPaid);
+                        order.setRefundConfirmedPenalty(0.0);
+                        order.setRefundConfirmedSecondShippingFee(shippingFee);
+                    }
+                }
+
+                // Also save to note field for backward compatibility
+                if (request.getNote() != null && !request.getNote().isBlank()) {
+                    order.setNote(request.getNote());
+                } else {
+                    // Generate note from request data for backward compatibility
+                    StringBuilder noteBuilder = new StringBuilder();
+                    if (request.getReasonType() != null) {
+                        String reasonText =
+                                "store".equals(request.getReasonType())
+                                        ? "Sản phẩm gặp sự cố từ cửa hàng"
+                                        : "Thay đổi nhu cầu / Mua nhầm";
+                        noteBuilder
+                                .append("Yêu cầu hoàn tiền/trả hàng - ")
+                                .append(reasonText);
+                    }
+                    if (request.getDescription() != null
+                            && !request.getDescription().isBlank()) {
+                        noteBuilder
+                                .append("\nMô tả: ")
+                                .append(request.getDescription());
+                    }
+                    if (request.getReturnAddress() != null
+                            && !request.getReturnAddress().isBlank()) {
+                        noteBuilder
+                                .append("\nĐịa chỉ gửi hàng: ")
+                                .append(request.getReturnAddress());
+                    }
+                    if (request.getRefundMethod() != null
+                            && !request.getRefundMethod().isBlank()) {
+                        noteBuilder
+                                .append("\nPhương thức hoàn tiền: ")
+                                .append(request.getRefundMethod());
+                    }
+                    if (request.getBank() != null && !request.getBank().isBlank()) {
+                        noteBuilder.append("\nNgân hàng: ").append(request.getBank());
+                    }
+                    if (request.getAccountNumber() != null
+                            && !request.getAccountNumber().isBlank()) {
+                        noteBuilder
+                                .append("\nSố tài khoản: ")
+                                .append(request.getAccountNumber());
+                    }
+                    if (request.getAccountHolder() != null
+                            && !request.getAccountHolder().isBlank()) {
+                        noteBuilder
+                                .append("\nChủ tài khoản: ")
+                                .append(request.getAccountHolder());
+                    }
+                    order.setNote(noteBuilder.toString());
+                }
+            }
+
+            log.info("Saving order with return request: {}", orderId);
+            Order saved = orderRepository.save(order);
+            log.info("Order saved successfully: {}", orderId);
+
+            // Gửi thông báo in-app cho bộ phận CSKH về yêu cầu hoàn tiền / trả hàng mới
+            try {
+                String customerName =
+                        order.getUser() != null && order.getUser().getFullName() != null
+                                ? order.getUser().getFullName()
+                                : "Khách hàng";
+                String title = "Yêu cầu hoàn tiền / trả hàng mới";
+                String message =
+                        String.format(
+                                "%s đã gửi yêu cầu hoàn tiền/trả hàng cho đơn hàng %s.",
+                                customerName, order.getCode());
+                String link = "/customer-support/refund-management";
+                // Bạn có thể implement NotificationService tương tự LuminaBook nếu cần
+                // notificationService.sendToRole(title, message, "INFO", "CUSTOMER_SUPPORT",
+                // link);
+                log.info("Notification (mock) sent successfully for order: {}", orderId);
+            } catch (Exception e) {
+                log.error(
+                        "Failed to send notification to CS for return request {}: {}",
+                        orderId,
+                        e.getMessage(),
+                        e);
+                // Không throw exception vì notification là optional
+            }
+
+            log.info("Request return completed successfully for order: {}", orderId);
+            return saved;
+        } catch (AppException e) {
+            // Re-throw AppException để giữ nguyên error code và message
+            log.error(
+                    "AppException in requestReturn for order {}: code={}, message={}",
+                    orderId,
+                    e.getErrorCode().getCode(),
+                    e.getMessage(),
+                    e);
+            throw e;
+        } catch (Exception e) {
+            log.error(
+                    "Unexpected error in requestReturn for order {}: {}",
+                    orderId,
+                    e.getMessage(),
+                    e);
+            log.error("Exception stack trace:", e);
+            throw new AppException(
+                    ErrorCode.UNCATEGORIZED_EXCEPTION,
+                    "Có lỗi xảy ra khi xử lý yêu cầu trả hàng. Vui lòng thử lại sau.");
+        }
+    }
+
+    @Transactional
+    public Order rejectRefund(String orderId, RejectRefundRequest request) {
+        Order order =
+                orderRepository
+                        .findById(orderId)
+                        .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXISTED));
+
+        // Chỉ có thể từ chối đơn hàng chưa hoàn tất
+        if (order.getStatus() != OrderStatus.RETURN_REQUESTED
+                && order.getStatus() != OrderStatus.RETURN_CS_CONFIRMED
+                && order.getStatus() != OrderStatus.RETURN_STAFF_CONFIRMED) {
+            throw new AppException(
+                    ErrorCode.UNCATEGORIZED_EXCEPTION,
+                    "Chỉ có thể từ chối yêu cầu hoàn tiền cho đơn hàng đang ở trạng thái 'Hoàn tiền/ trả hàng'");
+        }
+
+        // Cập nhật status và lưu lý do từ chối
+        order.setStatus(OrderStatus.RETURN_REJECTED);
+        String rejectionReason =
+                request.getReason() != null ? request.getReason() : "Không có lý do";
+        order.setRefundRejectionReason(rejectionReason);
+        String rejectionSource =
+                request.getSource() != null ? request.getSource().trim() : null;
+        order.setRefundRejectionSource(
+                rejectionSource != null && !rejectionSource.isBlank()
+                        ? rejectionSource.toUpperCase()
+                        : null);
+        // Cũng lưu vào note để tương thích với code cũ
+        String rejectionNote =
+                "Yêu cầu hoàn tiền đã bị từ chối. Lý do: " + rejectionReason;
+        order.setNote(rejectionNote);
+
+        Order saved = orderRepository.save(order);
+
+        // Gửi email thông báo cho khách khi yêu cầu hoàn tiền bị từ chối
+        try {
+            brevoEmailService.sendReturnRejectedEmail(saved);
+        } catch (Exception e) {
+            log.error(
+                    "Failed to send return rejected email for order {}: {}",
+                    orderId,
+                    e.getMessage(),
+                    e);
+        }
+
+        return saved;
+    }
+
+    @Transactional
+    public Order csConfirmReturn(String orderId, ReturnProcessRequest request) {
+        Order order =
+                orderRepository
+                        .findById(orderId)
+                        .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXISTED));
+
+        // Chỉ có thể xác nhận hoàn tiền cho đơn hàng có status RETURN_REQUESTED
+        if (order.getStatus() != OrderStatus.RETURN_REQUESTED) {
+            throw new AppException(
+                    ErrorCode.UNCATEGORIZED_EXCEPTION,
+                    "Chỉ xác nhận các đơn đang ở trạng thái 'Khách yêu cầu hoàn tiền / trả hàng'");
+        }
+
+        appendProcessingNote(order, request);
+        order.setStatus(OrderStatus.RETURN_CS_CONFIRMED);
+        Order saved = orderRepository.save(order);
+
+        // Gửi email thông báo cho khách hàng: CSKH đã xác nhận yêu cầu hoàn tiền/trả hàng
+        try {
+            brevoEmailService.sendReturnCsConfirmedEmail(saved);
+        } catch (Exception e) {
+            log.error(
+                    "Failed to send CS-confirmed return email for order {}: {}",
+                    orderId,
+                    e.getMessage(),
+                    e);
+        }
+
+        // TODO: Gửi thông báo in-app cho STAFF nếu bạn triển khai NotificationService
+
+        return saved;
+    }
+
+    @Transactional
+    public Order staffConfirmReturn(String orderId, ReturnProcessRequest request) {
+        Order order =
+                orderRepository
+                        .findById(orderId)
+                        .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXISTED));
+
+        if (order.getStatus() != OrderStatus.RETURN_CS_CONFIRMED) {
+            throw new AppException(
+                    ErrorCode.UNCATEGORIZED_EXCEPTION,
+                    "Chỉ xử lý các đơn đã được CSKH xác nhận.");
+        }
+
+        appendProcessingNote(order, request);
+        if (request != null
+                && request.getNote() != null
+                && !request.getNote().isBlank()) {
+            order.setStaffInspectionResult(request.getNote().trim());
+        }
+        if (request != null && request.getRefundAmount() != null) {
+            order.setRefundAmount(request.getRefundAmount());
+            // Coi như đây là số tiền hoàn dự kiến do nhân viên xác nhận
+            order.setRefundConfirmedAmount(request.getRefundAmount());
+        }
+        LocalDate requestedReturnDate =
+                request != null ? request.getReturnCheckedDate() : null;
+        if (requestedReturnDate != null) {
+            order.setReturnCheckedDate(requestedReturnDate);
+        } else if (order.getReturnCheckedDate() == null) {
+            order.setReturnCheckedDate(LocalDate.now());
+        }
+        order.setStatus(OrderStatus.RETURN_STAFF_CONFIRMED);
+        Order saved = orderRepository.save(order);
+
+        // Gửi email cho khách về kết quả kiểm tra hàng (lỗi bên nào, số tiền dự kiến hoàn)
+        try {
+            brevoEmailService.sendReturnStaffInspectionEmail(saved);
+        } catch (Exception e) {
+            log.error(
+                    "Failed to send staff inspection email for order {}: {}",
+                    orderId,
+                    e.getMessage(),
+                    e);
+        }
+
+        return saved;
+    }
+
+    @Transactional
+    public Order confirmRefund(String orderId, ReturnProcessRequest request) {
+        Order order =
+                orderRepository
+                        .findById(orderId)
+                        .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXISTED));
+
+        // Chỉ có thể xác nhận hoàn tiền cho đơn hàng đã được staff kiểm tra
+        if (order.getStatus() != OrderStatus.RETURN_STAFF_CONFIRMED) {
+            throw new AppException(
+                    ErrorCode.UNCATEGORIZED_EXCEPTION,
+                    "Chỉ có thể xác nhận hoàn tiền cho đơn hàng đang ở trạng thái 'Hoàn tiền/ trả hàng'");
+        }
+
+        if (request != null
+                && request.getNote() != null
+                && !request.getNote().isBlank()) {
+            String trimmed = request.getNote().trim();
+            order.setAdminProcessingNote(trimmed);
+            appendProcessingNote(
+                    order, ReturnProcessRequest.builder().note(trimmed).build());
+        }
+
+        if (request != null && request.getRefundAmount() != null) {
+            order.setRefundAmount(request.getRefundAmount());
+        }
+        order.setStatus(OrderStatus.REFUNDED);
+
+        Order savedOrder = orderRepository.save(order);
+        notifyStaffOrderReturned(savedOrder);
+        return savedOrder;
+    }
+
+    @Transactional
+    public Order cancelOrder(String orderId, String reason) {
+        Order order =
+                orderRepository
+                        .findById(orderId)
+                        .orElseGet(
+                                () ->
+                                        orderRepository
+                                                .findByCode(orderId)
+                                                .orElseThrow(
+                                                        () ->
+                                                                new AppException(
+                                                                        ErrorCode
+                                                                                .ORDER_NOT_EXISTED)));
+
+        OrderStatus currentStatus =
+                order.getStatus() != null ? order.getStatus() : OrderStatus.CREATED;
+        if (currentStatus == OrderStatus.DELIVERED
+                || currentStatus == OrderStatus.SHIPPED
+                || currentStatus == OrderStatus.REFUNDED) {
+            throw new AppException(
+                    ErrorCode.UNCATEGORIZED_EXCEPTION,
+                    "Không thể hủy đơn hàng ở trạng thái hiện tại.");
+        }
+
+        if (currentStatus == OrderStatus.CANCELLED) {
+            boolean updated = false;
+            if (order.getCancellationReason() == null
+                    && reason != null
+                    && !reason.isBlank()) {
+                String resolvedReason = reason.trim();
+                order.setCancellationReason(resolvedReason);
+                order.setNote(buildCancellationNote(resolvedReason));
+                updated = true;
+            }
+            if (order.getCancellationSource() == null) {
+                order.setCancellationSource(
+                        guessCancellationSourceFromReason(
+                                order.getCancellationReason()));
+                updated = true;
+            }
+            Order saved = updated ? orderRepository.save(order) : order;
+            if (saved.getCancellationSource() == CancellationSource.CUSTOMER) {
+                notifyStaffOrderCancelledByCustomer(saved);
+            }
+            return saved;
+        }
+
+        var auth = SecurityUtil.getAuthentication();
+        boolean isPrivileged =
+                auth.getAuthorities().stream()
+                        .anyMatch(
+                                a -> {
+                                    String role = a.getAuthority();
+                                    return "ROLE_STAFF".equals(role)
+                                            || "ROLE_ADMIN".equals(role)
+                                            || "ROLE_CUSTOMER_SUPPORT".equals(role);
+                                });
+
+        if (!isPrivileged) {
+            String email = auth.getName();
+            if (order.getUser() == null
+                    || order.getUser().getEmail() == null
+                    || !order.getUser().getEmail().equalsIgnoreCase(email)) {
+                throw new AppException(ErrorCode.UNAUTHORIZED);
+            }
+        }
+
+        CancellationSource source =
+                isPrivileged ? CancellationSource.STAFF : CancellationSource.CUSTOMER;
+        String resolvedReason =
+                (reason != null && !reason.isBlank())
+                        ? reason.trim()
+                        : (source == CancellationSource.STAFF
+                                ? "Nhân viên hủy đơn"
+                                : "Khách hàng hủy đơn");
+
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setCancellationReason(resolvedReason);
+        order.setCancellationSource(source);
+        order.setNote(buildCancellationNote(resolvedReason));
+
+        Order savedOrder = orderRepository.save(order);
+        if (source == CancellationSource.CUSTOMER) {
+            notifyStaffOrderCancelledByCustomer(savedOrder);
+        }
+        return savedOrder;
+    }
+
+    private String buildCancellationNote(String reason) {
+        if (reason == null || reason.isBlank()) {
+            return "Đơn hàng đã được hủy.";
+        }
+        return "Đơn hàng đã được hủy. Lý do: " + reason;
+    }
+
+    private CancellationSource guessCancellationSourceFromReason(String reason) {
+        if (reason == null) {
+            return null;
+        }
+        String normalized = reason.toLowerCase();
+        if (normalized.contains("nhân viên") || normalized.contains("cửa hàng")) {
+            return CancellationSource.STAFF;
+        }
+        if (normalized.contains("khách hàng") || normalized.contains("khach hang")) {
+            return CancellationSource.CUSTOMER;
+        }
+        return null;
+    }
+
+    private void notifyStaffOrderCancelledByCustomer(Order order) {
+        try {
+            String code = resolveDisplayOrderCode(order);
+            int itemCount = order.getItems() != null ? order.getItems().size() : 0;
+            String message =
+                    itemCount > 0
+                            ? String.format(
+                                    "Khách hàng đã hủy đơn %s với %d sản phẩm. Vui lòng kiểm tra tồn kho/đơn hàng.",
+                                    code, itemCount)
+                            : String.format(
+                                    "Khách hàng đã hủy đơn %s. Vui lòng kiểm tra tồn kho/đơn hàng.",
+                                    code);
+            // TODO: implement notificationService.sendToStaff(...) if needed
+            log.info(
+                    "Mock notify staff order cancelled by customer: orderId={}, message={}",
+                    order.getId(),
+                    message);
+        } catch (Exception e) {
+            log.warn(
+                    "Không thể gửi thông báo hủy đơn bởi khách hàng cho order {}",
+                    order.getId(),
+                    e);
+        }
+    }
+
+    private void notifyStaffOrderReturned(Order order) {
+        try {
+            String code = resolveDisplayOrderCode(order);
+            // TODO: implement notificationService.sendToStaff(...) if needed
+            log.info(
+                    "Mock notify staff order returned: orderId={}, code={}",
+                    order.getId(),
+                    code);
+        } catch (Exception e) {
+            log.warn(
+                    "Không thể gửi thông báo đơn hoàn về cho order {}",
+                    order.getId(),
+                    e);
+        }
+    }
+
+    private String resolveDisplayOrderCode(Order order) {
+        if (order == null) return "";
+        if (order.getCode() != null && !order.getCode().isBlank()) {
+            return order.getCode();
+        }
+        return order.getId();
+    }
+
+    private void appendProcessingNote(Order order, ReturnProcessRequest request) {
+        if (request == null) {
+            return;
+        }
+        String note = request.getNote();
+        if (note == null || note.isBlank()) {
+            return;
+        }
+        String current = order.getNote();
+        if (current == null || current.isBlank()) {
+            order.setNote(note.trim());
+        } else {
+            order.setNote(current + System.lineSeparator() + note.trim());
+        }
     }
 }
 

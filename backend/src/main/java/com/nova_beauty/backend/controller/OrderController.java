@@ -1,5 +1,6 @@
 package com.nova_beauty.backend.controller;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -10,12 +11,18 @@ import org.springframework.web.bind.annotation.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nova_beauty.backend.dto.request.ApiResponse;
+import com.nova_beauty.backend.dto.request.CancelOrderRequest;
 import com.nova_beauty.backend.dto.request.CreateOrderRequest;
 import com.nova_beauty.backend.dto.request.DirectCheckoutRequest;
+import com.nova_beauty.backend.dto.request.RejectRefundRequest;
+import com.nova_beauty.backend.dto.request.ReturnProcessRequest;
+import com.nova_beauty.backend.dto.request.ReturnRequestRequest;
 import com.nova_beauty.backend.dto.response.CheckoutInitResponse;
 import com.nova_beauty.backend.dto.response.OrderDetailResponse;
 import com.nova_beauty.backend.dto.response.OrderItemResponse;
+import com.nova_beauty.backend.dto.response.OrderPageResponse;
 import com.nova_beauty.backend.dto.response.OrderResponse;
+import com.nova_beauty.backend.dto.response.OrderStatistics;
 import com.nova_beauty.backend.entity.Address;
 import com.nova_beauty.backend.entity.Order;
 import com.nova_beauty.backend.service.OrderService;
@@ -68,6 +75,38 @@ public class OrderController {
                 .build();
     }
 
+    @GetMapping("/statistics")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<OrderStatistics> getOrderStatistics(
+            @RequestParam LocalDate start, @RequestParam LocalDate end) {
+        return ApiResponse.<OrderStatistics>builder()
+                .result(orderService.getOrderStatistics(start, end))
+                .build();
+    }
+
+    @GetMapping("/recent")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    public ApiResponse<OrderPageResponse> getRecentOrders(
+            @RequestParam LocalDate start,
+            @RequestParam LocalDate end,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        var orderPage = orderService.getOrdersByDateRangePage(start, end, page, size);
+
+        OrderPageResponse response =
+                OrderPageResponse.builder()
+                        .orders(orderPage.getContent().stream().map(this::toResponse).toList())
+                        .totalElements(orderPage.getTotalElements())
+                        .totalPages(orderPage.getTotalPages())
+                        .currentPage(orderPage.getNumber())
+                        .pageSize(orderPage.getSize())
+                        .hasNext(orderPage.hasNext())
+                        .hasPrevious(orderPage.hasPrevious())
+                        .build();
+
+        return ApiResponse.<OrderPageResponse>builder().result(response).build();
+    }
+
     @GetMapping("/my-orders")
     @PreAuthorize("hasRole('CUSTOMER')")
     public ApiResponse<List<OrderResponse>> getMyOrders() {
@@ -83,6 +122,89 @@ public class OrderController {
         Order order = orderService.getOrderByIdForCurrentUser(id);
         return ApiResponse.<OrderDetailResponse>builder()
                 .result(toDetailResponse(order))
+                .build();
+    }
+
+    @PostMapping("/{id}/request-return")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ApiResponse<OrderDetailResponse> requestReturn(
+            @PathVariable String id,
+            @RequestBody(required = false) ReturnRequestRequest request) {
+        Order order = orderService.requestReturn(id, request);
+        return ApiResponse.<OrderDetailResponse>builder()
+                .result(toDetailResponse(order))
+                .message("Đã gửi yêu cầu trả hàng/hoàn tiền thành công.")
+                .build();
+    }
+
+    // Lấy danh sách các yêu cầu trả hàng/hoàn tiền.
+    // Dành cho Customer Support để quản lý và xử lý các yêu cầu trả hàng từ khách hàng.
+    @GetMapping("/return-requests")
+    @PreAuthorize("hasAnyRole('CUSTOMER_SUPPORT','STAFF','ADMIN')")
+    public ApiResponse<List<OrderResponse>> getReturnRequests() {
+        List<Order> orders = orderService.getReturnRequests();
+        return ApiResponse.<List<OrderResponse>>builder()
+                .result(orders.stream().map(this::toResponse).toList())
+                .build();
+    }
+
+    @PostMapping("/{id}/reject-refund")
+    @PreAuthorize("hasAnyRole('CUSTOMER_SUPPORT','STAFF','ADMIN')")
+    public ApiResponse<OrderDetailResponse> rejectRefund(
+            @PathVariable String id, @RequestBody RejectRefundRequest request) {
+        Order order = orderService.rejectRefund(id, request);
+        return ApiResponse.<OrderDetailResponse>builder()
+                .result(toDetailResponse(order))
+                .message("Đã từ chối yêu cầu hoàn tiền thành công.")
+                .build();
+    }
+
+    @PostMapping("/{id}/cs-confirm-refund")
+    @PreAuthorize("hasAnyRole('CUSTOMER_SUPPORT','STAFF','ADMIN')")
+    public ApiResponse<OrderDetailResponse> csConfirmRefund(
+            @PathVariable String id,
+            @RequestBody(required = false) ReturnProcessRequest request) {
+        Order order = orderService.csConfirmReturn(id, request);
+        return ApiResponse.<OrderDetailResponse>builder()
+                .result(toDetailResponse(order))
+                .message("CSKH đã xác nhận đơn hoàn và chuyển cho bộ phận kho.")
+                .build();
+    }
+
+    @PostMapping("/{id}/staff-confirm-refund")
+    @PreAuthorize("hasAnyRole('STAFF','ADMIN')")
+    public ApiResponse<OrderDetailResponse> staffConfirmRefund(
+            @PathVariable String id,
+            @RequestBody(required = false) ReturnProcessRequest request) {
+        Order order = orderService.staffConfirmReturn(id, request);
+        return ApiResponse.<OrderDetailResponse>builder()
+                .result(toDetailResponse(order))
+                .message("Kho đã xác nhận kiểm tra đơn hoàn và chuyển cho Admin.")
+                .build();
+    }
+
+    @PostMapping("/{id}/confirm-refund")
+    @PreAuthorize("hasAnyRole('CUSTOMER_SUPPORT','STAFF','ADMIN')")
+    public ApiResponse<OrderDetailResponse> confirmRefund(
+            @PathVariable String id,
+            @RequestBody(required = false) ReturnProcessRequest request) {
+        Order order = orderService.confirmRefund(id, request);
+        return ApiResponse.<OrderDetailResponse>builder()
+                .result(toDetailResponse(order))
+                .message("Đã xác nhận yêu cầu hoàn tiền thành công.")
+                .build();
+    }
+
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('CUSTOMER','STAFF','ADMIN')")
+    public ApiResponse<OrderDetailResponse> cancelOrder(
+            @PathVariable String id,
+            @RequestBody(required = false) CancelOrderRequest request) {
+        String reason = request != null ? request.getReason() : null;
+        Order order = orderService.cancelOrder(id, reason);
+        return ApiResponse.<OrderDetailResponse>builder()
+                .result(toDetailResponse(order))
+                .message("Đơn hàng đã được hủy thành công.")
                 .build();
     }
 

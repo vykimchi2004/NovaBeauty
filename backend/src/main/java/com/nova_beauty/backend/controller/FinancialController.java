@@ -7,9 +7,11 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.nova_beauty.backend.dto.request.ApiResponse;
+import com.nova_beauty.backend.dto.response.FinancialSummary;
 import com.nova_beauty.backend.dto.response.PaymentRevenue;
 import com.nova_beauty.backend.dto.response.ProductRevenue;
 import com.nova_beauty.backend.dto.response.RevenuePoint;
+import com.nova_beauty.backend.dto.response.RevenueSummary;
 import com.nova_beauty.backend.service.FinancialService;
 
 import lombok.RequiredArgsConstructor;
@@ -23,18 +25,12 @@ public class FinancialController {
 
     @GetMapping("/revenue/day")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<List<RevenuePoint>> revenueByDay(@RequestParam LocalDate start, @RequestParam LocalDate end) {
+    public ApiResponse<List<RevenuePoint>> revenueByDay(
+            @RequestParam LocalDate start,
+            @RequestParam LocalDate end,
+            @RequestParam(required = false, defaultValue = "day") String timeMode) {
         return ApiResponse.<List<RevenuePoint>>builder()
-                .result(financialService.revenueByDay(start, end))
-                .build();
-    }
-
-    @GetMapping("/revenue/product")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<List<ProductRevenue>> revenueByProduct(
-            @RequestParam LocalDate start, @RequestParam LocalDate end) {
-        return ApiResponse.<List<ProductRevenue>>builder()
-                .result(financialService.revenueByProduct(start, end))
+                .result(financialService.revenueByDay(start, end, timeMode))
                 .build();
     }
 
@@ -44,6 +40,35 @@ public class FinancialController {
             @RequestParam LocalDate start, @RequestParam LocalDate end) {
         return ApiResponse.<List<PaymentRevenue>>builder()
                 .result(financialService.revenueByPayment(start, end))
+                .build();
+    }
+
+    @GetMapping("/revenue/summary")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<RevenueSummary> revenueSummary(
+            @RequestParam LocalDate start, @RequestParam LocalDate end) {
+        return ApiResponse.<RevenueSummary>builder()
+                .result(financialService.revenueSummary(start, end))
+                .build();
+    }
+
+    @GetMapping("/summary")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<FinancialSummary> summary(
+            @RequestParam LocalDate start, @RequestParam LocalDate end) {
+        return ApiResponse.<FinancialSummary>builder()
+                .result(financialService.summary(start, end))
+                .build();
+    }
+
+    @GetMapping("/top-products")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<List<ProductRevenue>> topProductsByRevenue(
+            @RequestParam LocalDate start,
+            @RequestParam LocalDate end,
+            @RequestParam(defaultValue = "10") int limit) {
+        return ApiResponse.<List<ProductRevenue>>builder()
+                .result(financialService.topProductsByRevenue(start, end, limit))
                 .build();
     }
 }
