@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import classNames from 'classnames/bind';
 import styles from './Navbar.module.scss';
-import { getRootCategories } from '~/services/category';
+import { getRootCategories, getSubCategories } from '~/services/category';
 
 const cx = classNames.bind(styles);
 
@@ -16,8 +16,12 @@ function Navbar({ open = false, setOpen = () => {}, onLoginClick = () => {} }) {
     user = null;
   }
 
-  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 992 : false);
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth <= 992 : false,
+  );
   const [categories, setCategories] = useState([]);
+  const [activeCategoryId, setActiveCategoryId] = useState(null);
+  const [subCategories, setSubCategories] = useState([]);
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 992);
@@ -54,8 +58,29 @@ function Navbar({ open = false, setOpen = () => {}, onLoginClick = () => {} }) {
     fetchCategories();
   }, []);
 
+  const handleMouseEnterCategory = async (categoryId) => {
+    if (isMobile) return;
+
+    setActiveCategoryId(categoryId);
+
+    try {
+      const data = await getSubCategories(categoryId);
+      const activeSubs = (data || []).filter((cat) => cat.status !== false);
+      setSubCategories(activeSubs);
+    } catch (error) {
+      console.error('Error fetching subcategories for navbar:', error);
+      setSubCategories([]);
+    }
+  };
+
+  const handleMouseLeaveNavbar = () => {
+    if (isMobile) return;
+    setActiveCategoryId(null);
+    setSubCategories([]);
+  };
+
   return (
-    <nav className={cx('navbar')}>
+    <nav className={cx('navbar')} onMouseLeave={handleMouseLeaveNavbar}>
       <div className={cx('overlay', { active: open })} onClick={() => setOpen(false)} />
       <ul className={cx('menu', { active: open })}>
         {/* back row at top - visible in drawer only on mobile */}
@@ -78,10 +103,28 @@ function Navbar({ open = false, setOpen = () => {}, onLoginClick = () => {} }) {
         </li>
         {/* Dynamic categories from API - added to the right */}
         {categories.map((category) => (
-          <li key={category.id}>
+          <li
+            key={category.id}
+            onMouseEnter={() => handleMouseEnterCategory(category.id)}
+          >
             <Link to={`/products?category=${category.id}`} onClick={() => setOpen(false)}>
               {category.name}
             </Link>
+
+            {!isMobile && activeCategoryId === category.id && subCategories.length > 0 && (
+              <div className={cx('megaDropdown')}>
+                {subCategories.map((sub) => (
+                  <Link
+                    key={sub.id}
+                    to={`/products?category=${sub.id}`}
+                    className={cx('megaItem')}
+                    onClick={() => setOpen(false)}
+                  >
+                    {sub.name}
+                  </Link>
+                ))}
+              </div>
+            )}
           </li>
         ))}
 

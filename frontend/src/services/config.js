@@ -110,12 +110,21 @@ export const API_ENDPOINTS = {
         REMOVE_ITEM: (itemId) => `/cart/items/${itemId}`,
         UPDATE_ITEM: (itemId) => `/cart/items/${itemId}`,
     },
-    // Orders (placeholder - chưa có backend)
+    // Orders
     ORDERS: {
+        CHECKOUT: '/orders/checkout',
+        CHECKOUT_DIRECT: '/orders/checkout-direct',
         LIST: '/orders',
-        CREATE: '/orders',
         DETAIL: (id) => `/orders/${id}`,
         CANCEL: (id) => `/orders/${id}/cancel`,
+    },
+    // Addresses
+    ADDRESSES: {
+        CREATE: '/addresses',
+        MY_ADDRESSES: '/addresses',
+        DETAIL: (id) => `/addresses/${id}`,
+        UPDATE: (id) => `/addresses/${id}`,
+        DELETE: (id) => `/addresses/${id}`,
     },
 };
 
