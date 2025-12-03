@@ -18,11 +18,11 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class OtpVerificationRequest {
-    @NotBlank(message = "Email khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    @NotBlank(message = "Email không được để trống")
     @EmailConstraint
     String email;
 
-    @NotBlank(message = "OTP is required")
-    @Pattern(regexp = "\\d{6}", message = "OTP must be 6 digits")
+    @NotBlank(message = "OTP không được để trống")
+    @Pattern(regexp = "\\d{6}", message = "OTP phải gồm 6 chữ số")
     String otp;
 }

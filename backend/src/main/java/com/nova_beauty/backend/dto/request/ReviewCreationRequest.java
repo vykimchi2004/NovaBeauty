@@ -15,15 +15,15 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ReviewCreationRequest {
 
-    @Size(max = 100, message = "TÃªn hiá»ƒn thá»‹ khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 100 kÃ½ tá»±")
+    @Size(max = 100, message = "Tên hiển thị không được vượt quá 100 ký tự")
     String nameDisplay;
 
-    @NotNull(message = "ÄÃ¡nh giÃ¡ khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
-    @Min(value = 1, message = "ÄÃ¡nh giÃ¡ pháº£i tá»« 1 Ä‘áº¿n 5 sao")
-    @Max(value = 5, message = "ÄÃ¡nh giÃ¡ pháº£i tá»« 1 Ä‘áº¿n 5 sao")
+    @NotNull(message = "Đánh giá không được để trống")
+    @Min(value = 1, message = "Đánh giá phải từ 1 đến 5 sao")
+    @Max(value = 5, message = "Đánh giá phải từ 1 đến 5 sao")
     Integer rating;
 
-    @Size(max = 1000, message = "BÃ¬nh luáº­n khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 1000 kÃ½ tá»±")
+    @Size(max = 1000, message = "Bình luận không được vượt quá 1000 ký tự")
     String comment;
 
     User user;

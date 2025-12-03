@@ -10,7 +10,7 @@ import jakarta.validation.Payload;
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface VoucherScopeConstraint {
-    String message() default "Pháº¡m vi Ã¡p dá»¥ng voucher khÃ´ng há»£p lá»‡";
+    String message() default "Phạm vi áp dụng voucher không hợp lệ";
 
     Class<?>[] groups() default {};
 

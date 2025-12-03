@@ -10,7 +10,7 @@ import jakarta.validation.Payload;
 @Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface PasswordConstraint {
-    String message() default "Password khÃ´ng há»£p lá»‡";
+    String message() default "Mật khẩu không hợp lệ";
 
     Class<?>[] groups() default {};
 

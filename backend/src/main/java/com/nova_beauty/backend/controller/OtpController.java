@@ -32,12 +32,12 @@ public class OtpController {
                     String email,
             @RequestParam(required = false) String mode) {
         try {
-            // If in register mode and email already exists, block sending OTP
+            // Nếu ở chế độ đăng ký (register) và email đã tồn tại, không gửi OTP
             if ("register".equalsIgnoreCase(mode)
                     && userRepository.findByEmail(email).isPresent()) {
                 return ApiResponse.<String>builder()
                         .code(400)
-                        .message("Email Ä‘Ã£ Ä‘Æ°á»£c sá»­ dá»¥ng")
+                        .message("Email đã được sử dụng")
                         .result(null)
                         .build();
             }

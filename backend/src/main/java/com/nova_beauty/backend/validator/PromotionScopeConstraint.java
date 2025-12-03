@@ -10,7 +10,7 @@ import jakarta.validation.Payload;
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface PromotionScopeConstraint {
-    String message() default "Pháº¡m vi Ã¡p dá»¥ng khuyáº¿n mÃ£i khÃ´ng há»£p lá»‡";
+    String message() default "Phạm vi áp dụng khuyến mãi không hợp lệ";
 
     Class<?>[] groups() default {};
 

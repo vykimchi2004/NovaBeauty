@@ -7,41 +7,41 @@ public class PasswordValidator implements ConstraintValidator<PasswordConstraint
 
     @Override
     public void initialize(PasswordConstraint constraintAnnotation) {
-        // KhÃ´ng cáº§n khá»Ÿi táº¡o gÃ¬ Ä‘áº·c biá»‡t
+        // Không cần khởi tạo gì đặc biệt
     }
 
     @Override
     public boolean isValid(String password, ConstraintValidatorContext context) {
         if (password == null) {
-            return true; // Äá»ƒ @NotNull xá»­ lÃ½ trÆ°á»ng há»£p null
+            return true; // Để @NotNull xử lý trường hợp null
         }
 
-        // Kiá»ƒm tra Ä‘á»™ dÃ i
+        // Kiểm tra độ dài
         if (password.length() < 8) {
             context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate("Máº­t kháº©u quÃ¡ ngáº¯n, tá»‘i thiá»ƒu 8 kÃ½ tá»±")
+            context.buildConstraintViolationWithTemplate("Mật khẩu quá ngắn, tối thiểu 8 ký tự")
                     .addConstraintViolation();
             return false;
         }
 
         if (password.length() > 32) {
             context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate("Máº­t kháº©u quÃ¡ dÃ i, tá»‘i Ä‘a 32 kÃ½ tá»±")
+            context.buildConstraintViolationWithTemplate("Mật khẩu quá dài, tối đa 32 ký tự")
                     .addConstraintViolation();
             return false;
         }
 
-        // Kiá»ƒm tra khoáº£ng tráº¯ng (bao gá»“m táº¥t cáº£ loáº¡i khoáº£ng tráº¯ng Unicode)
+        // Kiểm tra khoảng trắng (bao gồm tất cả loại khoảng trắng Unicode)
         String whitespaceRegex =
                 "[\\s\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF\\u200B\\u200C\\u200D]";
         if (password.matches(".*" + whitespaceRegex + ".*")) {
             context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate("Máº­t kháº©u khÃ´ng Ä‘Æ°á»£c chá»©a khoáº£ng tráº¯ng")
+            context.buildConstraintViolationWithTemplate("Mật khẩu không được chứa khoảng trắng")
                     .addConstraintViolation();
             return false;
         }
 
-        // Kiá»ƒm tra cÃ¡c yÃªu cáº§u vá» kÃ½ tá»±
+        // Kiểm tra các yêu cầu về ký tự
         boolean hasLowercase = password.matches(".*[a-z].*");
         boolean hasUppercase = password.matches(".*[A-Z].*");
         boolean hasDigit = password.matches(".*\\d.*");
@@ -50,7 +50,7 @@ public class PasswordValidator implements ConstraintValidator<PasswordConstraint
         if (!(hasLowercase && hasUppercase && hasDigit && hasSpecial)) {
             context.disableDefaultConstraintViolation();
             context.buildConstraintViolationWithTemplate(
-                            "Máº­t kháº©u Ã­t nháº¥t pháº£i chá»©a má»™t chá»¯ cÃ¡i thÆ°á»ng, 1 chá»¯ cÃ¡i in hoa, 1 sá»‘ vÃ  1 kÃ½ tá»± Ä‘áº·c biá»‡t")
+                            "Mật khẩu ít nhất phải chứa một chữ cái thường, một chữ cái in hoa, một số và một ký tự đặc biệt")
                     .addConstraintViolation();
             return false;
         }

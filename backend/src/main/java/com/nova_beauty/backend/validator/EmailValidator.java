@@ -7,7 +7,7 @@ public class EmailValidator implements ConstraintValidator<EmailConstraint, Stri
 
     @Override
     public void initialize(EmailConstraint constraintAnnotation) {
-        // KhÃ´ng cáº§n khá»Ÿi táº¡o gÃ¬ Ä‘áº·c biá»‡t
+        // Không cần khởi tạo gì đặc biệt
     }
 
     @Override
@@ -16,19 +16,19 @@ public class EmailValidator implements ConstraintValidator<EmailConstraint, Stri
             return true; // Äá»ƒ @NotBlank xá»­ lÃ½ trÆ°á»ng há»£p null/empty
         }
 
-        // Kiá»ƒm tra dáº¥u cháº¥m liÃªn tiáº¿p
+        // Kiểm tra dấu chấm liên tiếp
         if (email.contains("..")) {
             context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate("Email khÃ´ng Ä‘Æ°á»£c chá»©a dáº¥u cháº¥m liÃªn tiáº¿p")
+            context.buildConstraintViolationWithTemplate("Email không được chứa dấu chấm liên tiếp")
                     .addConstraintViolation();
             return false;
         }
 
-        // Kiá»ƒm tra cÃ³ kÃ½ tá»± @ vÃ  chia thÃ nh 2 pháº§n
+        // Kiểm tra có ký tự @ và chia thành 2 phần
         String[] parts = email.split("@");
         if (parts.length != 2) {
             context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate("Email pháº£i cÃ³ Ä‘Ãºng má»™t kÃ½ tá»± @")
+            context.buildConstraintViolationWithTemplate("Email phải có đúng một ký tự @")
                     .addConstraintViolation();
             return false;
         }
@@ -36,35 +36,35 @@ public class EmailValidator implements ConstraintValidator<EmailConstraint, Stri
         String localPart = parts[0];
         String domainPart = parts[1];
 
-        // Kiá»ƒm tra local part vÃ  domain part khÃ´ng rá»—ng
+        // Kiểm tra local part và domain part không rỗng
         if (localPart.isEmpty() || domainPart.isEmpty()) {
             context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate("Email pháº£i cÃ³ pháº§n tÃªn vÃ  domain")
+            context.buildConstraintViolationWithTemplate("Email phải có phần tên và domain")
                     .addConstraintViolation();
             return false;
         }
 
-        // Kiá»ƒm tra dáº¥u cháº¥m á»Ÿ Ä‘áº§u hoáº·c cuá»‘i local part
+        // Kiểm tra dấu chấm ở đầu hoặc cuối local part
         if (localPart.startsWith(".") || localPart.endsWith(".")) {
             context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate("TÃªn email khÃ´ng Ä‘Æ°á»£c báº¯t Ä‘áº§u hoáº·c káº¿t thÃºc báº±ng dáº¥u cháº¥m")
+            context.buildConstraintViolationWithTemplate("Tên email không được bắt đầu hoặc kết thúc bằng dấu chấm")
                     .addConstraintViolation();
             return false;
         }
 
-        // Kiá»ƒm tra dáº¥u cháº¥m á»Ÿ Ä‘áº§u hoáº·c cuá»‘i domain part
+        // Kiểm tra dấu chấm ở đầu hoặc cuối domain part
         if (domainPart.startsWith(".") || domainPart.endsWith(".")) {
             context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate("Domain khÃ´ng Ä‘Æ°á»£c báº¯t Ä‘áº§u hoáº·c káº¿t thÃºc báº±ng dáº¥u cháº¥m")
+            context.buildConstraintViolationWithTemplate("Domain không được bắt đầu hoặc kết thúc bằng dấu chấm")
                     .addConstraintViolation();
             return false;
         }
 
-        // Kiá»ƒm tra format email vá»›i regex
+        // Kiểm tra format email với regex
         String emailRegex = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
         if (!email.matches(emailRegex)) {
             context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate("Email khÃ´ng Ä‘Ãºng Ä‘á»‹nh dáº¡ng")
+            context.buildConstraintViolationWithTemplate("Email không đúng định dạng")
                     .addConstraintViolation();
             return false;
         }

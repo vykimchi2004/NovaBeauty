@@ -35,7 +35,7 @@ public class VoucherScopeValidator implements ConstraintValidator<VoucherScopeCo
                         && (productIds == null || productIds.isEmpty());
                 if (!orderValid) {
                     context.buildConstraintViolationWithTemplate(
-                                    "Voucher Ã¡p dá»¥ng toÃ n bá»™ Ä‘Æ¡n hÃ ng khÃ´ng Ä‘Æ°á»£c chá»n danh má»¥c hoáº·c sáº£n pháº©m cá»¥ thá»ƒ")
+                                    "Voucher áp dụng toàn bộ đơn hàng không được chọn danh mục hoặc sản phẩm cụ thể")
                             .addConstraintViolation();
                 }
                 return orderValid;
@@ -43,14 +43,14 @@ public class VoucherScopeValidator implements ConstraintValidator<VoucherScopeCo
                 boolean categoryValid = categoryIds != null && !categoryIds.isEmpty();
                 if (!categoryValid) {
                     context.buildConstraintViolationWithTemplate(
-                                    "Vui lÃ²ng chá»n Ã­t nháº¥t má»™t danh má»¥c khi Ã¡p dá»¥ng theo danh má»¥c")
+                                    "Vui lòng chọn ít nhất một danh mục khi áp dụng theo danh mục")
                             .addConstraintViolation();
                     return false;
                 }
-                // KhÃ´ng cho phÃ©p truyá»n productIds khi apply theo category
+                // Không cho phép truyền productIds khi apply theo category
                 if (productIds != null && !productIds.isEmpty()) {
                     context.buildConstraintViolationWithTemplate(
-                                    "KhÃ´ng Ä‘Æ°á»£c chá»n sáº£n pháº©m cá»¥ thá»ƒ khi voucher Ã¡p dá»¥ng theo danh má»¥c")
+                                    "Không được chọn sản phẩm cụ thể khi voucher áp dụng theo danh mục")
                             .addConstraintViolation();
                     return false;
                 }
@@ -59,13 +59,13 @@ public class VoucherScopeValidator implements ConstraintValidator<VoucherScopeCo
                 boolean productValid = productIds != null && !productIds.isEmpty();
                 if (!productValid) {
                     context.buildConstraintViolationWithTemplate(
-                                    "Vui lÃ²ng chá»n Ã­t nháº¥t má»™t sáº£n pháº©m khi Ã¡p dá»¥ng theo sáº£n pháº©m")
+                                    "Vui lòng chọn ít nhất một sản phẩm khi áp dụng theo sản phẩm")
                             .addConstraintViolation();
                     return false;
                 }
                 if (categoryIds != null && !categoryIds.isEmpty()) {
                     context.buildConstraintViolationWithTemplate(
-                                    "KhÃ´ng Ä‘Æ°á»£c chá»n danh má»¥c khi voucher Ã¡p dá»¥ng theo sáº£n pháº©m cá»¥ thá»ƒ")
+                                    "Không được chọn danh mục khi voucher áp dụng theo sản phẩm cụ thể")
                             .addConstraintViolation();
                     return false;
                 }

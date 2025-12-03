@@ -10,7 +10,7 @@ import jakarta.validation.Payload;
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface PromotionDateConstraint {
-    String message() default "NgÃ y khuyáº¿n mÃ£i khÃ´ng há»£p lá»‡";
+    String message() default "Ngày khuyến mãi không hợp lệ";
 
     Class<?>[] groups() default {};
 
