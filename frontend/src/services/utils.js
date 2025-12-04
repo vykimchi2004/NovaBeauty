@@ -1,3 +1,5 @@
+import { API_BASE_URL, STORAGE_KEYS } from './config';
+
 // Utils
 // Hàm tiện ích
 
@@ -170,6 +172,64 @@ export const throttle = (func, limit) => {
 export const truncateText = (text, maxLength = 100, suffix = '...') => {
     if (!text || text.length <= maxLength) return text;
     return text.slice(0, maxLength - suffix.length) + suffix;
+};
+
+// Expose API base url (env override or fallback)
+export const getApiBaseUrl = () => {
+    if (typeof process !== 'undefined' && process?.env?.REACT_APP_API_BASE_URL) {
+        const envUrl = String(process.env.REACT_APP_API_BASE_URL).trim();
+        if (envUrl) {
+            return envUrl;
+        }
+    }
+    return API_BASE_URL;
+};
+
+// Safely read token from storage (session first, then local)
+export const getStoredToken = (key = STORAGE_KEYS.TOKEN) => {
+    const normalize = (value) => {
+        if (!value) return null;
+        let token = String(value).trim();
+
+        if ((token.startsWith('"') && token.endsWith('"')) || (token.startsWith("'") && token.endsWith("'"))) {
+            token = token.slice(1, -1);
+        }
+
+        if (token.startsWith('{') || token.startsWith('[')) {
+            try {
+                const parsed = JSON.parse(token);
+                if (typeof parsed === 'string') {
+                    token = parsed;
+                } else if (parsed && typeof parsed.token === 'string') {
+                    token = parsed.token;
+                }
+            } catch (_) {
+                // ignore parse errors, fallback to raw string
+            }
+        }
+
+        if (token.toLowerCase().startsWith('bearer ')) {
+            token = token.slice(7);
+        }
+
+        return token.trim() || null;
+    };
+
+    try {
+        const fromSession = normalize(sessionStorage.getItem(key));
+        if (fromSession) return fromSession;
+    } catch (_) {
+        // ignore sessionStorage access errors
+    }
+
+    try {
+        const fromLocal = normalize(localStorage.getItem(key));
+        if (fromLocal) return fromLocal;
+    } catch (_) {
+        // ignore localStorage access errors
+    }
+
+    return null;
 };
 
 // Format number with thousand separators

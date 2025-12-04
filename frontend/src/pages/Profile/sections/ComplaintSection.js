@@ -1,36 +1,81 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import classNames from 'classnames/bind';
 import styles from '../Profile.module.scss';
+import { useNavigate } from 'react-router-dom';
+import ticketService from '~/services/ticket';
+import { STORAGE_KEYS } from '~/services/config';
+import { storage } from '~/services/utils';
 
 const cx = classNames.bind(styles);
 
-// Dữ liệu mẫu đơn khiếu nại
-const COMPLAINTS_DATA = [
-  {
-    id: 'KN12345',
-    orderCode: 'FHS56789',
-    dateSent: '10/10/2025',
-    status: 'Đang xử lý',
-    statusKey: 'processing',
-  },
-  {
-    id: 'KN12346',
-    orderCode: 'FHS56790',
-    dateSent: '09/10/2025',
-    status: 'Hoàn tất',
-    statusKey: 'completed',
-  },
-  {
-    id: 'KN12347',
-    orderCode: 'FHS56791',
-    dateSent: '08/10/2025',
-    status: 'Từ chối',
-    statusKey: 'rejected',
-  },
-];
-
 function ComplaintSection() {
-  const [complaints] = useState(COMPLAINTS_DATA);
+  const [complaints, setComplaints] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchMyComplaints = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const user = storage.get(STORAGE_KEYS.USER, null);
+        const email = user?.email?.toLowerCase();
+        if (!email) {
+          setComplaints([]);
+          return;
+        }
+
+        const tickets = await ticketService.getAllTickets();
+        const myTickets = Array.isArray(tickets)
+          ? tickets.filter((t) => (t.email || '').toLowerCase() === email)
+          : [];
+
+        const mapStatus = (raw) => {
+          const key = (raw || '').toUpperCase();
+          if (key === 'RESOLVED') return { label: 'Hoàn tất', key: 'completed' };
+          if (key === 'PENDING' || key === 'IN_PROGRESS' || key === 'ESCALATED') {
+            return { label: 'Đang xử lý', key: 'processing' };
+          }
+          return { label: raw || 'Không xác định', key: 'processing' };
+        };
+
+        const formatDate = (value) => {
+          if (!value) return '';
+          const d = new Date(value);
+          if (Number.isNaN(d.getTime())) return '';
+          return d.toLocaleDateString('vi-VN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+          });
+        };
+
+        const mapped = myTickets.map((t) => {
+          const s = mapStatus(t.status);
+          // Nếu orderCode là 'KHAC' (Khác), hiển thị "-" thay vì "KHAC"
+          const displayOrderCode = t.orderCode === 'KHAC' ? '-' : (t.orderCode || '-');
+          return {
+            id: t.id || '',
+            orderCode: displayOrderCode,
+            dateSent: formatDate(t.createdAt),
+            status: s.label,
+            statusKey: s.key,
+          };
+        });
+
+        setComplaints(mapped);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Error loading complaints:', err);
+        setError('Không thể tải danh sách khiếu nại. Vui lòng thử lại sau.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMyComplaints();
+  }, []);
 
   const getStatusClass = (statusKey) => {
     const statusMap = {
@@ -41,16 +86,24 @@ function ComplaintSection() {
     return statusMap[statusKey] || '';
   };
 
+  const handleCreateComplaint = () => {
+    navigate('/support?section=quality');
+  };
+
   const handleViewDetails = (complaintId) => {
-    // TODO: Navigate to complaint details page
-    console.log('View details for:', complaintId);
+    // Tạm thời điều hướng sang trang hỗ trợ để xem/trao đổi thêm
+    navigate('/support?section=quality');
   };
 
   return (
     <div className={cx('card', 'complaintsCard')}>
       <div className={cx('complaintsHeader')}>
         <h2>Đơn khiếu nại</h2>
-        <button type="button" className={cx('btn', 'btnPrimary', 'newComplaintBtn')}>
+        <button
+          type="button"
+          className={cx('btn', 'btnPrimary', 'newComplaintBtn')}
+          onClick={handleCreateComplaint}
+        >
           Tạo đơn khiếu nại mới
         </button>
       </div>
@@ -67,7 +120,19 @@ function ComplaintSection() {
             </tr>
           </thead>
           <tbody>
-            {complaints.length === 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan="5" className={cx('emptyTableMessage')}>
+                  Đang tải dữ liệu...
+                </td>
+              </tr>
+            ) : error ? (
+              <tr>
+                <td colSpan="5" className={cx('emptyTableMessage')}>
+                  {error}
+                </td>
+              </tr>
+            ) : complaints.length === 0 ? (
               <tr>
                 <td colSpan="5" className={cx('emptyTableMessage')}>
                   Bạn chưa có đơn khiếu nại nào.
@@ -77,7 +142,9 @@ function ComplaintSection() {
               complaints.map((complaint) => (
                 <tr key={complaint.id}>
                   <td className={cx('complaintId')}>#{complaint.id}</td>
-                  <td className={cx('complaintOrder')}>#{complaint.orderCode}</td>
+                  <td className={cx('complaintOrder')}>
+                    {complaint.orderCode === 'OTHER' ? '-' : `#${complaint.orderCode}`}
+                  </td>
                   <td className={cx('complaintDate')}>{complaint.dateSent}</td>
                   <td>
                     <span className={cx('complaintStatus', getStatusClass(complaint.statusKey))}>

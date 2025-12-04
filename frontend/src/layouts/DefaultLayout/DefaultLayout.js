@@ -43,8 +43,10 @@ function DefaultLayout({ children }) {
     const roleName = currentUser?.role?.name?.toUpperCase();
     if (!navigate || !roleName) return;
 
-    if ((roleName === 'STAFF' || roleName === 'CUSTOMER_SUPPORT') && !location.pathname.startsWith('/staff')) {
+    if (roleName === 'STAFF' && !location.pathname.startsWith('/staff')) {
       navigate('/staff', { replace: true });
+    } else if (roleName === 'CUSTOMER_SUPPORT' && !location.pathname.startsWith('/customer-support')) {
+      navigate('/customer-support', { replace: true });
     }
   }, [currentUser, navigate, location.pathname]);
   

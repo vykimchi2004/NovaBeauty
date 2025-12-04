@@ -19,6 +19,7 @@ public class TicketResponse {
     String customerName;
     String email;
     String phone;
+    String topic;
     String content;
     String handlerNote;
     String handlerId;

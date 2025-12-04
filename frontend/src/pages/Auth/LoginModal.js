@@ -122,12 +122,17 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
           } else {
             window.location.href = '/admin';
           }
-        } else if (roleName === 'STAFF' || roleName === 'CUSTOMER_SUPPORT') {
-          // Redirect staff to staff page
+        } else if (roleName === 'STAFF') {
           if (navigate) {
             navigate('/staff', { replace: true });
           } else {
             window.location.href = '/staff';
+          }
+        } else if (roleName === 'CUSTOMER_SUPPORT') {
+          if (navigate) {
+            navigate('/customer-support', { replace: true });
+          } else {
+            window.location.href = '/customer-support';
           }
         } else {
           // Refresh page để cập nhật UI cho user thường
