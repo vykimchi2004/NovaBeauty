@@ -49,16 +49,16 @@
   position: absolute;
   top: 100%;
   left: 50%;
-  width: 85%;
+  width: 83%;
   transform: translateX(-50%);
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.06);
   padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  
   z-index: 5;
-  max-height: 300px;
+  max-height: 200px;
   overflow-y: auto;
 }
 
@@ -66,8 +66,8 @@
   width: 100%;
   text-align: left;
   border: none;
-  background: #f8f8f8;
-  padding: 10px 12px;
+  background: #ffffff;
+  padding: 5px 12px;
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
@@ -76,7 +76,6 @@
   transition: background-color 140ms ease, transform 140ms ease;
   display: block;
   white-space: nowrap;
-  overflow: hidden;
   text-overflow: ellipsis;
 }
 

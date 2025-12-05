@@ -28,6 +28,30 @@ const orderService = {
     },
 
     /**
+     * Tạo đơn hàng trực tiếp không qua giỏ hàng
+     * @param {Object} request - DirectCheckoutRequest
+     * @param {string} request.productId - ID sản phẩm
+     * @param {number} request.quantity - Số lượng
+     * @param {string} request.colorCode - Mã màu (optional)
+     * @param {string} request.shippingAddress - JSON string của địa chỉ giao hàng
+     * @param {string} request.addressId - ID của địa chỉ đã lưu (optional)
+     * @param {string} request.note - Ghi chú đơn hàng (optional)
+     * @param {number} request.shippingFee - Phí vận chuyển (VND)
+     * @param {string} request.paymentMethod - Phương thức thanh toán ('momo' | 'cod')
+     * @returns {Promise<Object>} CheckoutInitResponse với order và payUrl
+     */
+    async checkoutDirect(request) {
+        try {
+            const response = await apiClient.post('/orders/checkout-direct', request);
+            console.log('[Order Service] checkoutDirect response:', response);
+            return response;
+        } catch (error) {
+            console.error('[Order Service] checkoutDirect error:', error);
+            throw error;
+        }
+    },
+
+    /**
      * Lấy tất cả orders của khách hàng hiện tại
      */
     async getMyOrders() {

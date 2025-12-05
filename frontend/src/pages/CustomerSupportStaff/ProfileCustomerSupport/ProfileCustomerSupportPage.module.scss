@@ -1,4 +1,4 @@
-.profile-staff-page {
+.profile-customer-support-page {
   width: 100%;
   max-width: 95%;
   min-height: 100vh;
@@ -81,6 +81,39 @@
   margin-left: 4px;
 }
 
+.input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input-wrap input {
+  flex: 1;
+  width: 100%;
+  padding-right: 48px;
+}
+
+.toggle-visibility {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #e5677d;
+  font-size: 16px;
+
+  &:hover {
+    color: #d4556b;
+  }
+}
+
 .form-group label {
   font-weight: 600;
   color: #1f1f1f;
@@ -122,39 +155,6 @@
   min-height: 100px;
   resize: vertical;
   line-height: 1.5;
-}
-
-.input-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 100%;
-}
-
-.input-wrap input {
-  flex: 1;
-  width: 100%;
-  padding-right: 48px;
-}
-
-.toggle-visibility {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #e5677d;
-  font-size: 16px;
-
-  &:hover {
-    color: #d4556b;
-  }
 }
 
 .actions {
@@ -242,7 +242,7 @@
 }
 
 @media (max-width: 1024px) {
-  .profile-staff-page {
+  .profile-customer-support-page {
     padding: 20px;
   }
 
@@ -252,7 +252,7 @@
 }
 
 @media (max-width: 640px) {
-  .profile-staff-page {
+  .profile-customer-support-page {
     padding: 16px;
   }
 

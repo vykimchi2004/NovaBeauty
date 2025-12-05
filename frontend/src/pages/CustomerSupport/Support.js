@@ -149,7 +149,7 @@ const goToQuestion = (code, labelForInput) => {
       { replace: true }
     );
     setActiveSection('faq');
-    setShowSuggestions(false);
+    // Giữ suggestions hiển thị sau khi chọn câu hỏi
   };
 
 const handleSelectSuggestion = (sug) => {

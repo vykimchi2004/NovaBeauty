@@ -1,14 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faSearch, faArrowLeft, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faSearch, faArrowLeft, faCalendarAlt, faTimes } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from './StaffProducts.module.scss';
 import AddProductPage from './components/AddProduct/AddProductPage';
 import UpdateProductPage from './components/UpdateProduct/UpdateProductPage';
 import ProductDetailPage from './components/ProductDetail/ProductDetailPage';
-import { getMyProducts, createProduct, updateProduct, deleteProduct } from '~/services/product';
-import { getCategories, getRootCategories, getSubCategories } from '~/services/category';
+import { getMyProducts, createProduct, updateProduct } from '~/services/product';
 import { uploadProductMedia } from '~/services/media';
 import notify from '~/utils/notification';
 import { createStatusHelpers } from '~/utils/statusHelpers';
@@ -27,6 +26,7 @@ import {
   serializeVariantPayload,
   normalizeVariantRecords,
 } from '~/utils/colorVariants';
+import { useCategories } from '~/hooks';
 import fallbackImage from '~/assets/images/products/image1.jpg';
 
 const cx = classNames.bind(styles);
@@ -108,9 +108,26 @@ function StaffProducts() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [editingProduct, setEditingProduct] = useState(null);
   const [viewingProduct, setViewingProduct] = useState(null);
-  const [categories, setCategories] = useState([]);
-  const [categoriesTree, setCategoriesTree] = useState([]);
-  const [loadingCategories, setLoadingCategories] = useState(false);
+  
+  // Sử dụng useCategories hook để tái sử dụng logic
+  const { categories: allCategories, loading: loadingCategories } = useCategories({
+    type: 'all', // Load tất cả để có thể build tree với subcategories
+    autoLoad: true,
+    filterInactive: true,
+  });
+
+  // Build categories tree từ allCategories - tối ưu với useMemo
+  const categoriesTree = useMemo(() => {
+    if (!allCategories || allCategories.length === 0) return [];
+    
+    const rootCats = allCategories.filter((cat) => !cat.parentId);
+    return rootCats.map((root) => ({
+      ...root,
+      children: allCategories.filter((cat) => cat.parentId === root.id),
+    }));
+  }, [allCategories]);
+
+  const categories = allCategories;
   const [formData, setFormData] = useState(() => getInitialFormData());
   const [formErrors, setFormErrors] = useState({});
   const [uploadingMedia, setUploadingMedia] = useState(false);
@@ -121,16 +138,7 @@ function StaffProducts() {
 
   useEffect(() => {
     fetchProducts();
-    fetchCategories();
-
-    const handleCategoriesUpdated = () => {
-      fetchCategories();
-    };
-    window.addEventListener('categoriesUpdated', handleCategoriesUpdated);
-
-    return () => {
-      window.removeEventListener('categoriesUpdated', handleCategoriesUpdated);
-    };
+    // useCategories hook đã tự động load và lắng nghe events
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -216,58 +224,6 @@ function StaffProducts() {
     });
   };
 
-  const fetchCategories = async () => {
-    try {
-      setLoadingCategories(true);
-      const rootData = await getRootCategories();
-      const activeRootCategories = (rootData || []).filter((cat) => cat.status !== false);
-      const allCategories = [...activeRootCategories];
-      const treeStructure = [];
-
-      for (const rootCat of activeRootCategories) {
-        try {
-          const subCats = await getSubCategories(rootCat.id);
-          const activeSubCats = (subCats || []).filter((cat) => cat.status !== false);
-          allCategories.push(...activeSubCats);
-
-          treeStructure.push({
-            ...rootCat,
-            children: activeSubCats,
-          });
-        } catch (subErr) {
-          console.warn(`Error fetching subcategories for ${rootCat.id}:`, subErr);
-          treeStructure.push({
-            ...rootCat,
-            children: [],
-          });
-        }
-      }
-
-      setCategories(allCategories);
-      setCategoriesTree(treeStructure);
-    } catch (err) {
-      console.error('Error fetching categories:', err);
-      try {
-        const allData = await getCategories();
-        const activeData = (allData || []).filter((cat) => cat.status !== false);
-        setCategories(activeData);
-
-        const rootCats = activeData.filter((cat) => !cat.parentId);
-        const tree = rootCats.map((root) => ({
-          ...root,
-          children: activeData.filter((cat) => cat.parentId === root.id),
-        }));
-        setCategoriesTree(tree);
-      } catch (fallbackErr) {
-        console.error('Error fetching all categories:', fallbackErr);
-        setCategories([]);
-        setCategoriesTree([]);
-      }
-    } finally {
-      setLoadingCategories(false);
-    }
-  };
-
   const filterProducts = () => {
     let filtered = [...products];
     if (searchTerm) {
@@ -286,6 +242,11 @@ function StaffProducts() {
         const productDate = new Date(product.createdAt).toISOString().split('T')[0];
         return productDate === filterDate;
       });
+    }
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(
+        (product) => getNormalizedProductStatus(product) === statusFilter,
+      );
     }
     setFilteredProducts(filtered);
   };
@@ -325,7 +286,6 @@ function StaffProducts() {
         productId: product.id || '',
         name: product.name || '',
         description: product.description || '',
-        size: product.size || '',
         brand: product.brand || '',
         brandOrigin: product.brandOrigin || '',
         texture: product.texture || '',
@@ -334,10 +294,17 @@ function StaffProducts() {
         ingredients: product.ingredients || '',
         uses: product.uses || '',
         usageInstructions: product.usageInstructions || '',
+        length: product.length?.toString() || '',
+        width: product.width?.toString() || '',
+        height: product.height?.toString() || '',
         weight: product.weight?.toString() || '',
         price:
           product.unitPrice?.toString() ||
-          (product.price ? (product.price / 1.08).toFixed(0) : ''),
+          (product.price && product.tax
+            ? (product.price / (1 + product.tax)).toFixed(0)
+            : product.price
+            ? (product.price / 1.08).toFixed(0)
+            : ''),
         tax: product.tax ? (product.tax * 100).toString() : '8',
         publicationDate: product.publicationDate || new Date().toISOString().split('T')[0],
         categoryId: product.categoryId || product.category?.id || '',
@@ -542,6 +509,24 @@ function StaffProducts() {
     }
     if (!formData.categoryId) errors.categoryId = STAFF_PRODUCT_ERRORS.category;
 
+    if (formData.length && formData.length !== '') {
+      const length = parseFloat(formData.length);
+      if (Number.isNaN(length) || length < 0) {
+        errors.length = 'Chiều dài phải là số lớn hơn hoặc bằng 0';
+      }
+    }
+    if (formData.width && formData.width !== '') {
+      const width = parseFloat(formData.width);
+      if (Number.isNaN(width) || width < 0) {
+        errors.width = 'Chiều rộng phải là số lớn hơn hoặc bằng 0';
+      }
+    }
+    if (formData.height && formData.height !== '') {
+      const height = parseFloat(formData.height);
+      if (Number.isNaN(height) || height < 0) {
+        errors.height = 'Chiều cao phải là số lớn hơn hoặc bằng 0';
+      }
+    }
     if (formData.weight && formData.weight !== '') {
       const weight = parseFloat(formData.weight);
       if (Number.isNaN(weight) || weight < 0) {
@@ -549,10 +534,12 @@ function StaffProducts() {
       }
     }
 
-    if (formData.tax && formData.tax !== '') {
+    if (!formData.tax || formData.tax === '') {
+      errors.tax = 'Vui lòng nhập phần trăm thuế';
+    } else {
       const tax = parseFloat(formData.tax);
-      if (Number.isNaN(tax) || tax < 0) {
-        errors.tax = STAFF_PRODUCT_ERRORS.tax;
+      if (Number.isNaN(tax) || tax < 0 || tax > 100) {
+        errors.tax = 'Thuế phải là số từ 0 đến 100';
       }
     }
 
@@ -652,16 +639,9 @@ function StaffProducts() {
       const imageUrls = finalMediaList
         .filter((item) => item.type !== 'VIDEO' && item.uploadedUrl)
         .map((item) => item.uploadedUrl);
-      // Khi edit, cho phép giữ nguyên media cũ nếu không có ảnh mới
-      // Chỉ bắt buộc ảnh khi tạo mới
-      if (!editingProduct && !imageUrls.length) {
+      if (!imageUrls.length) {
         throw new Error(STAFF_PRODUCT_MESSAGES.imageRequired);
       }
-      // Khi edit mà không có ảnh nào (cả cũ và mới), giữ nguyên media hiện tại bằng cách không gửi imageUrls
-      // Backend sẽ giữ nguyên media nếu không có imageUrls/videoUrls trong request
-      const shouldUpdateMedia = editingProduct 
-        ? imageUrls.length > 0 || finalMediaList.some(item => item.type === 'VIDEO' && item.uploadedUrl)
-        : true;
       const videoUrls = finalMediaList
         .filter((item) => item.type === 'VIDEO' && item.uploadedUrl)
         .map((item) => item.uploadedUrl);
@@ -708,10 +688,9 @@ function StaffProducts() {
         tax: formData.tax ? parseFloat(formData.tax) / 100 : 0.08,
         publicationDate: formData.publicationDate || null,
         categoryId: formData.categoryId,
-        // Chỉ gửi imageUrls/videoUrls nếu có thay đổi về media hoặc đang tạo mới
-        imageUrls: shouldUpdateMedia ? imageUrls : undefined,
-        videoUrls: shouldUpdateMedia ? videoUrls : undefined,
-        defaultMediaUrl: shouldUpdateMedia ? (defaultMedia?.uploadedUrl || imageUrls[0] || null) : undefined,
+        imageUrls,
+        videoUrls,
+        defaultMediaUrl: defaultMedia?.uploadedUrl || imageUrls[0] || null,
       };
 
       if (editingProduct) {
@@ -753,6 +732,7 @@ function StaffProducts() {
   const handleCloseViewDetail = () => {
     setViewingProduct(null);
   };
+
 
   const formatPrice = (price) => {
     const value = Math.round(Number(price) || 0);
@@ -902,6 +882,7 @@ function StaffProducts() {
                       <button
                         onClick={() => handleViewDetail(product)}
                         className={cx('actionBtn', 'viewBtn')}
+                        title="Xem chi tiết"
                       >
                         Xem chi tiết
                       </button>

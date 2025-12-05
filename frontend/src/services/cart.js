@@ -72,6 +72,19 @@ const cartService = {
     },
 
     /**
+     * Xóa item khỏi giỏ hàng
+     * @param {string} itemId - ID của cart item
+     */
+    async removeItem(itemId) {
+        try {
+            return await apiClient.delete(API_ENDPOINTS.CART.REMOVE_ITEM(itemId));
+        } catch (error) {
+            console.error('[Cart Service] removeItem error:', error);
+            throw error;
+        }
+    },
+
+    /**
      * Áp dụng voucher
      * @param {string} code - Mã voucher
      */

@@ -438,20 +438,16 @@
 }
 
 .qty-btn {
-  width: 40px;
-  height: 40px;
+  width: 50px;
+  height: 20px;
   border: none;
-  background: #f8f9fa;
+  background: #ffffff;
   cursor: pointer;
   font-size: 18px;
   font-weight: 600;
   color: #2c3e50;
   transition: all 0.2s ease;
 
-  &:hover {
-    background: #ff80b5;
-    color: #fff;
-  }
 
   &:active {
     transform: scale(0.95);
@@ -459,8 +455,8 @@
 }
 
 .qty-input {
-  width: 60px;
-  height: 40px;
+  width: 50px;
+  height: 20px;
   border: none;
   text-align: center;
   font-size: 16px;
@@ -521,26 +517,6 @@
   }
 }
 
-.btn-favorite {
-  width: 50px;
-  height: 50px;
-  padding: 0;
-  background: #f8f9fa;
-  border: 2px solid #eee;
-  border-radius: 8px;
-  font-size: 20px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background: #ff80b5;
-    border-color: #ff80b5;
-    transform: scale(1.1);
-  }
-}
 
 .benefits {
   display: flex;

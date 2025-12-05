@@ -9,6 +9,8 @@ import notify from '~/utils/notification';
 import { useCart, useAddress } from '~/hooks';
 import orderService from '~/services/order';
 import { setDefaultAddress, formatFullAddress } from '~/services/address';
+import { getProductById } from '~/services/product';
+import { normalizeVariantRecords } from '~/utils/colorVariants';
 
 const cx = classNames.bind(styles);
 
@@ -18,8 +20,16 @@ function CheckoutDetailPage() {
 
   // Danh sách cartItemId được chọn truyền từ trang giỏ hàng
   const selectedItemIds = location.state?.selectedItemIds || [];
+  
+  // Thông tin checkout trực tiếp (không qua giỏ hàng)
+  const directCheckout = location.state?.directCheckout || false;
+  const directProductId = location.state?.productId;
+  const directQuantity = location.state?.quantity || 1;
+  const directColorCode = location.state?.colorCode || null;
 
   const [loading, setLoading] = useState(true);
+  const [directProduct, setDirectProduct] = useState(null);
+  const [directProductLoading, setDirectProductLoading] = useState(false);
   const [placingOrder, setPlacingOrder] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [showAddAddressForm, setShowAddAddressForm] = useState(false);
@@ -42,13 +52,74 @@ function CheckoutDetailPage() {
     appliedDiscount: voucherDiscount,
   } = useCart({ autoLoad: true, listenToEvents: false });
 
+  // Load thông tin sản phẩm nếu là checkout trực tiếp
+  useEffect(() => {
+    if (directCheckout && directProductId) {
+      const loadDirectProduct = async () => {
+        try {
+          setDirectProductLoading(true);
+          const product = await getProductById(directProductId);
+          setDirectProduct(product);
+        } catch (error) {
+          console.error('[Checkout] Error loading direct product:', error);
+          notify.error('Không thể tải thông tin sản phẩm. Vui lòng thử lại.');
+        } finally {
+          setDirectProductLoading(false);
+        }
+      };
+      loadDirectProduct();
+    }
+  }, [directCheckout, directProductId]);
+
+  // Tạo item ảo cho checkout trực tiếp
+  const directCheckoutItem = useMemo(() => {
+    if (!directCheckout || !directProduct) return null;
+    
+    // Tính giá dựa trên variant nếu có colorCode
+    let unitPrice = directProduct.currentPrice || directProduct.price || 0;
+    let finalPrice = unitPrice * directQuantity;
+    
+    if (directColorCode && directProduct.manufacturingLocation) {
+      // Chuẩn hóa variant records
+      const variants = normalizeVariantRecords(directProduct.manufacturingLocation);
+      const code = (directColorCode || '').toString().trim().toLowerCase();
+      const variant = variants.find(v => {
+        const vCode = (v.code || v.name || '').toString().trim().toLowerCase();
+        return vCode === code;
+      });
+      if (variant && variant.price) {
+        unitPrice = variant.price;
+        finalPrice = unitPrice * directQuantity;
+      }
+    }
+    
+    return {
+      id: `direct-${directProductId}-${directColorCode || 'no-color'}`,
+      productId: directProductId,
+      productName: directProduct.name,
+      name: directProduct.name,
+      quantity: directQuantity,
+      colorCode: directColorCode,
+      unitPrice: unitPrice,
+      currentPrice: unitPrice,
+      finalPrice: finalPrice,
+      imageUrl: directProduct.defaultMediaUrl || directProduct.mediaUrls?.[0],
+    };
+  }, [directCheckout, directProduct, directQuantity, directColorCode]);
+
   // Lọc ra các item được chọn thanh toán (phải khai báo trước khi dùng trong useAddress)
   const checkoutItems = useMemo(() => {
+    // Nếu là checkout trực tiếp, sử dụng item ảo
+    if (directCheckout && directCheckoutItem) {
+      return [directCheckoutItem];
+    }
+    
+    // Nếu không, sử dụng logic cũ từ giỏ hàng
     if (!selectedItemIds.length) return cartItems;
     const idSet = new Set(selectedItemIds);
     const filtered = cartItems.filter((item) => idSet.has(item.id));
     return filtered.length > 0 ? filtered : cartItems;
-  }, [cartItems, selectedItemIds]);
+  }, [directCheckout, directCheckoutItem, cartItems, selectedItemIds]);
 
   // Calculate totalWeight and subtotal for address hook
   const totalWeight = useMemo(
@@ -326,16 +397,35 @@ function CheckoutDetailPage() {
 
     setPlacingOrder(true);
     try {
-      const request = {
-        shippingAddress: shippingAddressJson,
-        addressId: selectedAddress?.id || selectedAddress?.addressId || selectedAddressId || null,
-        note: orderNote || null,
-        shippingFee: shippingFee || 0,
-        cartItemIds: selectedItemIds && selectedItemIds.length > 0 ? selectedItemIds : null,
-        paymentMethod: paymentMethod || 'cod',
-      };
+      let result;
+      
+      // Nếu là checkout trực tiếp (không qua giỏ hàng)
+      if (directCheckout && directProductId) {
+        const directRequest = {
+          productId: directProductId,
+          quantity: directQuantity,
+          colorCode: directColorCode,
+          shippingAddress: shippingAddressJson,
+          addressId: selectedAddress?.id || selectedAddress?.addressId || selectedAddressId || null,
+          note: orderNote || null,
+          shippingFee: shippingFee || 0,
+          paymentMethod: paymentMethod || 'cod',
+        };
+        
+        result = await orderService.checkoutDirect(directRequest);
+      } else {
+        // Checkout từ giỏ hàng (logic cũ)
+        const request = {
+          shippingAddress: shippingAddressJson,
+          addressId: selectedAddress?.id || selectedAddress?.addressId || selectedAddressId || null,
+          note: orderNote || null,
+          shippingFee: shippingFee || 0,
+          cartItemIds: selectedItemIds && selectedItemIds.length > 0 ? selectedItemIds : null,
+          paymentMethod: paymentMethod || 'cod',
+        };
 
-      const result = await orderService.createOrder(request);
+        result = await orderService.createOrder(request);
+      }
       
       console.log('[CheckoutDetailPage] Order creation result:', result);
       
@@ -463,11 +553,22 @@ function CheckoutDetailPage() {
     }
   };
 
-  if (loading || cartLoading) {
+  if (loading || cartLoading || (directCheckout && directProductLoading)) {
     return (
       <div className={cx('container')}>
         <div className={cx('cartSection')}>
           <div className={cx('loading')}>Đang tải thông tin thanh toán...</div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Kiểm tra nếu là direct checkout nhưng không có sản phẩm
+  if (directCheckout && !directProduct) {
+    return (
+      <div className={cx('container')}>
+        <div className={cx('cartSection')}>
+          <div className={cx('loading')}>Không thể tải thông tin sản phẩm. Vui lòng thử lại.</div>
         </div>
       </div>
     );

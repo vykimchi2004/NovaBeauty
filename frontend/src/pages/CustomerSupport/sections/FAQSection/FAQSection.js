@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from './FAQSection.module.scss';
 
@@ -157,6 +158,8 @@ const CATEGORIES = [
 ];
 
 function FAQSection({ initialQuestion }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [activeCategory, setActiveCategory] = useState(CATEGORIES[0].id);
   const [selectedFaqIndex, setSelectedFaqIndex] = useState(null);
   const [showAnswerOnly, setShowAnswerOnly] = useState(false);
@@ -191,15 +194,42 @@ function FAQSection({ initialQuestion }) {
     const cat = CATEGORIES.find((c) => c.id === categoryId);
     setSelectedFaqIndex(cat?.faqs?.length ? 0 : null);
     setShowAnswerOnly(false);
+    // Cập nhật URL để xóa question parameter khi chuyển category
+    navigate(
+      {
+        pathname: '/support',
+        search: '?section=faq'
+      },
+      { replace: true }
+    );
   };
 
   const handleSelectFaq = (faqIndex) => {
+    const currentCategory = CATEGORIES.find((cat) => cat.id === activeCategory);
+    const currentFaqList = currentCategory?.faqs || [];
+    const faq = currentFaqList[faqIndex];
     setSelectedFaqIndex(faqIndex);
     setShowAnswerOnly(true);
+    // Cập nhật URL với code của câu hỏi
+    navigate(
+      {
+        pathname: '/support',
+        search: `?section=faq&question=${encodeURIComponent(faq.code)}`
+      },
+      { replace: true }
+    );
   };
 
   const handleBackToList = () => {
     setShowAnswerOnly(false);
+    // Cập nhật URL để xóa question parameter khi quay lại danh sách
+    navigate(
+      {
+        pathname: '/support',
+        search: '?section=faq'
+      },
+      { replace: true }
+    );
   };
 
   const activeCategoryData = CATEGORIES.find((cat) => cat.id === activeCategory);

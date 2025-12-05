@@ -556,8 +556,7 @@ function Cart() {
           </div>
           <button
             type="button"
-            className={cx('btn', 'btnBuy')}
-            disabled={selectedItems.length === 0}
+            className={cx('btn', 'btnBuy', { disabled: selectedItems.length === 0 })}
             onClick={handleCheckout}
           >
             MUA HÀNG
