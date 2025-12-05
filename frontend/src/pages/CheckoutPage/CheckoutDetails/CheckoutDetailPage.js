@@ -324,28 +324,31 @@ function CheckoutDetailPage() {
       address: finalAddressText,
     });
 
-    // Nếu là COD, tạo đơn hàng ngay và chuyển sang trang thành công
-    if (paymentMethod === 'cod') {
-      setPlacingOrder(true);
-      try {
-        const request = {
-          shippingAddress: shippingAddressJson,
-          addressId: selectedAddress?.id || selectedAddress?.addressId || selectedAddressId || null,
-          note: orderNote || null,
-          shippingFee: shippingFee || 0,
-          cartItemIds: selectedItemIds && selectedItemIds.length > 0 ? selectedItemIds : null,
-          paymentMethod: 'cod',
-        };
+    setPlacingOrder(true);
+    try {
+      const request = {
+        shippingAddress: shippingAddressJson,
+        addressId: selectedAddress?.id || selectedAddress?.addressId || selectedAddressId || null,
+        note: orderNote || null,
+        shippingFee: shippingFee || 0,
+        cartItemIds: selectedItemIds && selectedItemIds.length > 0 ? selectedItemIds : null,
+        paymentMethod: paymentMethod || 'cod',
+      };
 
-        const result = await orderService.createOrder(request);
-        
-        console.log('[CheckoutDetailPage] Order creation result:', result);
-        
-        // Kiểm tra cấu trúc response
-        if (!result) {
-          throw new Error('Không nhận được phản hồi từ server.');
-        }
-        
+      const result = await orderService.createOrder(request);
+      
+      console.log('[CheckoutDetailPage] Order creation result:', result);
+      
+      // Kiểm tra cấu trúc response
+      if (!result) {
+        throw new Error('Không nhận được phản hồi từ server.');
+      }
+      
+      // Dispatch event để cập nhật giỏ hàng (backend đã xóa các items đã đặt hàng)
+      window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { source: 'order-placement' } }));
+      
+      // Nếu là COD, chuyển sang trang thank you
+      if (paymentMethod === 'cod') {
         // result có thể là CheckoutInitResponse { order, payUrl } hoặc trực tiếp là order object
         const orderData = result.order || result;
         
@@ -353,9 +356,6 @@ function CheckoutDetailPage() {
           console.error('[CheckoutDetailPage] Invalid order data:', result);
           throw new Error('Dữ liệu đơn hàng không hợp lệ.');
         }
-        
-        // Dispatch event để cập nhật giỏ hàng (backend đã xóa các items đã đặt hàng)
-        window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { source: 'order-placement' } }));
         
         // Chuyển sang trang thank you với thông tin đơn hàng
         navigate('/order-success', {
@@ -371,33 +371,22 @@ function CheckoutDetailPage() {
             voucherDiscount: voucherDiscount,
           },
         });
-      } catch (error) {
-        console.error('Error creating order:', error);
-        notify.error(error.message || 'Không thể tạo đơn hàng. Vui lòng thử lại.');
-      } finally {
-        setPlacingOrder(false);
+      } else if (paymentMethod === 'momo') {
+        // Nếu là MoMo, kiểm tra payUrl và redirect đến trang thanh toán MoMo ngay
+        if (result.payUrl) {
+          // Redirect đến trang thanh toán MoMo
+          window.location.href = result.payUrl;
+        } else {
+          notify.error('Không thể lấy link thanh toán MoMo. Vui lòng thử lại.');
+          setPlacingOrder(false);
+        }
       }
-    } else {
-      // Nếu là MoMo, chuyển sang trang confirm
-      navigate('/checkout/confirm', {
-        state: {
-          items: summaryItems,
-          fullName,
-          phone,
-          address,
-          paymentMethod,
-          subtotal,
-          shippingFee,
-          voucherDiscount,
-          total,
-          shippingMethod,
-          orderNote,
-          selectedItemIds,
-          shippingAddressJson,
-          selectedAddressId,
-        },
-      });
+    } catch (error) {
+      console.error('Error creating order:', error);
+      notify.error(error.message || 'Không thể tạo đơn hàng. Vui lòng thử lại.');
+      setPlacingOrder(false);
     }
+    // Note: Không set placingOrder = false ở đây vì nếu là MoMo, sẽ redirect ngay
   };
 
   const handleProvinceSelect = (value) => {

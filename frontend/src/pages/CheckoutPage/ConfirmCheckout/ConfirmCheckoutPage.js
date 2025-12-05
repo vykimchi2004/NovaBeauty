@@ -42,29 +42,28 @@ function ConfirmCheckoutPage() {
   const handleConfirm = async () => {
     if (loading) return;
 
-    // Nếu là COD, gọi API tạo đơn hàng và chuyển sang trang thank you
-    if (paymentMethod === 'cod') {
-      setLoading(true);
-      try {
-        const request = {
-          shippingAddress: shippingAddressJson || JSON.stringify({
-            name: fullName,
-            phone: phone,
-            address: address,
-          }),
-          addressId: selectedAddressId || null,
-          note: orderNote || null,
-          shippingFee: shippingFee || 0,
-          cartItemIds: selectedItemIds && selectedItemIds.length > 0 ? selectedItemIds : null,
-          paymentMethod: 'cod',
-        };
+    setLoading(true);
+    try {
+      const request = {
+        shippingAddress: shippingAddressJson || JSON.stringify({
+          name: fullName,
+          phone: phone,
+          address: address,
+        }),
+        addressId: selectedAddressId || null,
+        note: orderNote || null,
+        shippingFee: shippingFee || 0,
+        cartItemIds: selectedItemIds && selectedItemIds.length > 0 ? selectedItemIds : null,
+        paymentMethod: paymentMethod || 'cod',
+      };
 
-        const result = await orderService.createOrder(request);
-        
-        // Dispatch event để cập nhật giỏ hàng (backend đã xóa các items đã đặt hàng)
-        window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { source: 'order-placement' } }));
-        
-        // Chuyển sang trang thank you với thông tin đơn hàng
+      const result = await orderService.createOrder(request);
+      
+      // Dispatch event để cập nhật giỏ hàng (backend đã xóa các items đã đặt hàng)
+      window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { source: 'order-placement' } }));
+      
+      // Nếu là COD, chuyển sang trang thank you
+      if (paymentMethod === 'cod') {
         navigate('/order-success', {
           state: {
             order: result.order,
@@ -72,20 +71,28 @@ function ConfirmCheckoutPage() {
             fullName: fullName,
             address: address,
             total: total,
+            subtotal: subtotal,
+            shippingFee: shippingFee,
+            voucherDiscount: voucherDiscount,
             paymentMethod: paymentMethod,
           },
         });
-      } catch (error) {
-        console.error('Error creating order:', error);
-        notify.error(error.message || 'Không thể tạo đơn hàng. Vui lòng thử lại.');
-      } finally {
-        setLoading(false);
+      } else if (paymentMethod === 'momo') {
+        // Nếu là MoMo, kiểm tra payUrl và redirect đến trang thanh toán MoMo
+        if (result.payUrl) {
+          // Redirect đến trang thanh toán MoMo
+          window.location.href = result.payUrl;
+        } else {
+          notify.error('Không thể lấy link thanh toán MoMo. Vui lòng thử lại.');
+          setLoading(false);
+        }
       }
-    } else {
-      // Nếu là MoMo, xử lý thanh toán (sẽ được cập nhật sau)
-      notify.success('Đặt hàng thành công (demo).');
-      navigate('/order-success', { state });
+    } catch (error) {
+      console.error('Error creating order:', error);
+      notify.error(error.message || 'Không thể tạo đơn hàng. Vui lòng thử lại.');
+      setLoading(false);
     }
+    // Note: Không set loading = false ở đây vì nếu là MoMo, sẽ redirect ngay
   };
 
   if (!items.length) {

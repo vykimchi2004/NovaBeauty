@@ -83,13 +83,12 @@ function Footer() {
         </div>
 
         <div className={cx("col")}>
-          <h4>Hỗ trợ khách hàng</h4>
+          <h4>HỖ TRỢ KHÁCH HÀNG</h4>
           <div className={cx('links-list')}>
-            <Link to= '/shopping-guide' onClick={handleScrollToTop}>Hướng dẫn mua hàng</Link>
-            <Link to= '/payment-policy' onClick={handleScrollToTop}>Chính sách thanh toán</Link>
-            <Link to= '/shipping-policy' onClick={handleScrollToTop}>Chính sách vận chuyển</Link>
-            <Link to= '/return-policy' onClick={handleScrollToTop}>Chính sách đổi trả</Link>
-            <Link to= '/support?section=faq' onClick={handleScrollToTop}>FAQ</Link>
+            <Link to="/support/payment-policy" onClick={handleScrollToTop}>Chính sách thanh toán</Link>
+            <Link to="/support/shipping-policy" onClick={handleScrollToTop}>Chính sách vận chuyển</Link>
+            <Link to="/support/return-policy" onClick={handleScrollToTop}>Chính sách đổi trả</Link>
+            <Link to="/support?section=faq" onClick={handleScrollToTop}>FAQ</Link>
           </div>
         </div>
 
