@@ -53,11 +53,13 @@ public class ReviewService {
     }
 
     public List<ReviewResponse> getMyReviews() {
-        // Get current user from security context
+        // Get current user from security context - giống LuminaBook
+        // JWT token subject contains email, not userId
         var context = SecurityContextHolder.getContext();
-        String userId = context.getAuthentication().getName();
+        String userEmail = context.getAuthentication().getName();
 
-        User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
         List<Review> reviews = reviewRepository.findByUserId(user.getId());
 
@@ -73,16 +75,22 @@ public class ReviewService {
 
     @Transactional
     public ReviewResponse createReview(ReviewCreationRequest request) {
-        // Get current user from security context
+        // Get current user from security context - giống LuminaBook
+        // JWT token subject contains email, not userId
         var context = SecurityContextHolder.getContext();
-        String userId = context.getAuthentication().getName();
+        String userEmail = context.getAuthentication().getName();
 
-        // Get user
-        User user = userRepository.findById(userId).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+        // Get user by email (JWT token subject contains email, not userId) - giống LuminaBook
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        // Get product
+        // Get product - giống LuminaBook
+        String productId = request.getProductId();
+        if (productId == null || productId.trim().isEmpty()) {
+            throw new AppException(ErrorCode.PRODUCT_NOT_EXISTED);
+        }
         Product product = productRepository
-                .findById(request.getProduct().getId())
+                .findById(productId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
 
         // Create review entity using mapper
@@ -95,7 +103,8 @@ public class ReviewService {
         review.setProduct(product);
 
         Review savedReview = reviewRepository.save(review);
-        log.info("Review created with ID: {} by user: {}", savedReview.getId(), userId);
+        log.info("Review created with ID: {} by user: {} (display name: {})", 
+            savedReview.getId(), userEmail, request.getNameDisplay());
 
         return reviewMapper.toReviewResponse(savedReview);
     }

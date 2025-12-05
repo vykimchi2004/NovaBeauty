@@ -23,13 +23,16 @@ public class SupportTicket {
     @GeneratedValue(strategy = GenerationType.UUID)
     String id;
 
-    // Order info submitted by customer
+    // Order info submitted by customer (can be 'KHAC' when customer selects "Khác")
     @Column(name = "order_code", nullable = false)
     String orderCode;
 
     String customerName;
     String email;
     String phone;
+
+    // Topic for complaints without order (optional, used when orderCode is 'KHAC')
+    String topic;
 
     @Column(columnDefinition = "TEXT")
     String content;

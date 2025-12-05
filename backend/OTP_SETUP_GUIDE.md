@@ -91,7 +91,7 @@ mvn spring-boot:run
 
 ### Frontend (React)
 ```bash
-cd D:\LuminaBook\luminabook
+cd D:\WebBanMyPham_SageBeauty\NovaBeauty\frontend
 npm start
 ```
 

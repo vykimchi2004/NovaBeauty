@@ -27,5 +27,13 @@ public class ReviewCreationRequest {
     String comment;
 
     User user;
+    
+    // Product object - Jackson sẽ deserialize { id: "..." } thành Product với @Setter
+    // Nếu product chỉ có id, Jackson sẽ tạo Product object và set id
     Product product;
+    
+    // Helper method để lấy productId an toàn
+    public String getProductId() {
+        return product != null ? product.getId() : null;
+    }
 }

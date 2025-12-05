@@ -977,7 +977,7 @@ public class OrderService {
                                 "%s đã gửi yêu cầu hoàn tiền/trả hàng cho đơn hàng %s.",
                                 customerName, order.getCode());
                 String link = "/customer-support/refund-management";
-                // Bạn có thể implement NotificationService tương tự LuminaBook nếu cần
+                // Bạn có thể implement NotificationService tương tự NovaBeauty nếu cần
                 // notificationService.sendToRole(title, message, "INFO", "CUSTOMER_SUPPORT",
                 // link);
                 log.info("Notification (mock) sent successfully for order: {}", orderId);

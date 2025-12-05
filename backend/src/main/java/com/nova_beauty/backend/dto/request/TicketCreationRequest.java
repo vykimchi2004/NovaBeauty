@@ -25,6 +25,9 @@ public class TicketCreationRequest {
     @NotBlank
     String phone;
 
+    // topic is optional - used when orderCode is 'KHAC' (Khác)
+    String topic;
+
     @NotBlank
     String content;
 }
