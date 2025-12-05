@@ -21,7 +21,7 @@ import {
 import StaffProducts from './StaffProducts';
 import StaffVouchers from './StaffVouchers';
 import StaffBanners from './StaffBanners';
-// import StaffOrders from './StaffOrders/StaffOrders';
+import StaffOrder from './StaffOrder';
 import StaffProfile from './StaffProfile';
 
 const cx = classNames.bind(styles);
@@ -322,7 +322,7 @@ function StaffPage() {
             <Route path="products" element={<StaffProducts />} />
             <Route path="content" element={<StaffBanners />} />
             <Route path="vouchers" element={<StaffVouchers />} />
-            <Route path="orders" element={<StaffOrdersPlaceholder />} />
+            <Route path="orders" element={<StaffOrder />} />
             <Route path="profile" element={<StaffProfile />} />
           </Routes>
         </section>

@@ -75,6 +75,62 @@ const orderService = {
             throw error;
         }
     },
+
+    /**
+     * Lấy tất cả orders (cho Staff/Admin)
+     */
+    async getAllOrders() {
+        try {
+            const response = await apiClient.get('/orders');
+            if (Array.isArray(response)) return response;
+            if (response && typeof response === 'object' && 'result' in response) {
+                return response.result || [];
+            }
+            return [];
+        } catch (error) {
+            console.error('[Order Service] getAllOrders error:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Xác nhận đơn hàng (Staff)
+     */
+    async confirmOrder(orderId) {
+        try {
+            const response = await apiClient.post(`/orders/${orderId}/confirm`);
+            return { ok: true, data: response };
+        } catch (error) {
+            console.error('[Order Service] confirmOrder error:', error);
+            return { ok: false, status: error.status || 500, data: null };
+        }
+    },
+
+    /**
+     * Hủy đơn hàng (Staff)
+     */
+    async cancelOrder(orderId, reason = '') {
+        try {
+            const response = await apiClient.post(`/orders/${orderId}/cancel`, { reason });
+            return { ok: true, data: response };
+        } catch (error) {
+            console.error('[Order Service] cancelOrder error:', error);
+            return { ok: false, status: error.status || 500, data: null };
+        }
+    },
+
+    /**
+     * Tạo vận đơn GHN (Staff)
+     */
+    async createShipment(orderId, payload = null) {
+        try {
+            const response = await apiClient.post(`/orders/${orderId}/shipment`, payload || {});
+            return { ok: true, status: 200, data: response };
+        } catch (error) {
+            console.error('[Order Service] createShipment error:', error);
+            return { ok: false, status: error.status || 500, data: null };
+        }
+    },
 };
 
 export default orderService;

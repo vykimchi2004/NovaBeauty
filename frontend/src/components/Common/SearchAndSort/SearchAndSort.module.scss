@@ -1,0 +1,217 @@
+.search-sort-container {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.search-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 300px;
+}
+
+.search-input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    height: 44px;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #e5677d;
+    box-shadow: 0 0 0 3px rgba(229, 103, 125, 0.1);
+}
+
+.date-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+}
+
+.date-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    white-space: nowrap;
+    display: none; /* Hide label to match image */
+}
+
+.date-input {
+    width: 160px;
+    padding: 12px 16px;
+    padding-right: 40px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #fff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    height: 44px;
+}
+
+.date-input:focus {
+    outline: none;
+    border-color: #e5677d;
+    box-shadow: 0 0 0 3px rgba(229, 103, 125, 0.1);
+}
+
+.date-input::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+
+.date-input::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+.search-btn {
+    padding: 12px 20px;
+    background: #e5677d;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    white-space: nowrap;
+    height: 44px;
+}
+
+.search-btn:hover {
+    background: #d1526a;
+}
+
+.sort-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.sort-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    white-space: nowrap;
+}
+
+.sort-dropdown {
+    padding: 12px 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    min-width: 120px;
+    height: 44px;
+}
+
+.sort-dropdown:focus {
+    outline: none;
+    border-color: #e5677d;
+    box-shadow: 0 0 0 3px rgba(229, 103, 125, 0.1);
+}
+
+.btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn.add-btn {
+    background: #e5677d;
+    color: #ffffff;
+}
+
+.btn.add-btn:hover {
+    background: #d1526a;
+}
+
+.btn.edit-btn {
+    background: #3B82F6;
+    color: #ffffff;
+}
+
+.btn.edit-btn:hover {
+    background: #2563EB;
+}
+
+.btn.lock-btn {
+    background: #6B7280;
+    color: #ffffff;
+}
+
+.btn.lock-btn:hover {
+    background: #4B5563;
+}
+
+.btn.unlock-btn {
+    background: #10B981;
+    color: #ffffff;
+}
+
+.btn.unlock-btn:hover {
+    background: #059669;
+}
+
+.btn.delete-btn {
+    background: #EF4444;
+    color: #ffffff;
+}
+
+.btn.delete-btn:hover {
+    background: #DC2626;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .search-sort-container {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .search-section {
+        min-width: auto;
+        flex-wrap: wrap;
+    }
+    
+    .search-input {
+        min-width: 200px;
+    }
+    
+    .date-input-wrapper {
+        width: 100%;
+    }
+    
+    .date-input {
+        width: 100%;
+    }
+    
+    .sort-section {
+        justify-content: space-between;
+        width: 100%;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+}
+
