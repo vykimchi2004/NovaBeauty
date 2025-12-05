@@ -1,0 +1,340 @@
+// Styles mirrored from NovaBeauty ComplaintManagementPage.module.scss
+.wrapper {
+    width: 100%;
+    padding: 0;
+}
+
+.top-line {
+    width: 100%;
+    height: 2px;
+    background: #e5677d; // dùng màu chủ đạo NovaBeauty (giống Staff)
+    margin-bottom: 0;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+    padding: 16px 24px;
+    margin-bottom: 0;
+    border-bottom: 1px solid #f2ebdd;
+}
+
+.page-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1b2b34;
+    margin: 0;
+}
+
+.dashboard-btn {
+    background: #e5677d;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.2s ease;
+}
+
+.dashboard-btn:hover {
+    background: #d1526a;
+}
+
+.content-wrapper {
+    padding: 20px 24px;
+    background: #F5F0E6;
+    min-height: calc(100vh - 60px);
+}
+
+.cards-container {
+    display: grid;
+    grid-template-columns: 70% 30%;
+    gap: 24px;
+}
+
+.card {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    margin-bottom: 20px;
+}
+
+.card-title {
+    font-weight: 700;
+    color: #1b2b34;
+    margin-bottom: 8px;
+    font-size: 18px;
+}
+
+.card-desc {
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.complaint-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.complaint-table thead {
+    background: #f8f9fa;
+}
+
+.complaint-table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 14px;
+    color: #1b2b34;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.complaint-table td {
+    padding: 12px;
+    font-size: 14px;
+    color: #374151;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.complaint-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.status {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.status-mới {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.status-đang-xử-lý {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.status-đã-giải-quyết {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.authority-tag {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.authority-transfer {
+    background: #fee2e2;
+    color: #C84A4A;
+    font-weight: 600;
+}
+
+.view-btn {
+    background: #e5677d;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.2s ease;
+}
+
+.view-btn:hover {
+    background: #d1526a;
+}
+
+.detail-content {
+    margin-top: 20px;
+}
+
+.detail-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.detail-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    font-weight: 600;
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+.detail-value {
+    font-size: 16px;
+    color: #1b2b34;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.6;
+}
+
+// CSS cho phần "CSKH đã trả lời" - lấy từ LuminaBook ProductDetail (giống 100%)
+// LuminaBook: .reviewReply { margin-top: 12px; padding: 12px 16px; background: #f9fafb; border-left: 3px solid #1A3C5A; border-radius: 4px; }
+.reply-row {
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: #f9fafb;
+    border-left: 3px solid #e5677d; // NovaBeauty primary color (thay thế #1A3C5A từ LuminaBook)
+    border-radius: 4px;
+}
+
+// LuminaBook: .replyHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; gap: 12px; }
+.reply-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    gap: 12px;
+}
+
+// LuminaBook: .replyLabel { font-size: 13px; font-weight: 600; color: #1A3C5A; }
+.reply-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e5677d; // NovaBeauty primary color (thay thế #1A3C5A từ LuminaBook)
+}
+
+// LuminaBook: .replyDate { font-size: 12px; color: #9ca3af; }
+.reply-date {
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+// LuminaBook: .replyText { font-size: 14px; color: #374151; line-height: 1.6; margin: 0; white-space: pre-line; }
+.reply-text {
+    font-size: 14px;
+    color: #374151;
+    line-height: 1.6;
+    margin: 0;
+    white-space: pre-line;
+}
+
+.notes-section {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.notes-label {
+    display: block;
+    font-weight: 600;
+    font-size: 14px;
+    color: #1b2b34;
+    margin-bottom: 8px;
+}
+
+.notes-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 80px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    line-height: 1.6;
+}
+
+.notes-input:focus {
+    outline: none;
+    border-color: #e5677d;
+}
+
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.action-btn {
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.btn-resolved {
+    background: #e5677d;
+    color: #fff;
+}
+
+.btn-resolved:hover {
+    background: #d1526a;
+}
+
+.btn-save-note {
+    background: #fff;
+    color: #1b2b34;
+    border: 1px solid #d1d5db;
+}
+
+.btn-save-note:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+}
+
+.btn-transfer {
+    background: #C84A4A;
+    color: #fff;
+}
+
+.btn-transfer:hover {
+    background: #B03A3A;
+}
+
+.empty-detail {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    color: #9ca3af;
+    font-size: 14px;
+}

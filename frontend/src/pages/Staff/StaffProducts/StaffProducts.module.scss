@@ -717,6 +717,13 @@ $white: #fff;
   margin-bottom: 16px;
 }
 
+.dimensionRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
 .formGroup {
   display: flex;
   flex-direction: column;
@@ -1622,6 +1629,14 @@ $white: #fff;
 
 @media (max-width: 768px) {
   .formRow {
+    grid-template-columns: 1fr;
+  }
+
+  .dimensionRow {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .dimensionRow {
     grid-template-columns: 1fr;
   }
 

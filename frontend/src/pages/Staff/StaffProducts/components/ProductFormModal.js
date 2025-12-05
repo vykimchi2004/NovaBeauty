@@ -164,39 +164,117 @@ function ProductFormModal({
                         minimumFractionDigits: 0,
                         maximumFractionDigits: 0,
                       }).format(
-                        Math.round(parseFloat(formData.price || 0) * 1.08)
+                        Math.round(
+                          parseFloat(formData.price || 0) * (1 + parseFloat(formData.tax || 8) / 100)
+                        )
                       ) + ' ₫'
                     : '0 ₫'
                 }
                 className={cx('readOnlyInput')}
               />
               <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                Giá hiển thị = Giá niêm yết × 1.08 (Thuế cố định 8%)
+                Giá hiển thị = Giá niêm yết × (1 + {formData.tax || 8}%)
               </small>
             </div>
           </div>
 
-          <div className={cx('formGroup')}>
-            <label>Kích thước/Quy cách</label>
-            <input
-              type="text"
-              value={formData.size}
-              onChange={(e) => onFormDataChange('size', e.target.value)}
-              placeholder="VD: 30ml, Hũ 50g…"
-            />
-          </div>
-
-          <div className={cx('formGroup', { error: formErrors.weight })}>
-            <label>Trọng lượng (gram)</label>
+          <div className={cx('formGroup', { error: formErrors.tax })}>
+            <label>Thuế (%) *</label>
             <input
               type="number"
               min="0"
+              max="100"
               step="0.01"
-              value={formData.weight}
-              onChange={(e) => onFormDataChange('weight', e.target.value)}
-              placeholder="Nhập trọng lượng"
+              value={formData.tax}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                  onFormDataChange('tax', value);
+                }
+              }}
+              placeholder="VD: 8, 10, 12.5..."
             />
-            {renderError('weight')}
+            {renderError('tax')}
+            <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+              Nhập phần trăm thuế (ví dụ: 8 cho 8%, 10 cho 10%). Mặc định: 8%
+            </small>
+          </div>
+
+          <div className={cx('formGroup')}>
+            <label>Kích thước (cm) & Trọng lượng</label>
+            <div className={cx('dimensionRow')}>
+              <div className={cx('formGroup', { error: formErrors.length })}>
+                <label>Chiều dài (cm)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.length || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                      onFormDataChange('length', value);
+                    }
+                  }}
+                  placeholder="VD: 19.8"
+                />
+                {renderError('length')}
+              </div>
+              <div className={cx('formGroup', { error: formErrors.width })}>
+                <label>Chiều rộng (cm)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.width || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                      onFormDataChange('width', value);
+                    }
+                  }}
+                  placeholder="VD: 12.9"
+                />
+                {renderError('width')}
+              </div>
+              <div className={cx('formGroup', { error: formErrors.height })}>
+                <label>Chiều cao (cm)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.height || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                      onFormDataChange('height', value);
+                    }
+                  }}
+                  placeholder="VD: 1.5"
+                />
+                {renderError('height')}
+              </div>
+              <div className={cx('formGroup', { error: formErrors.weight })}>
+                <label>Khối lượng (gram)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.weight || ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                      onFormDataChange('weight', value);
+                    }
+                  }}
+                  placeholder="VD: 500"
+                />
+                {renderError('weight')}
+              </div>
+            </div>
+            <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+              Ví dụ kích thước: <strong>19.8 × 12.9 × 1.5 cm</strong> - Giúp hệ thống tự tính phí vận chuyển GHN
+            </small>
           </div>
           
           <div className={cx('formGroup', { error: formErrors.mediaFiles })}>

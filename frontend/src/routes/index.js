@@ -9,6 +9,7 @@ import Profile from '../pages/Profile/Profile';
 import AdminPage from '../pages/Admin/AdminPage';
 import StaffPage from '../pages/Staff/StaffPage';
 import Support from '../pages/Support/Support';
+import CustomerSupportPage from '../pages/CustomerSupport/CustomerSupportPage';
 import Cart from '../pages/Cart/Cart';
 import CheckoutDetailPage from '../pages/CheckoutPage/CheckoutDetails/CheckoutDetailPage';
 import ConfirmCheckoutPage from '../pages/CheckoutPage/ConfirmCheckout/ConfirmCheckoutPage';
@@ -43,6 +44,8 @@ const publicRoutes = [
   { path: '/admin/*', component: AdminPage },
   // Staff shell with nested routes
   { path: '/staff/*', component: StaffPage },
+  // Customer support shell
+  { path: '/customer-support/*', component: CustomerSupportPage },
 ];
 
 const privateRoutes = [];

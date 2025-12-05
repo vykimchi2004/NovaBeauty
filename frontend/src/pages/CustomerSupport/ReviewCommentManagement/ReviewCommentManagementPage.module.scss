@@ -1,0 +1,379 @@
+.wrapper {
+    width: 100%;
+    background: #f5f0e6;
+    min-height: 100%;
+    padding: 0;
+}
+
+.topLine {
+    display: none;
+}
+
+.pageHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #ffffff;
+    padding: 16px 24px;
+    border-bottom: 1px solid #f2ebdd;
+}
+
+.pageTitle {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1b2b34;
+    margin: 0;
+}
+
+.dashboardBtn {
+    padding: 8px 18px;
+    border-radius: 10px;
+    border: none;
+    background: #e5677d;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.dashboardBtn:hover {
+    background: #d1526a;
+}
+
+.contentWrapper {
+    background: #f4ead4;
+    min-height: calc(100vh - 70px);
+    padding: 0;
+}
+
+.contentCard {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #ede3cf;
+    box-shadow: 0 6px 18px rgba(26, 60, 90, 0.05);
+    padding: 32px 40px;
+    max-width: none;
+    margin: 0;
+    border-left: none;
+    border-right: none;
+}
+
+.cardHeading {
+    margin-bottom: 20px;
+}
+
+.sectionTitle {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1b2b34;
+    margin: 0 0 4px;
+}
+
+.sectionDesc {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.reviewsList {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.reviewItem {
+    background: #fdfcfa;
+    border-radius: 10px;
+    padding: 18px 24px;
+    border: 1px solid rgba(26, 60, 90, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.reviewHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+
+.customerInfo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+}
+
+.customerName {
+    font-weight: 700;
+    color: #1b2b34;
+    transition: color 0.2s ease;
+
+    &.clickable {
+        cursor: pointer;
+        text-decoration: underline;
+        text-decoration-color: transparent;
+        transition: all 0.2s ease;
+
+        &:hover {
+            color: #e5677d;
+            text-decoration-color: #e5677d;
+        }
+    }
+}
+
+.reviewDate {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.rating {
+    font-size: 16px;
+    font-weight: 600;
+    color: #f59e0b;
+    letter-spacing: 2px;
+}
+
+.productInfo {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.loadingState {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6b7280;
+    font-size: 15px;
+}
+
+.emptyState {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6b7280;
+    font-size: 15px;
+}
+
+.comment {
+    font-size: 15px;
+    color: #1b2b34;
+    line-height: 1.7;
+    margin: 0;
+}
+
+// CSS cho phần "CSKH đã trả lời" - lấy từ LuminaBook ProductDetail (giống 100%)
+.replySection {
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: #f9fafb;
+    border-left: 3px solid #e5677d; // NovaBeauty primary color (thay thế #1A3C5A từ LuminaBook)
+    border-radius: 4px;
+}
+
+.replyHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    gap: 12px;
+}
+
+.replyLabel {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e5677d; // NovaBeauty primary color (thay thế #1A3C5A từ LuminaBook)
+}
+
+.replyDate {
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+.replyText {
+    font-size: 14px;
+    color: #374151;
+    line-height: 1.6;
+    margin: 0;
+    white-space: pre-line;
+}
+
+.replyInputRow {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.replyInput {
+    flex: 1;
+    min-width: 220px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    font-size: 14px;
+    color: #1b2b34;
+}
+
+.replyInput:focus {
+    outline: none;
+    border-color: #e5677d;
+    box-shadow: 0 0 0 3px rgba(229, 103, 125, 0.12);
+}
+
+.replyButton {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    background: #e5677d;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.replyButton:hover {
+    background: #d1526a;
+}
+
+.replyButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .wrapper {
+        padding: 0;
+    }
+
+    .pageHeader {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .contentWrapper {
+        padding: 20px;
+    }
+
+    .replyInputRow {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .replyButton {
+        width: 100%;
+    }
+}
+
+/* Modal hiển thị thông tin khách hàng */
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.customerModal {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.modalTitle {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1b2b34;
+    margin: 0;
+}
+
+.closeButton {
+    background: transparent;
+    border: none;
+    font-size: 28px;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+
+    &:hover {
+        background: #f3f4f6;
+        color: #111827;
+    }
+}
+
+.modalContent {
+    padding: 24px;
+}
+
+.customerDetails {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.detailRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f3f4f6;
+
+    &:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+}
+
+.detailLabel {
+    font-weight: 600;
+    color: #374151;
+    font-size: 14px;
+    min-width: 120px;
+    flex-shrink: 0;
+}
+
+.detailValue {
+    font-size: 14px;
+    color: #111827;
+    flex: 1;
+    word-break: break-word;
+
+    &.active {
+        color: #10b981;
+        font-weight: 600;
+    }
+
+    &.inactive {
+        color: #ef4444;
+        font-weight: 600;
+    }
+}
+

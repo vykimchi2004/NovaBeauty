@@ -43,8 +43,10 @@ function DefaultLayout({ children }) {
     const roleName = currentUser?.role?.name?.toUpperCase();
     if (!navigate || !roleName) return;
 
-    if ((roleName === 'STAFF' || roleName === 'CUSTOMER_SUPPORT') && !location.pathname.startsWith('/staff')) {
+    if (roleName === 'STAFF' && !location.pathname.startsWith('/staff')) {
       navigate('/staff', { replace: true });
+    } else if (roleName === 'CUSTOMER_SUPPORT' && !location.pathname.startsWith('/customer-support')) {
+      navigate('/customer-support', { replace: true });
     }
   }, [currentUser, navigate, location.pathname]);
   
@@ -129,6 +131,17 @@ function DefaultLayout({ children }) {
     return () => {
       window.removeEventListener('userRegistered', onRegistered);
       window.removeEventListener('storage', onStorage);
+    };
+  }, []);
+
+  // Lắng nghe event mở login modal từ các component con
+  React.useEffect(() => {
+    const handleOpenLoginModal = () => {
+      setActiveModal('login');
+    };
+    window.addEventListener('openLoginModal', handleOpenLoginModal);
+    return () => {
+      window.removeEventListener('openLoginModal', handleOpenLoginModal);
     };
   }, []);
 
