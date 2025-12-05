@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faSearch,
-  faTrash,
   faLock,
   faUnlock,
   faEdit,
@@ -10,7 +9,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from './ManageStaffAccounts.module.scss';
-import { getUsers, deleteUser, updateUser, createStaff, getRoles } from '~/services/user';
+import { getUsers, updateUser, createStaff, getRoles } from '~/services/user';
 import notify from '~/utils/notification';
 
 const cx = classNames.bind(styles);
@@ -136,26 +135,6 @@ function ManageStaffAccounts() {
     }
 
     setFilteredStaff(filtered);
-  };
-
-  const handleDelete = async (userId) => {
-    const confirmed = await notify.confirm(
-      'Bạn có chắc chắn muốn xóa tài khoản nhân viên này?',
-      'Xác nhận xóa tài khoản',
-      'Xóa',
-      'Hủy'
-    );
-    
-    if (!confirmed) return;
-
-    try {
-      await deleteUser(userId);
-      setStaff(staff.filter((s) => s.id !== userId));
-      notify.success('Xóa tài khoản thành công!');
-    } catch (err) {
-      console.error('Error deleting staff:', err);
-      notify.error('Không thể xóa tài khoản. Vui lòng thử lại.');
-    }
   };
 
   const handleToggleStatus = async (employee) => {
@@ -457,13 +436,6 @@ function ManageStaffAccounts() {
                         title={isActive ? 'Khóa' : 'Mở khóa'}
                       >
                         {isActive ? 'Khóa' : 'Mở khóa'}
-                      </button>
-                      <button
-                        onClick={() => handleDelete(employee.id)}
-                        className={cx('actionBtn', 'deleteBtn')}
-                        title="Xóa"
-                      >
-                        Xóa
                       </button>
                     </div>
                   </td>

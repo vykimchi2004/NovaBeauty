@@ -356,34 +356,6 @@ function ManageProduct() {
                           >
                             <FontAwesomeIcon icon={faEye} />
                           </button>
-                          {normalizeStatus(product.status) === 'CHO_DUYET' && (
-                            <>
-                              <button
-                                type="button"
-                                className={cx('actionBtn', 'approveBtn')}
-                                onClick={() => openApprovePrompt(product)}
-                                title="Duyệt sản phẩm"
-                              >
-                                <FontAwesomeIcon icon={faCheck} /> Duyệt
-                              </button>
-                              <button
-                                type="button"
-                                className={cx('actionBtn', 'rejectBtn')}
-                                onClick={() => openRejectPrompt(product)}
-                                title="Không duyệt"
-                              >
-                                <FontAwesomeIcon icon={faXmark} /> Không duyệt
-                              </button>
-                            </>
-                          )}
-                          <button
-                            type="button"
-                            className={cx('actionBtn', 'deleteBtn')}
-                            onClick={() => openDeletePrompt(product)}
-                            title="Xóa sản phẩm"
-                          >
-                            <FontAwesomeIcon icon={faTrash} /> Xóa
-                          </button>
                         </div>
                       </td>
                     </tr>

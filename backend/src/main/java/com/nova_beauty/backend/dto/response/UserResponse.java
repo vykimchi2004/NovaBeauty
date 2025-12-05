@@ -18,7 +18,6 @@ public class UserResponse {
     String email;
     String phoneNumber;
     String address;
-    String avatarUrl;
     
     @JsonProperty("isActive")
     boolean active;

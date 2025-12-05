@@ -10,7 +10,9 @@ import AdminPage from '../pages/Admin/AdminPage';
 import StaffPage from '../pages/Staff/StaffPage';
 import Support from '../pages/Support/Support';
 import Cart from '../pages/Cart/Cart';
-import Checkout from '../pages/Cart/Checkout';
+import CheckoutDetailPage from '../pages/CheckoutPage/CheckoutDetails/CheckoutDetailPage';
+import ConfirmCheckoutPage from '../pages/CheckoutPage/ConfirmCheckout/ConfirmCheckoutPage';
+import OrderSuccessPage from '../pages/CheckoutPage/OrderSuccess/OrderSuccessPage';
 import Vouchers from '../pages/Vouchers/Vouchers';
 
 // Layouts
@@ -33,7 +35,9 @@ const publicRoutes = [
   { path: '/profile', component: Profile, layout: DefaultLayout },
   { path: '/support', component: Support, layout: DefaultLayout },
   { path: '/cart', component: Cart, layout: DefaultLayout },
-  { path: '/checkout', component: Checkout, layout: DefaultLayout },
+  { path: '/checkout', component: CheckoutDetailPage, layout: DefaultLayout },
+  { path: '/checkout/confirm', component: ConfirmCheckoutPage, layout: DefaultLayout },
+  { path: '/order-success', component: OrderSuccessPage, layout: DefaultLayout },
   { path: '/vouchers', component: Vouchers, layout: DefaultLayout },
   // Admin shell with nested routes
   { path: '/admin/*', component: AdminPage },

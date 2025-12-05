@@ -66,6 +66,7 @@ public interface ProductMapper {
     @Mapping(target = "banners", ignore = true)
     @Mapping(target = "quantitySold", ignore = true)
     @Mapping(target = "status", ignore = true) // Giữ nguyên status hiện tại, chỉ admin mới có thể thay đổi
+    @Mapping(target = "manufacturingLocation", ignore = true) // Xử lý thủ công trong service để hỗ trợ null
     void updateProduct(@MappingTarget Product product, ProductUpdateRequest request);
 
     @Named("mapMediaUrls")

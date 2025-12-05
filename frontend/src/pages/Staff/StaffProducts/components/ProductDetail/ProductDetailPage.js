@@ -156,6 +156,16 @@ function ProductDetailPage({
     infoRows.push({ label: 'Người duyệt', value: detailProduct.approvedByName });
   }
 
+  // Hiển thị tồn kho (chỉ khi không có color variants)
+  if (!colorVariants || colorVariants.length === 0) {
+    if (detailProduct.stockQuantity !== undefined && detailProduct.stockQuantity !== null) {
+      infoRows.push({ 
+        label: 'Hàng tồn kho', 
+        value: detailProduct.stockQuantity.toLocaleString('vi-VN') 
+      });
+    }
+  }
+
   if (detailProduct.quantitySold !== undefined && detailProduct.quantitySold !== null) {
     infoRows.push({ label: 'Số lượng đã bán', value: detailProduct.quantitySold });
   }

@@ -42,10 +42,6 @@ public class UserService {
     PasswordGeneratorService passwordGeneratorService;
     BrevoEmailService brevoEmailService;
 
-    @NonFinal
-    @Value("${app.default-avatar}")
-    private String defaultAvatarUrl;
-
     public UserResponse createUser(UserCreationRequest request) {
         User user = userMapper.toUser(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
@@ -53,7 +49,6 @@ public class UserService {
         user.setPhoneNumber(request.getPhoneNumber() != null ? request.getPhoneNumber() : "");
         user.setFullName(request.getFullName());
         user.setAddress(request.getAddress() != null ? request.getAddress() : "");
-        user.setAvatarUrl(defaultAvatarUrl);
         user.setCreateAt(LocalDate.now());
 
         Role role = roleRepository
@@ -92,7 +87,6 @@ public class UserService {
                 .fullName(request.getFullName())
                 .phoneNumber(request.getPhoneNumber() != null ? request.getPhoneNumber() : "")
                 .address(request.getAddress() != null ? request.getAddress() : "")
-                .avatarUrl(defaultAvatarUrl)
                 .createAt(LocalDate.now())
                 .isActive(request.isActive())
                 .build();
@@ -195,10 +189,6 @@ public class UserService {
         // Address - cho phép cập nhật kể cả khi empty string (để có thể xóa)
         if (request.getAddress() != null) {
             user.setAddress(request.getAddress());
-        }
-        // AvatarUrl
-        if (request.getAvatarUrl() != null && !request.getAvatarUrl().isEmpty()) {
-            user.setAvatarUrl(request.getAvatarUrl());
         }
 
         // role

@@ -21,65 +21,9 @@ function HotPromotions() {
       try {
         setLoading(true);
         
-        // Debug: Fetch active promotions to check
-        try {
-          const promotionsData = await getActivePromotions();
-          const promotionsList = Array.isArray(promotionsData) ? promotionsData : (promotionsData?.result && Array.isArray(promotionsData.result) ? promotionsData.result : []);
-          console.log('[HotPromotions] Active promotions:', promotionsList.length);
-          if (promotionsList.length > 0) {
-            console.log('[HotPromotions] Active promotions details:', promotionsList.map(p => ({
-              id: p?.id,
-              name: p?.name,
-              status: p?.status,
-              isActive: p?.isActive,
-              applyScope: p?.applyScope,
-              categoryIds: p?.categoryIds,
-              categoryNames: p?.categoryNames,
-              startDate: p?.startDate,
-              expiryDate: p?.expiryDate,
-              discountValue: p?.discountValue
-            })));
-          }
-        } catch (err) {
-          console.error('[HotPromotions] Error fetching promotions:', err);
-        }
-        
         const data = await getActiveProducts();
         // Đảm bảo data là array
         const productsList = Array.isArray(data) ? data : (data?.result && Array.isArray(data.result) ? data.result : []);
-        
-        console.log('[HotPromotions] Total products:', productsList.length);
-        
-        // Debug: Log products with promotion info
-        const productsWithPromoInfo = productsList.map(p => ({
-          id: p?.id,
-          name: p?.name,
-          categoryId: p?.categoryId,
-          categoryName: p?.categoryName,
-          promotionId: p?.promotionId,
-          promotionName: p?.promotionName,
-          discountValue: p?.discountValue,
-          price: p?.price,
-          unitPrice: p?.unitPrice
-        }));
-        console.log('[HotPromotions] Products with promotion info:', productsWithPromoInfo);
-        
-        // Debug: Group by category to see which categories have products
-        const productsByCategory = productsList.reduce((acc, p) => {
-          const catId = p?.categoryId || 'NO_CATEGORY';
-          const catName = p?.categoryName || 'NO_CATEGORY';
-          if (!acc[catId]) {
-            acc[catId] = { categoryId: catId, categoryName: catName, products: [] };
-          }
-          acc[catId].products.push({
-            id: p?.id,
-            name: p?.name,
-            promotionId: p?.promotionId,
-            discountValue: p?.discountValue
-          });
-          return acc;
-        }, {});
-        console.log('[HotPromotions] Products grouped by category:', productsByCategory);
         
         // Lọc các sản phẩm có promotion active (có promotionId, promotionName và discountValue > 0)
         const promoProducts = (productsList || []).filter(
@@ -93,55 +37,6 @@ function HotPromotions() {
                      product.price > 0 &&
                      (product.price !== null && product.price !== undefined)
         );
-        
-        console.log('[HotPromotions] Filtered promo products:', promoProducts.length);
-        if (promoProducts.length > 0) {
-          console.log('[HotPromotions] Sample promo product:', {
-            id: promoProducts[0].id,
-            name: promoProducts[0].name,
-            promotionId: promoProducts[0].promotionId,
-            promotionName: promoProducts[0].promotionName,
-            discountValue: promoProducts[0].discountValue,
-            price: promoProducts[0].price
-          });
-        } else {
-          // Debug: Check why products are filtered out
-          const productsWithDiscount = productsList.filter(p => p?.discountValue && p.discountValue > 0);
-          const productsWithPromoId = productsList.filter(p => p?.promotionId);
-          const productsWithPromoName = productsList.filter(p => p?.promotionName);
-          const productsWithCategory = productsList.filter(p => p?.categoryId);
-          
-          console.log('[HotPromotions] Products with discountValue > 0:', productsWithDiscount.length);
-          console.log('[HotPromotions] Products with promotionId:', productsWithPromoId.length);
-          console.log('[HotPromotions] Products with promotionName:', productsWithPromoName.length);
-          console.log('[HotPromotions] Products with categoryId:', productsWithCategory.length);
-          
-          // Show sample products to debug
-          if (productsWithCategory.length > 0) {
-            console.log('[HotPromotions] Sample products with category:', productsWithCategory.slice(0, 3).map(p => ({
-              id: p.id,
-              name: p.name,
-              categoryId: p.categoryId,
-              categoryName: p.categoryName,
-              promotionId: p.promotionId,
-              promotionName: p.promotionName,
-              discountValue: p.discountValue,
-              price: p.price,
-              unitPrice: p.unitPrice
-            })));
-          }
-          
-          if (productsWithPromoId.length > 0) {
-            console.log('[HotPromotions] Sample products with promotionId (but may not have discount):', productsWithPromoId.slice(0, 3).map(p => ({
-              id: p.id,
-              name: p.name,
-              promotionId: p.promotionId,
-              promotionName: p.promotionName,
-              discountValue: p.discountValue,
-              price: p.price
-            })));
-          }
-        }
         
         setProducts(promoProducts);
       } catch (error) {

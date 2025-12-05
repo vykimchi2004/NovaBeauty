@@ -13,7 +13,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from './ManageCustomerAccounts.module.scss';
-import { getUsers, deleteUser, updateUser } from '~/services/user';
+import { getUsers, updateUser } from '~/services/user';
 import notify from '~/utils/notification';
 
 const cx = classNames.bind(styles);
@@ -90,27 +90,6 @@ function ManageCustomerAccounts() {
     }
 
     setFilteredCustomers(filtered);
-  };
-
-  const handleDelete = async (userId) => {
-    const confirmed = await notify.confirm(
-      'Bạn có chắc chắn muốn xóa tài khoản này?',
-      'Xác nhận xóa tài khoản',
-      'Xóa',
-      'Hủy'
-    );
-    
-    if (!confirmed) return;
-
-    try {
-      await deleteUser(userId);
-      // Remove from local state
-      setCustomers(customers.filter(c => c.id !== userId));
-      notify.success('Xóa tài khoản thành công!');
-    } catch (err) {
-      console.error('Error deleting customer:', err);
-      notify.error('Không thể xóa tài khoản. Vui lòng thử lại.');
-    }
   };
 
   const handleToggleStatus = async (customer) => {
@@ -361,13 +340,6 @@ function ManageCustomerAccounts() {
                         title={customer.isActive ? 'Khóa' : 'Mở khóa'}
                       >
                         {customer.isActive ? 'Khóa' : 'Mở khóa'}
-                      </button>
-                      <button
-                        onClick={() => handleDelete(customer.id)}
-                        className={cx('actionBtn', 'deleteBtn')}
-                        title="Xóa"
-                      >
-                        Xóa
                       </button>
                     </div>
                   </td>

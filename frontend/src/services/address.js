@@ -9,24 +9,75 @@ export async function createAddress(address) {
   return apiClient.post('/addresses', address);
 }
 
+export async function updateAddress(addressId, address) {
+  return apiClient.put(`/addresses/${addressId}`, address);
+}
+
+export async function deleteAddress(addressId) {
+  return apiClient.delete(`/addresses/${addressId}`);
+}
+
+export async function setDefaultAddress(addressId) {
+  return apiClient.put(`/addresses/${addressId}/set-default`);
+}
+
 // GHN location helpers
+const extractResult = (payload) => {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  return payload.result || payload.data || [];
+};
+
+const fetchJson = async (url, options) => {
+  const res = await fetch(url, options);
+  if (!res.ok) {
+    const error = new Error(`Request failed with status ${res.status}`);
+    error.status = res.status;
+    error.statusText = res.statusText;
+    throw error;
+  }
+  return res.json();
+};
+
 export async function getProvinces() {
-  const res = await fetch(`${API_BASE_URL}/ghn/provinces`);
-  const data = await res.json();
-  return data.result || [];
+  const data = await fetchJson(`${API_BASE_URL}/ghn/provinces`);
+  return extractResult(data);
 }
 
 export async function getDistricts(provinceId) {
-  const res = await fetch(`${API_BASE_URL}/ghn/districts?province_id=${provinceId}`);
-  const data = await res.json();
-  return data.result || [];
+  const data = await fetchJson(`${API_BASE_URL}/ghn/districts?province_id=${provinceId}`);
+  return extractResult(data);
 }
 
 export async function getWards(districtId) {
-  const res = await fetch(`${API_BASE_URL}/ghn/wards?district_id=${districtId}`);
-  const data = await res.json();
-  return data.result || [];
+  const data = await fetchJson(`${API_BASE_URL}/ghn/wards?district_id=${districtId}`);
+  return extractResult(data);
 }
 
+// Tính phí vận chuyển GHN dựa trên địa chỉ & trọng lượng ước tính
+export async function calculateShippingFee(payload) {
+  const data = await fetchJson(`${API_BASE_URL}/ghn/shipping-fees`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+  // Backend bọc kết quả trong ApiResponse { result: ... } hoặc { data: ... }
+  return data.result || data.data || {};
+}
 
+// Format địa chỉ đầy đủ từ các field
+export function formatFullAddress(address) {
+  if (!address) return '';
+  const segments = [
+    address.address,
+    address.wardName,
+    address.districtName,
+    address.provinceName,
+  ]
+    .map((part) => (part || '').trim())
+    .filter(Boolean);
+  return segments.join(', ');
+}
 

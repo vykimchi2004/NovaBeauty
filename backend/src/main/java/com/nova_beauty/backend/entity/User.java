@@ -27,7 +27,6 @@ public class User {
     String email;
     String phoneNumber;
     String address;
-    String avatarUrl;
     boolean isActive;
     LocalDate createAt;
 

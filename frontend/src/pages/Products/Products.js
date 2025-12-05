@@ -5,8 +5,7 @@ import styles from '../Categories/Makeup/Category.module.scss';
 import image1 from '~/assets/images/products/image1.jpg';
 import { Link } from 'react-router-dom';
 import { scrollToTop } from '~/services/utils';
-import { getActiveProducts, getProductsByCategory } from '~/services/product';
-import { getCategories } from '~/services/category';
+import { useProducts, useCategories } from '~/hooks';
 
 const cx = classNames.bind(styles);
 
@@ -24,44 +23,23 @@ function Products() {
   const categoryId = searchParams.get('category');
   const brandParam = searchParams.get('brand');
   const headingParam = searchParams.get('heading');
-  const [allProducts, setAllProducts] = useState([]); // Tất cả products từ API
-  const [products, setProducts] = useState([]); // Products sau khi filter
-  const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState([]);
   const [selectedPriceRanges, setSelectedPriceRanges] = useState([]); // Các price ranges được chọn
   const [selectedBrands, setSelectedBrands] = useState(() => (brandParam ? [brandParam] : [])); // Các brands được chọn
   const [brandSearchTerm, setBrandSearchTerm] = useState(''); // Từ khóa tìm kiếm brand
   const brandParamRef = useRef(brandParam);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        let productsData = [];
-        
-        if (categoryId) {
-          // Fetch products by category
-          productsData = await getProductsByCategory(categoryId);
-        } else {
-          // Fetch all approved products
-          productsData = await getActiveProducts();
-        }
-        
-        setAllProducts(productsData || []);
-        
-        // Fetch categories for filter
-        const categoriesData = await getCategories();
-        setCategories(categoriesData || []);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        setAllProducts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Use hooks
+  const { products: allProducts, loading: productsLoading } = useProducts({
+    categoryId,
+    autoLoad: true,
+  });
+  const { categories, loading: categoriesLoading } = useCategories({
+    type: 'all',
+    autoLoad: true,
+    filterInactive: false, // Show all for filter
+  });
 
-    fetchData();
-  }, [categoryId]);
+  const loading = productsLoading || categoriesLoading;
 
   // Lấy danh sách unique brands từ products
   const availableBrands = useMemo(() => {
@@ -74,7 +52,7 @@ function Products() {
   }, [allProducts]);
 
   // Filter products theo price ranges và brands được chọn
-  useEffect(() => {
+  const products = useMemo(() => {
     let filtered = [...allProducts];
 
     // Filter theo price ranges
@@ -103,7 +81,7 @@ function Products() {
       });
     }
 
-    setProducts(filtered);
+    return filtered;
   }, [allProducts, selectedPriceRanges, selectedBrands]);
 
   useEffect(() => {

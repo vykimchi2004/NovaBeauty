@@ -88,7 +88,10 @@ public class ProductService {
         product.setCreatedAt(LocalDateTime.now());
         product.setUpdatedAt(LocalDateTime.now());
         product.setQuantitySold(0);
-        product.setStatus(ProductStatus.PENDING);
+        // Staff tạo sản phẩm trực tiếp được duyệt, không cần chờ admin duyệt
+        product.setStatus(ProductStatus.APPROVED);
+        product.setApprovedBy(user);
+        product.setApprovedAt(LocalDateTime.now());
 
 
         if (request.getUnitPrice() == null || request.getUnitPrice() < 0) {
@@ -97,6 +100,15 @@ public class ProductService {
         product.setUnitPrice(request.getUnitPrice());
         product.setPrice(computeFinalPrice(request.getUnitPrice(), request.getTax(), request.getDiscountValue()));
 
+        // Xử lý stockQuantity để tạo Inventory
+        if (request.getStockQuantity() != null) {
+            Inventory inventory = Inventory.builder()
+                    .stockQuantity(request.getStockQuantity())
+                    .lastUpdated(java.time.LocalDate.now())
+                    .product(product)
+                    .build();
+            product.setInventory(inventory);
+        }
 
         attachMediaFromRequest(product, request);
 
@@ -194,20 +206,15 @@ public class ProductService {
             }
         }
 
+        // Xử lý manufacturingLocation (color variants)
+        // Luôn cập nhật manufacturingLocation từ request để đảm bảo đồng bộ
+        // Nếu request có manufacturingLocation = null, nghĩa là user đã bỏ chọn "Có biến thể màu"
+        product.setManufacturingLocation(request.getManufacturingLocation());
 
-        // Cáº­p nháº­t media náº¿u cÃ³ - chá»‰ xÃ³a media khÃ´ng cÃ²n trong danh sÃ¡ch má»›i, thÃªm media má»›i
+        // Cập nhật media nếu có - chỉ xóa media không còn trong danh sách mới, thêm media mới
+        // Chỉ cập nhật media khi request có imageUrls hoặc videoUrls
+        // Nếu không có, giữ nguyên media hiện tại
         if (request.getImageUrls() != null || request.getVideoUrls() != null) {
-
-            if (product.getMediaList() != null && !product.getMediaList().isEmpty()) {
-
-                for (ProductMedia oldMedia : product.getMediaList()) {
-                    deletePhysicalFileByUrl(oldMedia.getMediaUrl());
-                }
-
-                productMediaRepository.deleteAll(product.getMediaList());
-            }
-
-            attachMediaFromUpdateRequest(product, request);
             updateMediaList(product, request);
         }
 

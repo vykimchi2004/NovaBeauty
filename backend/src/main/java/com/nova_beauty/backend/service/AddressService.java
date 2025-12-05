@@ -123,6 +123,23 @@ public class AddressService {
         return address;
     }
 
+    @Transactional
+    public AddressResponse setDefaultAddress(String addressId) {
+        User currentUser = getCurrentUser();
+        Address address = getOwnedAddress(addressId, currentUser);
+
+        // Unset other default addresses
+        unsetOtherDefaults(currentUser, addressId);
+
+        // Set this address as default
+        address.setDefaultAddress(true);
+        address.setUpdatedAt(LocalDateTime.now());
+
+        Address savedAddress = addressRepository.save(address);
+        log.info("Address set as default with ID: {} for user: {}", savedAddress.getAddressId(), currentUser.getEmail());
+        return addressMapper.toAddressResponse(savedAddress);
+    }
+
     private void unsetOtherDefaults(User currentUser, String excludeAddressId) {
         currentUser.getAddresses().stream()
                 .filter(Address::isDefaultAddress)

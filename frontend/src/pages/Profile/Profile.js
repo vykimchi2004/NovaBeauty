@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -16,9 +16,9 @@ import { logout, changePassword } from '~/services/auth';
 import { storage, validatePassword } from '~/services/utils';
 import { STORAGE_KEYS } from '~/services/config';
 import notifier from '~/utils/notification';
+import { getMyAddresses, formatFullAddress, setDefaultAddress } from '~/services/address';
 import {
   STATUS_CLASS_MAP,
-  ORDERS_DATA,
   PLACEHOLDER_CONTENT,
 } from './constants';
 import ProfileSection from './sections/ProfileSection';
@@ -46,8 +46,11 @@ const MENU_ITEMS = [
 
 function ProfilePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { success } = notifier;
-  const [activeSection, setActiveSection] = useState('profile');
+  // Check if navigating from order success page
+  const sectionFromState = location.state?.section || 'profile';
+  const [activeSection, setActiveSection] = useState(sectionFromState);
   const [profileForm, setProfileForm] = useState({
     fullName: '',
     email: '',
@@ -74,8 +77,26 @@ function ProfilePage() {
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [addressRefreshKey, setAddressRefreshKey] = useState(0);
+  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [showAddressList, setShowAddressList] = useState(false);
 
   const getStatusClass = (status) => STATUS_CLASS_MAP[status] || '';
+
+  // Persist default address when selected
+  const persistDefaultAddress = async (address) => {
+    if (!address) return;
+    const addressId = address.id || address.addressId || address.address_id;
+    if (!addressId) return;
+    if (address.defaultAddress) return;
+
+    try {
+      await setDefaultAddress(addressId);
+      setAddressRefreshKey((prev) => prev + 1);
+    } catch (err) {
+      console.error('Không thể cập nhật địa chỉ mặc định', err);
+    }
+  };
 
   const handleSectionSelect = (sectionId) => {
     setActiveSection(sectionId);
@@ -401,6 +422,30 @@ function ProfilePage() {
         }
 
         setUserId(userInfo.id);
+        
+        // Fetch addresses to find default address
+        try {
+          const addresses = await getMyAddresses();
+          if (Array.isArray(addresses) && addresses.length > 0) {
+            const defaultAddress = addresses.find((addr) => addr?.defaultAddress === true);
+            if (defaultAddress) {
+              userInfo.address = formatFullAddress(defaultAddress);
+              // Cập nhật số điện thoại từ địa chỉ mặc định nếu có
+              if (defaultAddress.recipientPhoneNumber) {
+                userInfo.phone = defaultAddress.recipientPhoneNumber;
+                userInfo.phoneNumber = defaultAddress.recipientPhoneNumber;
+              }
+              setSelectedAddress(defaultAddress);
+            } else {
+              userInfo.address = userInfo.address || '';
+            }
+          } else {
+            userInfo.address = userInfo.address || '';
+          }
+        } catch (_addrErr) {
+          userInfo.address = userInfo.address || '';
+        }
+        
         const normalizedProfile = normalizeUserProfile(userInfo);
         setInitialProfile(normalizedProfile);
         setProfileForm(normalizedProfile);
@@ -430,6 +475,56 @@ function ProfilePage() {
     };
   }, [navigate]);
 
+  // Auto-update default address when address list changes
+  useEffect(() => {
+    const updateDefaultAddress = async () => {
+      if (addressRefreshKey === 0) return;
+      try {
+        const addresses = await getMyAddresses();
+        if (Array.isArray(addresses) && addresses.length > 0) {
+          const defaultAddress = addresses.find((addr) => addr?.defaultAddress === true);
+
+          if (defaultAddress) {
+            const formatted = formatFullAddress(defaultAddress);
+            const phoneFromAddress = defaultAddress.recipientPhoneNumber || '';
+            setProfileForm((prev) => ({ 
+              ...(prev || {}), 
+              address: formatted,
+              phone: phoneFromAddress || prev?.phone || ''
+            }));
+            setInitialProfile((prev) => ({ 
+              ...(prev || {}), 
+              address: formatted,
+              phone: phoneFromAddress || prev?.phone || ''
+            }));
+            setSelectedAddress(defaultAddress);
+          } else {
+            // No default address, clear if no address selected
+            setProfileForm((prev) => {
+              const currentSelectedId = selectedAddress?.id || selectedAddress?.addressId || selectedAddress?.address_id;
+              const stillExists = addresses.some((addr) => {
+                const addrId = addr.id || addr.addressId || addr.address_id;
+                return addrId === currentSelectedId;
+              });
+              if (!stillExists) {
+                return { ...(prev || {}), address: '' };
+              }
+              return prev;
+            });
+          }
+        } else {
+          // No addresses at all, clear
+          setProfileForm((prev) => ({ ...(prev || {}), address: '' }));
+          setInitialProfile((prev) => ({ ...(prev || {}), address: '' }));
+          setSelectedAddress(null);
+        }
+      } catch (_e) {
+        // Ignore errors
+      }
+    };
+    updateDefaultAddress();
+  }, [addressRefreshKey, selectedAddress]);
+
   const renderContent = () => {
     if (activeSection === 'password') {
       return (
@@ -447,7 +542,8 @@ function ProfilePage() {
     }
 
     if (activeSection === 'orders') {
-      return <OrdersSection orders={ORDERS_DATA} getStatusClass={getStatusClass} />;
+      const defaultTab = location.state?.orderTab || 'pending';
+      return <OrdersSection getStatusClass={getStatusClass} defaultTab={defaultTab} />;
     }
 
     if (activeSection === 'complaint') {
@@ -496,6 +592,24 @@ function ProfilePage() {
         onCancelEdit={handleCancelProfileEdit}
         onChange={handleProfileSectionChange}
         onSubmit={handleProfileSubmit}
+        onAddressClick={() => setShowAddressList(true)}
+        showAddressList={showAddressList}
+        onCloseAddressList={() => setShowAddressList(false)}
+        onSelectAddress={(address) => {
+          if (!address) return;
+          const formatted = formatFullAddress(address);
+          const phoneFromAddress = address.recipientPhoneNumber || '';
+          setProfileForm((prev) => ({ 
+            ...(prev || {}), 
+            address: formatted,
+            phone: phoneFromAddress || prev?.phone || ''
+          }));
+          setSelectedAddress(address);
+          persistDefaultAddress(address);
+        }}
+        addressRefreshKey={addressRefreshKey}
+        setAddressRefreshKey={setAddressRefreshKey}
+        selectedAddress={selectedAddress}
       />
     );
   };

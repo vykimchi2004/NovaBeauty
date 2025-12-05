@@ -40,9 +40,7 @@ jwt:
   valid-duration: 3600  # in second
   refreshable-duration: 360000 # in seconds
 
-# Default avatar configuration
 app:
-  default-avatar: "/assets/images/default-avatar.png"
   frontend:
     base-url: "http://localhost:8080/nova_beauty"
 
@@ -50,7 +48,7 @@ app:
 ghn:
   token: ${GHN_TOKEN:change-me}
   shopId: ${GHN_SHOP_ID:0}
-  baseUrl: ${GHN_BASE_URL:https://online-gateway.ghn.vn}
+  baseUrl: ${GHN_BASE_URL:https://dev-online-gateway.ghn.vn}
 
 # Momo payment configuration
 momo:

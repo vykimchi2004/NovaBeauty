@@ -21,7 +21,6 @@ public class UserUpdateRequest {
     String phoneNumber;
     String fullName;
     String address;
-    String avatarUrl;
     Boolean isActive;
 
     String role;

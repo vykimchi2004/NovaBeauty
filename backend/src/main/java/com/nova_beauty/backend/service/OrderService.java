@@ -205,13 +205,11 @@ public class OrderService {
         // Sử dụng ArrayList thay vì List.of() để tránh UnsupportedOperationException
         savedOrder.setItems(new ArrayList<>(List.of(orderItem)));
 
-        // Nếu là COD, finalize ngay
+        // Nếu là COD, finalize ngay nhưng giữ status CREATED để hiển thị "Chờ xác nhận"
+        // COD orders sẽ được staff xác nhận thủ công sau đó
         if (paymentMethod == PaymentMethod.COD) {
             // Không cần xóa cart items vì không có
-            // Chỉ cần update status và gửi email
-            if (savedOrder.getStatus() == OrderStatus.CREATED) {
-                savedOrder.setStatus(OrderStatus.CONFIRMED);
-            }
+            // Giữ status CREATED để hiển thị "Chờ xác nhận"
             orderRepository.save(savedOrder);
             sendOrderConfirmationEmail(savedOrder);
             return new CheckoutResult(savedOrder, null);
@@ -319,7 +317,10 @@ public class OrderService {
         if (order.getUser() != null && cartItemIds != null && !cartItemIds.isEmpty()) {
             cartService.removeCartItemsForOrder(order.getUser(), cartItemIds);
         }
-        if (order.getStatus() == OrderStatus.CREATED) {
+        // COD orders giữ status CREATED để hiển thị "Chờ xác nhận" 
+        // Chỉ MoMo orders mới tự động chuyển sang CONFIRMED sau khi thanh toán thành công
+        // COD orders sẽ được staff xác nhận thủ công
+        if (order.getStatus() == OrderStatus.CREATED && order.getPaymentMethod() == PaymentMethod.MOMO) {
             order.setStatus(OrderStatus.CONFIRMED);
         }
         orderRepository.save(order);

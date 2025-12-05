@@ -8,8 +8,6 @@ import NewArrivals from '../../components/Sections/NewArrivals/NewArrivals';
 import HotPromotions from '../../components/Sections/HotPromotions/HotPromotions';
 
 const Home = () => {
-  console.log('Home component is rendering!');
-
   const cx = classNames.bind(styles);
 
   return (

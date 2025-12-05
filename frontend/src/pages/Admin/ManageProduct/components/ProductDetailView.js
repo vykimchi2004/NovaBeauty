@@ -264,39 +264,6 @@ function ProductDetailView({
             >
               Đóng
             </button>
-
-            {(!getNormalizedStatus || getNormalizedStatus(product) === 'CHO_DUYET') && (
-              <>
-                <button
-                  type="button"
-                  className={cx('approveBtn')}
-                  onClick={onApprove}
-                  disabled={processingApproval || processingRejection || processingDelete}
-                >
-                  <FontAwesomeIcon icon={faCheck} />
-                  Duyệt
-                </button>
-                <button
-                  type="button"
-                  className={cx('rejectBtn')}
-                  onClick={onReject}
-                  disabled={processingApproval || processingRejection || processingDelete}
-                >
-                  <FontAwesomeIcon icon={faXmark} />
-                  Không duyệt
-                </button>
-              </>
-            )}
-
-            <button
-              type="button"
-              className={cx('deleteBtn')}
-              onClick={onDelete}
-              disabled={processingApproval || processingRejection || processingDelete}
-            >
-              <FontAwesomeIcon icon={faTrash} />
-              Xóa sản phẩm
-            </button>
           </div>
         </div>
       </div>

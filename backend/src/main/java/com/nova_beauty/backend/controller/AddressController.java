@@ -22,7 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Slf4j
-class AddressController {
+public class AddressController {
     AddressService addressService;
 
     @PostMapping
@@ -67,6 +67,14 @@ class AddressController {
         addressService.deleteAddress(addressId);
         return ApiResponse.<String>builder()
                 .result("Address has been deleted")
+                .build();
+    }
+
+    @PutMapping("/{addressId}/set-default")
+    ApiResponse<AddressResponse> setDefaultAddress(@PathVariable String addressId) {
+        AddressResponse result = addressService.setDefaultAddress(addressId);
+        return ApiResponse.<AddressResponse>builder()
+                .result(result)
                 .build();
     }
 }

@@ -1,42 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash, faMinus, faPlus, faTimes } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from './Cart.module.scss';
 import cartService from '~/services/cart';
+import { getActiveVouchers } from '~/services/voucher';
 import notify from '~/utils/notification';
-import { storage } from '~/services/utils';
-import { STORAGE_KEYS } from '~/services/config';
+import { useCart } from '~/hooks';
 
 const cx = classNames.bind(styles);
 
 function Cart() {
-  const [cartItems, setCartItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [isUnauthenticated, setIsUnauthenticated] = useState(false);
-  const [discountCode, setDiscountCode] = useState('');
-  const [appliedDiscount, setAppliedDiscount] = useState(0);
-  const [appliedVoucherCode, setAppliedVoucherCode] = useState(null);
-  const [subtotal, setSubtotal] = useState(0);
-  const [total, setTotal] = useState(0);
+  const navigate = useNavigate();
+  const {
+    cartItems,
+    setCartItems,
+    loading,
+    isUnauthenticated,
+    subtotal,
+    total,
+    appliedDiscount,
+    appliedVoucherCode,
+    loadCart,
+    applyVoucher,
+    clearVoucher,
+  } = useCart({ autoLoad: true, listenToEvents: true });
 
-  useEffect(() => {
-    loadCart();
-    
-    // Lắng nghe event cartUpdated để tự động reload giỏ hàng
-    const handleCartUpdated = () => {
-      console.log('[Cart] Cart updated event received, reloading cart...');
-      // Skip event dispatch để tránh loop vô hạn
-      loadCart(true);
-    };
-    
-    window.addEventListener('cartUpdated', handleCartUpdated);
-    
-    return () => {
-      window.removeEventListener('cartUpdated', handleCartUpdated);
-    };
-  }, []);
+  const [discountCode, setDiscountCode] = useState('');
+  const [suggestedVouchers, setSuggestedVouchers] = useState([]);
+  const [quantityErrors, setQuantityErrors] = useState({});
+  const [quantityInputValues, setQuantityInputValues] = useState({}); // Lưu giá trị input tạm thời
 
   // Tự động xóa voucher khi user rời khỏi trang giỏ hàng (component unmount)
   useEffect(() => {
@@ -44,7 +38,7 @@ function Cart() {
       // Chỉ xóa voucher nếu có voucher đang được áp dụng
       if (appliedVoucherCode) {
         console.log('[Cart] Clearing voucher on unmount:', appliedVoucherCode);
-        cartService.clearVoucher().catch(error => {
+        clearVoucher().catch(error => {
           // Không hiển thị lỗi nếu user đã đăng xuất hoặc có lỗi network
           if (error.code !== 401 && error.code !== 403 && error.status !== 401 && error.status !== 403) {
             console.error('[Cart] Error clearing voucher on unmount:', error);
@@ -52,121 +46,7 @@ function Cart() {
         });
       }
     };
-  }, [appliedVoucherCode]);
-
-  const loadCart = async (skipEventDispatch = false) => {
-    try {
-      setLoading(true);
-      setIsUnauthenticated(false);
-      
-      // Kiểm tra token trước khi gọi API
-      const token = storage.get(STORAGE_KEYS.TOKEN);
-      if (!token) {
-        setIsUnauthenticated(true);
-        setCartItems([]);
-        setSubtotal(0);
-        setTotal(0);
-        return;
-      }
-      
-      const cartData = await cartService.getCart();
-      
-      // Map dữ liệu từ API sang format hiển thị
-      const items = (cartData.items || []).map(item => ({
-        id: item.id,
-        productId: item.productId,
-        name: item.productName,
-        currentPrice: item.unitPrice,
-        originalPrice: item.unitPrice, // Có thể lấy từ product nếu cần
-        quantity: item.quantity,
-        selected: true, // Mặc định chọn tất cả
-        finalPrice: item.finalPrice,
-        colorCode: item.colorCode || null,
-      }));
-
-      setCartItems(items);
-      setSubtotal(cartData.subtotal || 0);
-      setAppliedDiscount(cartData.voucherDiscount || 0);
-      setAppliedVoucherCode(cartData.appliedVoucherCode);
-      setTotal(cartData.totalAmount || 0);
-      setIsUnauthenticated(false);
-
-      // Chỉ dispatch event nếu không phải từ event listener (tránh loop)
-      if (!skipEventDispatch) {
-        // Dispatch event để cập nhật cart count trong header
-        window.dispatchEvent(new CustomEvent('cartUpdated'));
-      }
-    } catch (error) {
-      console.error('Error loading cart:', error);
-      // Nếu lỗi do chưa đăng nhập
-      if (error.code === 401 || error.code === 403 || error.status === 401 || error.status === 403) {
-        setIsUnauthenticated(true);
-        setCartItems([]);
-        setSubtotal(0);
-        setTotal(0);
-      } else {
-        notify.error('Không thể tải giỏ hàng. Vui lòng thử lại.');
-        setCartItems([]);
-        setSubtotal(0);
-        setTotal(0);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Load cart mà không set loading state (để tránh nháy màn hình)
-  const loadCartWithoutLoading = async (skipEventDispatch = false) => {
-    try {
-      setIsUnauthenticated(false);
-      
-      // Kiểm tra token trước khi gọi API
-      const token = storage.get(STORAGE_KEYS.TOKEN);
-      if (!token) {
-        setIsUnauthenticated(true);
-        setCartItems([]);
-        setSubtotal(0);
-        setTotal(0);
-        return;
-      }
-      
-      const cartData = await cartService.getCart();
-      
-      // Map dữ liệu từ API sang format hiển thị
-      const items = (cartData.items || []).map(item => ({
-        id: item.id,
-        productId: item.productId,
-        name: item.productName,
-        currentPrice: item.unitPrice,
-        originalPrice: item.unitPrice,
-        quantity: item.quantity,
-        selected: true,
-        finalPrice: item.finalPrice,
-        colorCode: item.colorCode || null,
-      }));
-
-      setCartItems(items);
-      setSubtotal(cartData.subtotal || 0);
-      setAppliedDiscount(cartData.voucherDiscount || 0);
-      setAppliedVoucherCode(cartData.appliedVoucherCode);
-      setTotal(cartData.totalAmount || 0);
-      setIsUnauthenticated(false);
-
-      // Chỉ dispatch event nếu không phải từ event listener (tránh loop)
-      if (!skipEventDispatch) {
-        window.dispatchEvent(new CustomEvent('cartUpdated'));
-      }
-    } catch (error) {
-      console.error('Error loading cart:', error);
-      // Nếu lỗi do chưa đăng nhập
-      if (error.code === 401 || error.code === 403 || error.status === 401 || error.status === 403) {
-        setIsUnauthenticated(true);
-        setCartItems([]);
-        setSubtotal(0);
-        setTotal(0);
-      }
-    }
-  };
+  }, [appliedVoucherCode, clearVoucher]);
 
   const formatPrice = (price) => {
     const value = Math.round(Number(price) || 0);
@@ -186,82 +66,146 @@ function Cart() {
     setCartItems((items) => items.map((item) => (item.id === id ? { ...item, selected: checked } : item)));
   };
 
+  const handleCheckout = () => {
+    const selectedItems = cartItems.filter((item) => item.selected);
+    if (!selectedItems.length) {
+      notify.warning('Vui lòng chọn ít nhất một sản phẩm để tiếp tục thanh toán.');
+      return;
+    }
+
+    const selectedItemIds = selectedItems.map((item) => item.id);
+    navigate('/checkout', { state: { selectedItemIds } });
+  };
+
   const handleQuantityChange = async (id, delta) => {
-    const item = cartItems.find(i => i.id === id);
+    const item = cartItems.find((i) => i.id === id);
     if (!item) return;
 
-    const newQuantity = item.quantity + delta;
-    
+    let newQuantity = item.quantity + delta;
+
+    // Không cho nhỏ hơn 1
+    if (newQuantity < 1) {
+      newQuantity = 1;
+      delta = 1 - item.quantity;
+    }
+
+    // Nếu có maxQuantity (tồn kho) thì không cho vượt quá
+    if (item.maxQuantity != null && newQuantity > item.maxQuantity) {
+      // Hiển thị lỗi và không cho phép tăng thêm
+      setQuantityErrors((prev) => ({
+        ...prev,
+        [id]: `Số lượng tối đa còn lại là ${item.maxQuantity}.`,
+      }));
+      return; // Dừng lại, không gọi API
+    }
+
     try {
-      if (newQuantity < 0) {
-        // Nếu quantity về âm, không làm gì
-        notify.warning('Số lượng không thể nhỏ hơn 0');
-        return;
-      }
-      
       // Optimistic update: cập nhật UI ngay lập tức
-      const updatedItems = cartItems.map(i => {
+      const updatedItems = cartItems.map((i) => {
         if (i.id === id) {
-          const updatedQuantity = i.quantity + delta;
-          if (updatedQuantity <= 0) {
-            return null; // Sẽ filter ra sau
-          }
+          const updatedQuantity = i.id === id ? newQuantity : i.quantity;
           return {
             ...i,
             quantity: updatedQuantity,
-            finalPrice: i.currentPrice * updatedQuantity
+            finalPrice: i.currentPrice * updatedQuantity,
           };
         }
         return i;
-      }).filter(Boolean); // Xóa item nếu quantity <= 0
-      
+      });
+
       setCartItems(updatedItems);
-      
-      // Tính lại subtotal tạm thời
-      const tempSubtotal = updatedItems.reduce((sum, i) => sum + (i.finalPrice || i.currentPrice * i.quantity), 0);
-      setSubtotal(tempSubtotal);
-      
-      // Tính lại total dựa trên subtotal mới và voucher discount hiện tại
-      // Backend sẽ tự động tính lại voucher discount, nhưng để tránh nháy, ta tính tạm thời
-      const tempTotal = Math.max(0, tempSubtotal - appliedDiscount);
-      setTotal(tempTotal);
+      // Xóa lỗi cho item này vì đã cập nhật hợp lệ
+      setQuantityErrors((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
       
       // Gọi API để cập nhật backend
       await cartService.addItem(item.productId, delta, item.colorCode || null);
       
-      // Chỉ update những phần cần thiết từ backend, không update voucher để tránh nháy
-      const cartData = await cartService.getCart();
+      // Reload lại cart để đồng bộ với backend (sẽ tự động cập nhật subtotal và total)
+      await loadCart(true, true);
       
-      // Chỉ update cartItems, subtotal, total - giữ nguyên voucher discount và code
-      const items = (cartData.items || []).map(item => ({
-        id: item.id,
-        productId: item.productId,
-        name: item.productName,
-        currentPrice: item.unitPrice,
-        originalPrice: item.unitPrice,
-        quantity: item.quantity,
-        selected: true,
-        finalPrice: item.finalPrice,
-        colorCode: item.colorCode || null,
-      }));
-
-      setCartItems(items);
-      setSubtotal(cartData.subtotal || 0);
-      // Chỉ update voucher discount nếu thực sự thay đổi
-      if (cartData.voucherDiscount !== appliedDiscount) {
-        setAppliedDiscount(cartData.voucherDiscount || 0);
-      }
-      // Chỉ update voucher code nếu thực sự thay đổi
-      if (cartData.appliedVoucherCode !== appliedVoucherCode) {
-        setAppliedVoucherCode(cartData.appliedVoucherCode);
-      }
-      setTotal(cartData.totalAmount || 0);
+      // Dispatch event để cập nhật cart count trong header
+        window.dispatchEvent(
+          new CustomEvent('cartUpdated', { detail: { source: 'cart-page' } }),
+        );
     } catch (error) {
       console.error('Error updating quantity:', error);
       // Nếu có lỗi, reload lại cart để khôi phục state
-      await loadCartWithoutLoading();
+      await loadCart(true, true);
       notify.error(error.message || 'Không thể cập nhật số lượng. Vui lòng thử lại.');
     }
+  };
+
+  // Cho phép nhập số lượng bằng tay, không vượt quá tồn kho (nếu biết)
+  const handleQuantityInputChange = async (id, value) => {
+    const item = cartItems.find((i) => i.id === id);
+    if (!item) return;
+
+    // Lưu giá trị input để hiển thị ngay (cho phép nhập tạm thời)
+    setQuantityInputValues((prev) => ({ ...prev, [id]: value }));
+
+    let newQuantity = parseInt(value, 10);
+    
+    // Nếu không phải số hợp lệ, giữ nguyên giá trị input để người dùng tiếp tục nhập
+    if (Number.isNaN(newQuantity)) {
+      return;
+    }
+
+    // Nếu <= 0, reset về 1
+    if (newQuantity <= 0) {
+      setQuantityInputValues((prev) => ({ ...prev, [id]: '1' }));
+      newQuantity = 1;
+    }
+
+    // Kiểm tra tồn kho trước khi cho phép nhập
+    if (item.maxQuantity != null && newQuantity > item.maxQuantity) {
+      // Hiển thị lỗi
+      setQuantityErrors((prev) => ({
+        ...prev,
+        [id]: `Số lượng tối đa còn lại là ${item.maxQuantity}.`,
+      }));
+      
+      // Reset input về maxQuantity để người dùng biết số lượng tối đa
+      setQuantityInputValues((prev) => ({ ...prev, [id]: String(item.maxQuantity) }));
+      
+      // Nếu số lượng hiện tại chưa bằng maxQuantity, cho phép cập nhật về maxQuantity
+      if (item.quantity < item.maxQuantity) {
+        const delta = item.maxQuantity - item.quantity;
+        await handleQuantityChange(id, delta);
+      }
+      return;
+    } else {
+      // Xóa lỗi nếu nhập lại trong ngưỡng
+      setQuantityErrors((prev) => {
+        if (!prev[id]) return prev;
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
+
+    if (newQuantity === item.quantity) {
+      // Reset input về số lượng hiện tại nếu không thay đổi
+      setQuantityInputValues((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      return;
+    }
+
+    const delta = newQuantity - item.quantity;
+    await handleQuantityChange(id, delta);
+    
+    // Xóa giá trị input tạm thời sau khi cập nhật thành công
+    setQuantityInputValues((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   };
 
   const handleRemoveItem = async (id) => {
@@ -278,81 +222,61 @@ function Cart() {
       const updatedItems = cartItems.filter(i => i.id !== id);
       setCartItems(updatedItems);
       
-      // Tính lại subtotal tạm thời
-      const tempSubtotal = updatedItems.reduce((sum, i) => sum + (i.finalPrice || i.currentPrice * i.quantity), 0);
-      setSubtotal(tempSubtotal);
-      
-      // Tính lại total dựa trên subtotal mới và voucher discount hiện tại
-      const tempTotal = Math.max(0, tempSubtotal - appliedDiscount);
-      setTotal(tempTotal);
-      
       // Xóa bằng cách thêm với quantity âm bằng với số lượng hiện tại
       // Backend sẽ tự động xóa item khi quantity về 0 hoặc âm
       await cartService.addItem(item.productId, -item.quantity, item.colorCode || null);
       
-      // Chỉ update những phần cần thiết từ backend, không update voucher để tránh nháy
-      const cartData = await cartService.getCart();
-      
-      const items = (cartData.items || []).map(item => ({
-        id: item.id,
-        productId: item.productId,
-        name: item.productName,
-        currentPrice: item.unitPrice,
-        originalPrice: item.unitPrice,
-        quantity: item.quantity,
-        selected: true,
-        finalPrice: item.finalPrice,
-        colorCode: item.colorCode || null,
-      }));
-
-      setCartItems(items);
-      setSubtotal(cartData.subtotal || 0);
-      // Chỉ update voucher discount nếu thực sự thay đổi
-      if (cartData.voucherDiscount !== appliedDiscount) {
-        setAppliedDiscount(cartData.voucherDiscount || 0);
-      }
-      // Chỉ update voucher code nếu thực sự thay đổi
-      if (cartData.appliedVoucherCode !== appliedVoucherCode) {
-        setAppliedVoucherCode(cartData.appliedVoucherCode);
-      }
-      setTotal(cartData.totalAmount || 0);
+      // Reload lại cart để đồng bộ với backend (sẽ tự động cập nhật subtotal và total)
+      await loadCart(true, true);
       
       // Dispatch event để cập nhật cart count trong header
-      window.dispatchEvent(new CustomEvent('cartUpdated'));
+      window.dispatchEvent(
+        new CustomEvent('cartUpdated', { detail: { source: 'cart-page' } }),
+      );
     } catch (error) {
       console.error('[Cart] Error removing item:', error);
       // Nếu có lỗi, reload lại cart để khôi phục state
-      await loadCartWithoutLoading();
+      await loadCart(true, true);
       notify.error(error.message || 'Không thể xóa sản phẩm. Vui lòng thử lại.');
     }
   };
 
-  const handleApplyDiscount = async () => {
-    if (!discountCode.trim()) {
+  // Áp dụng mã giảm giá (dùng chung cho nhập tay và chọn gợi ý)
+  const applyVoucherCode = async (code) => {
+    const trimmed = (code || '').trim();
+    if (!trimmed) {
       notify.warning('Vui lòng nhập mã giảm giá');
       return;
     }
 
+    // Kiểm tra xem có sản phẩm nào được chọn không
+    const selectedItemsForVoucher = cartItems.filter((item) => item.selected);
+    if (selectedItemsForVoucher.length === 0) {
+      notify.warning('Vui lòng chọn ít nhất một sản phẩm để áp dụng mã giảm giá');
+      return;
+    }
+
     try {
-      const cartData = await cartService.applyVoucher(discountCode.trim());
-      setAppliedDiscount(cartData.voucherDiscount || 0);
-      setAppliedVoucherCode(cartData.appliedVoucherCode);
-      setTotal(cartData.totalAmount || 0);
-      setDiscountCode(''); // Clear input after applying
-      await loadCart();
+      await applyVoucher(trimmed);
+      setDiscountCode('');
     } catch (error) {
       console.error('Error applying voucher:', error);
       notify.error(error.message || 'Không thể áp dụng mã giảm giá. Vui lòng thử lại.');
     }
   };
 
+  const handleApplyDiscount = async () => {
+    await applyVoucherCode(discountCode);
+  };
+
+  const handleApplySuggestedVoucher = async (code) => {
+    await applyVoucherCode(code);
+  };
+
   const handleClearVoucher = async () => {
     try {
-      await cartService.clearVoucher();
-      setAppliedDiscount(0);
-      setAppliedVoucherCode(null);
+      await clearVoucher();
       setDiscountCode('');
-      await loadCart();
     } catch (error) {
       console.error('Error clearing voucher:', error);
       notify.error(error.message || 'Không thể xóa mã giảm giá. Vui lòng thử lại.');
@@ -364,8 +288,52 @@ function Cart() {
   const selectedCount = selectedItems.length;
 
   // Tính lại subtotal và total từ selected items
-  const calculatedSubtotal = selectedItems.reduce((sum, item) => sum + (item.finalPrice || item.currentPrice * item.quantity), 0);
-  const calculatedTotal = calculatedSubtotal - appliedDiscount;
+  const calculatedSubtotal = selectedItems.reduce(
+    (sum, item) => sum + (item.finalPrice || item.currentPrice * item.quantity),
+    0
+  );
+  // Chỉ áp dụng giảm giá khi có sản phẩm được chọn, và không cho total âm
+  const effectiveDiscount = selectedItems.length > 0 ? appliedDiscount : 0;
+  const calculatedTotal = Math.max(0, calculatedSubtotal - effectiveDiscount);
+
+  // Gợi ý mã giảm giá dựa trên sản phẩm đã chọn
+  useEffect(() => {
+    const loadSuggestedVouchers = async () => {
+      try {
+        // Nếu chưa chọn sản phẩm nào thì không cần gợi ý
+        if (!selectedItems.length || calculatedSubtotal <= 0) {
+          setSuggestedVouchers([]);
+          return;
+        }
+
+        const vouchersData = await getActiveVouchers().catch(() => []);
+        const vouchers = Array.isArray(vouchersData) ? vouchersData : [];
+
+        // Lọc các voucher đã được duyệt, đang hoạt động và có thể áp dụng cho giá trị đơn hiện tại
+        const applicableVouchers = vouchers.filter((voucher) => {
+          if (voucher.status !== 'APPROVED' || voucher.isActive !== true) return false;
+
+          // Chỉ gợi ý loại áp dụng cho đơn hàng
+          if (voucher.applyScope && voucher.applyScope !== 'ORDER') return false;
+
+          // Nếu yêu cầu giá trị đơn tối thiểu thì phải đạt
+          if (voucher.minOrderValue && Number(voucher.minOrderValue) > 0) {
+            return calculatedSubtotal >= Number(voucher.minOrderValue);
+          }
+
+          return true;
+        });
+
+        setSuggestedVouchers(applicableVouchers.slice(0, 5));
+      } catch (error) {
+        console.error('[Cart] Error loading suggested vouchers:', error);
+        setSuggestedVouchers([]);
+      }
+    };
+
+    loadSuggestedVouchers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calculatedSubtotal, selectedItems.length]);
 
   if (loading) {
     return (
@@ -448,29 +416,44 @@ function Cart() {
                       </div>
                     </td>
                     <td>
-                      <div className={cx('quantityControl')}>
-                        <button
-                          type="button"
-                          className={cx('quantityBtn')}
-                          onClick={() => handleQuantityChange(item.id, -1)}
-                          disabled={item.quantity <= 1}
-                        >
-                          <FontAwesomeIcon icon={faMinus} />
-                        </button>
-                        <input
-                          type="number"
-                          value={item.quantity}
-                          readOnly
-                          className={cx('quantityInput')}
-                          min="1"
-                        />
-                        <button
-                          type="button"
-                          className={cx('quantityBtn')}
-                          onClick={() => handleQuantityChange(item.id, 1)}
-                        >
-                          <FontAwesomeIcon icon={faPlus} />
-                        </button>
+                      <div className={cx('quantityCell')}>
+                        <div className={cx('quantityControl')}>
+                          <button
+                            type="button"
+                            className={cx('quantityBtn')}
+                            onClick={() => handleQuantityChange(item.id, -1)}
+                            disabled={item.quantity <= 1}
+                          >
+                            <FontAwesomeIcon icon={faMinus} />
+                          </button>
+                          <input
+                            type="number"
+                            value={quantityInputValues[item.id] !== undefined ? quantityInputValues[item.id] : item.quantity}
+                            onChange={(e) => handleQuantityInputChange(item.id, e.target.value)}
+                            onBlur={(e) => {
+                              // Reset về số lượng hiện tại khi blur
+                              setQuantityInputValues((prev) => {
+                                const next = { ...prev };
+                                delete next[item.id];
+                                return next;
+                              });
+                            }}
+                            className={cx('quantityInput')}
+                            min="1"
+                            max={item.maxQuantity != null ? item.maxQuantity : undefined}
+                          />
+                          <button
+                            type="button"
+                            className={cx('quantityBtn')}
+                            onClick={() => handleQuantityChange(item.id, 1)}
+                            disabled={item.maxQuantity != null && item.quantity >= item.maxQuantity}
+                          >
+                            <FontAwesomeIcon icon={faPlus} />
+                          </button>
+                        </div>
+                        {quantityErrors[item.id] && (
+                          <div className={cx('quantityError')}>{quantityErrors[item.id]}</div>
+                        )}
                       </div>
                     </td>
                     <td>
@@ -510,7 +493,36 @@ function Cart() {
               Áp dụng
             </button>
           </div>
-          {appliedVoucherCode && (
+          {suggestedVouchers.length > 0 && !appliedVoucherCode && (
+            <div className={cx('suggestedVouchers')}>
+              <p className={cx('suggestedTitle')}>
+                Gợi ý mã giảm giá có thể áp dụng cho các sản phẩm đã chọn:
+              </p>
+              <div className={cx('suggestedList')}>
+                {suggestedVouchers.map((voucher) => (
+                  <button
+                    key={voucher.id}
+                    type="button"
+                    className={cx('suggestedItem')}
+                    onClick={() => handleApplySuggestedVoucher(voucher.code || '')}
+                    title={voucher.description || voucher.name || 'Mã giảm giá'}
+                  >
+                    <span className={cx('suggestedCode')}>{voucher.code}</span>
+                    {voucher.discountValue && (
+                      <span className={cx('suggestedInfo')}>
+                        {voucher.discountValueType === 'PERCENTAGE'
+                          ? `Giảm ${voucher.discountValue}%`
+                          : `Giảm ${new Intl.NumberFormat('vi-VN').format(
+                              voucher.discountValue
+                            )}₫`}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {appliedVoucherCode && selectedItems.length > 0 && (
             <div className={cx('appliedVoucher')}>
               <span className={cx('appliedVoucherText')}>
                 Đã áp dụng: <strong>{appliedVoucherCode}</strong>
@@ -530,19 +542,24 @@ function Cart() {
         <div className={cx('orderSummary')}>
           <div className={cx('summaryRow')}>
             <span>Tạm tính:</span>
-            <span>{formatPrice(calculatedSubtotal || subtotal)}</span>
+            <span>{formatPrice(calculatedSubtotal)}</span>
           </div>
-          {appliedDiscount > 0 && (
+          {appliedDiscount > 0 && selectedItems.length > 0 && (
             <div className={cx('summaryRow')}>
               <span>Giảm giá:</span>
-              <span className={cx('discountAmount')}>-{formatPrice(appliedDiscount)}</span>
+              <span className={cx('discountAmount')}>-{formatPrice(effectiveDiscount)}</span>
             </div>
           )}
           <div className={cx('summaryRow', 'totalRow')}>
             <span>Tổng cộng (đã gồm VAT):</span>
-            <span className={cx('totalAmount')}>{formatPrice(calculatedTotal || total)}</span>
+            <span className={cx('totalAmount')}>{formatPrice(calculatedTotal)}</span>
           </div>
-          <button type="button" className={cx('btn', 'btnBuy')}>
+          <button
+            type="button"
+            className={cx('btn', 'btnBuy')}
+            disabled={selectedItems.length === 0}
+            onClick={handleCheckout}
+          >
             MUA HÀNG
           </button>
           <p className={cx('vatNote')}>(Giá hiển thị đã bao gồm VAT)</p>

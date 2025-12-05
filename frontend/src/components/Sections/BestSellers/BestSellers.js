@@ -9,7 +9,6 @@ import { getActiveProducts } from '~/services/product';
 const cx = classNames.bind(styles);
 
 function BestSellers() {
-  console.log('BestSellers component is rendering!');
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const trackRef = useRef(null);
@@ -25,17 +24,6 @@ function BestSellers() {
         const productsList = Array.isArray(data) ? data : (data?.result && Array.isArray(data.result) ? data.result : []);
         // Lọc các sản phẩm hợp lệ (có id và price)
         const validProducts = productsList.filter(p => p && p.id && (p.price !== null && p.price !== undefined));
-        
-        // Debug: Log products with promotions
-        const productsWithPromo = validProducts.filter(p => p.promotionId || p.discountValue > 0);
-        console.log('[BestSellers] Products with promotion:', productsWithPromo.map(p => ({
-          id: p.id,
-          name: p.name,
-          price: p.price,
-          discountValue: p.discountValue,
-          promotionId: p.promotionId,
-          promotionName: p.promotionName
-        })));
         
         setProducts(validProducts);
       } catch (error) {

@@ -81,6 +81,10 @@ public class ProductCreationRequest {
     // Promotion (optional)
     String promotionId;
 
+    // Stock quantity (optional)
+    @Min(value = 0, message = "Số lượng tồn kho phải >= 0")
+    Integer stockQuantity;
+
     // Media fields
     List<String> imageUrls;
     List<String> videoUrls;

@@ -20,7 +20,6 @@ public class UserCreationRequest {
     String phoneNumber;
     String fullName;
     String address;
-    String avatarUrl;
 
     @NotNull(message = "PASSWORD_REQUIRED")
     @PasswordConstraint
