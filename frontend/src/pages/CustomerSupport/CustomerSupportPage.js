@@ -87,7 +87,7 @@ export default function CustomerSupportPage() {
             <header className={cx('topbar')}>
                 <div className={cx('brand')}>
                     <div className={cx('brandLogo')}>
-                        <img src={logo} alt="LuminaBook" className={cx('logo')} />
+                        <img src={logo} alt="NovaBeauty" className={cx('logo')} />
                     </div>
                 </div>
                 <div className={cx('topbarActions')}>

@@ -11,49 +11,39 @@ class ApiClient {
         return typeof FormData !== 'undefined' && payload instanceof FormData;
     }
 
-    // Get auth token from storage
+    // Get auth token from storage (giống NovaBeauty)
     getAuthToken() {
         try {
-            // Lấy trực tiếp từ localStorage để tránh JSON.parse có thể gây lỗi
-            const rawToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
-            if (!rawToken) {
-                // Không log warning - public endpoints không cần token
-                return null;
-            }
+            const pick = (val) => {
+                if (!val) return null;
+                let t = String(val).trim();
 
-            let token;
-            try {
-                token = JSON.parse(rawToken);
-            } catch (e) {
-                // Nếu không parse được, có thể token được lưu dạng string thuần
-                token = rawToken;
-            }
-
-            // Token có thể là string hoặc object, cần extract string
-            if (!token) {
-                console.warn('[API] Token is null or empty');
-                return null;
-            }
-            
-            // Nếu token là string, trả về trực tiếp (loại bỏ dấu ngoặc kép nếu có)
-            if (typeof token === 'string') {
-                // Loại bỏ dấu ngoặc kép thừa nếu có
-                const cleanToken = token.replace(/^["']|["']$/g, '');
-                return cleanToken;
-            }
-            
-            // Nếu token là object, thử extract từ các field phổ biến
-            if (typeof token === 'object') {
-                const extractedToken = token.accessToken || token.token || token.value || null;
-                if (extractedToken) {
-                    return typeof extractedToken === 'string' ? extractedToken : String(extractedToken);
+                // Loại bỏ dấu ngoặc kép hoặc nháy đơn nếu có
+                if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
+                    t = t.substring(1, t.length - 1);
                 }
-                console.warn('[API] Token is object but no valid field found:', Object.keys(token));
-                return null;
-            }
-            
-            console.warn('[API] Token has unexpected type:', typeof token);
-            return null;
+
+                // Nếu value là JSON, parse một lần
+                if (t.startsWith('{') || t.startsWith('[')) {
+                    try {
+                        const parsed = JSON.parse(t);
+                        t = typeof parsed === 'string' ? parsed : '';
+                    } catch (_) { }
+                }
+                t = t.trim();
+                // Xóa prefix Bearer và khoảng trắng
+                if (t.toLowerCase().startsWith('bearer ')) {
+                    t = t.slice(7);
+                }
+                return t.trim() || null;
+            };
+
+            // Thử lấy từ sessionStorage trước (giống NovaBeauty)
+            const fromSession = pick(sessionStorage.getItem(STORAGE_KEYS.TOKEN));
+            if (fromSession) return fromSession;
+
+            // Nếu không có trong sessionStorage, lấy từ localStorage
+            return pick(localStorage.getItem(STORAGE_KEYS.TOKEN));
         } catch (error) {
             console.error('[API] Error getting token:', error);
             return null;
@@ -72,9 +62,12 @@ class ApiClient {
             ...customHeaders,
         };
 
-        const token = this.getAuthToken();
-        if (token && typeof token === 'string' && token.trim().length > 0) {
-            headers.Authorization = `Bearer ${token.trim()}`;
+        // Only add token if not already provided in customHeaders
+        if (!headers.Authorization) {
+            const token = this.getAuthToken();
+            if (token && typeof token === 'string' && token.trim().length > 0) {
+                headers.Authorization = `Bearer ${token.trim()}`;
+            }
         }
         // Không log warning cho public endpoints - đây là bình thường
 
@@ -164,11 +157,14 @@ class ApiClient {
         const headers = this.buildHeaders(options.headers);
         const isCartEndpoint = endpoint.includes('/cart');
 
+        // Extract options without headers to avoid override
+        const { headers: _, ...restOptions } = options;
+
         try {
             const response = await fetch(url, {
                 method: 'GET',
                 headers,
-                ...options,
+                ...restOptions,
             });
 
             return await this.handleResponse(response);
@@ -194,26 +190,33 @@ class ApiClient {
         const hasQueryParams = url.includes('?');
         const body = hasQueryParams ? undefined : (isFormData ? data : JSON.stringify(data));
 
-        // Log request details để debug (luôn log cho cart endpoints)
-        if (endpoint.includes('/cart')) {
+        // Log request details để debug (luôn log cho cart và review endpoints)
+        if (endpoint.includes('/cart') || endpoint.includes('/reviews')) {
+            const token = this.getAuthToken();
             console.log('[API] POST request:', {
                 url,
+                contentType: headers['Content-Type'],
                 hasAuth: !!headers.Authorization,
                 authHeader: headers.Authorization ? `${headers.Authorization.substring(0, 30)}...` : 'none',
+                tokenFromStorage: token ? `${token.substring(0, 20)}...` : 'none',
                 allHeaders: Object.keys(headers),
+                endpoint,
             });
         }
+
+        // Extract options without headers to avoid override
+        const { headers: _, ...restOptions } = options;
 
         try {
             const response = await fetch(url, {
                 method: 'POST',
                 headers,
                 body,
-                ...options,
+                ...restOptions,
             });
 
-            // Log response status (luôn log cho cart endpoints)
-            if (endpoint.includes('/cart')) {
+            // Log response status (luôn log cho cart và review endpoints)
+            if (endpoint.includes('/cart') || endpoint.includes('/reviews')) {
                 console.log('[API] POST response:', {
                     status: response.status,
                     statusText: response.statusText,

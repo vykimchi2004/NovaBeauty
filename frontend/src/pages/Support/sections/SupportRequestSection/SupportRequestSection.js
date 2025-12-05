@@ -55,7 +55,7 @@ function SupportRequestSection() {
     const phoneRaw = form.elements['phone']?.value || '';
     const rawOrderCode = form.elements['orderCode']?.value || '';
     const isOtherOrder = rawOrderCode === '__other__';
-    // Giống LuminaBook: khi chọn "Khác", gửi 'KHAC' thay vì null/empty để backend validate @NotBlank
+    // Giống NovaBeauty: khi chọn "Khác", gửi 'KHAC' thay vì null/empty để backend validate @NotBlank
     const orderCode = isOtherOrder ? 'KHAC' : (rawOrderCode || '').trim();
     const topic = isOtherOrder ? (form.elements['topic']?.value?.trim() || '') : '';
     const message = form.elements['message']?.value?.trim() || '';

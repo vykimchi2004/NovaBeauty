@@ -34,7 +34,6 @@ const getInitialFormData = (overrides = {}) => ({
   productId: '',
   name: '',
   description: '',
-  size: '',
   brand: '',
   brandOrigin: '',
   texture: '',
@@ -43,9 +42,12 @@ const getInitialFormData = (overrides = {}) => ({
   ingredients: '',
   uses: '',
   usageInstructions: '',
+  length: '',
+  width: '',
+  height: '',
   weight: '',
   price: '',
-  tax: '8', // Thuế cố định 8%
+  tax: '8', // Thuế mặc định 8%
   publicationDate: '',
   categoryId: '',
   stockQuantity: '',
@@ -317,7 +319,6 @@ export function useStaffProductsState() {
         productId: product.id || '',
         name: product.name || '',
         description: product.description || '',
-        size: product.size || '',
         brand: product.brand || '',
         brandOrigin: product.brandOrigin || '',
         texture: product.texture || '',
@@ -326,10 +327,17 @@ export function useStaffProductsState() {
         ingredients: product.ingredients || '',
         uses: product.uses || '',
         usageInstructions: product.usageInstructions || '',
+        length: product.length?.toString() || '',
+        width: product.width?.toString() || '',
+        height: product.height?.toString() || '',
         weight: product.weight?.toString() || '',
         price:
           product.unitPrice?.toString() ||
-          (product.price ? (product.price / 1.08).toFixed(0) : ''),
+          (product.price && product.tax
+            ? (product.price / (1 + product.tax)).toFixed(0)
+            : product.price
+            ? (product.price / 1.08).toFixed(0)
+            : ''),
         tax: product.tax ? (product.tax * 100).toString() : '8',
         publicationDate: product.publicationDate || new Date().toISOString().split('T')[0],
         categoryId: product.categoryId || product.category?.id || '',
@@ -534,6 +542,24 @@ export function useStaffProductsState() {
     }
     if (!formData.categoryId) errors.categoryId = STAFF_PRODUCT_ERRORS.category;
 
+    if (formData.length && formData.length !== '') {
+      const length = parseFloat(formData.length);
+      if (Number.isNaN(length) || length < 0) {
+        errors.length = 'Chiều dài phải là số lớn hơn hoặc bằng 0';
+      }
+    }
+    if (formData.width && formData.width !== '') {
+      const width = parseFloat(formData.width);
+      if (Number.isNaN(width) || width < 0) {
+        errors.width = 'Chiều rộng phải là số lớn hơn hoặc bằng 0';
+      }
+    }
+    if (formData.height && formData.height !== '') {
+      const height = parseFloat(formData.height);
+      if (Number.isNaN(height) || height < 0) {
+        errors.height = 'Chiều cao phải là số lớn hơn hoặc bằng 0';
+      }
+    }
     if (formData.weight && formData.weight !== '') {
       const weight = parseFloat(formData.weight);
       if (Number.isNaN(weight) || weight < 0) {
@@ -541,10 +567,12 @@ export function useStaffProductsState() {
       }
     }
 
-    if (formData.tax && formData.tax !== '') {
+    if (!formData.tax || formData.tax === '') {
+      errors.tax = 'Vui lòng nhập phần trăm thuế';
+    } else {
       const tax = parseFloat(formData.tax);
-      if (Number.isNaN(tax) || tax < 0) {
-        errors.tax = STAFF_PRODUCT_ERRORS.tax;
+      if (Number.isNaN(tax) || tax < 0 || tax > 100) {
+        errors.tax = 'Thuế phải là số từ 0 đến 100';
       }
     }
 
@@ -677,7 +705,6 @@ export function useStaffProductsState() {
         description: formData.description?.trim() || null,
         author: formData.texture?.trim() || null,
         publisher: formData.skinType?.trim() || null,
-        size: formData.size?.trim() || null,
         brand: formData.brand?.trim() || null,
         brandOrigin: formData.brandOrigin?.trim() || null,
         texture: formData.texture?.trim() || null,
@@ -686,6 +713,9 @@ export function useStaffProductsState() {
         ingredients: formData.ingredients?.trim() || null,
         uses: formData.uses?.trim() || null,
         usageInstructions: formData.usageInstructions?.trim() || null,
+        length: formData.length ? parseFloat(formData.length) : null,
+        width: formData.width ? parseFloat(formData.width) : null,
+        height: formData.height ? parseFloat(formData.height) : null,
         weight: formData.weight ? parseFloat(formData.weight) : null,
         stockQuantity,
         manufacturingLocation,

@@ -185,10 +185,10 @@ export default function ReviewCommentManagementPage() {
                         review.id === id ? updatedReview : review,
                     ),
                 );
-                // Cập nhật replyDrafts với reply mới
+                // Clear input sau khi gửi thành công
                 setReplyDrafts((prev) => ({
                     ...prev,
-                    [id]: updatedReview.reply || '',
+                    [id]: '',
                 }));
             }
 
@@ -261,8 +261,13 @@ export default function ReviewCommentManagementPage() {
                                             <p className={cx('comment')}>{review.comment}</p>
                                         )}
 
-                                        {review.reply && (
-                                            <p className={cx('replyText')}>{review.reply}</p>
+                                        {review.reply && review.reply.trim() && (
+                                            <div className={cx('replySection')}>
+                                                <div className={cx('replyHeader')}>
+                                                    <span className={cx('replyLabel')}>CSKH đã trả lời:</span>
+                                                </div>
+                                                <p className={cx('replyText')}>{review.reply}</p>
+                                            </div>
                                         )}
 
                                         <div className={cx('replyInputRow')}>

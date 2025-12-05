@@ -21,7 +21,7 @@
 .pageTitle {
     font-size: 22px;
     font-weight: 700;
-    color: #1a3c5a;
+    color: #1b2b34;
     margin: 0;
 }
 
@@ -29,7 +29,7 @@
     padding: 8px 18px;
     border-radius: 10px;
     border: none;
-    background: #1a3c5a;
+    background: #e5677d;
     color: #ffffff;
     font-size: 14px;
     font-weight: 600;
@@ -41,7 +41,7 @@
 }
 
 .dashboardBtn:hover {
-    opacity: 0.9;
+    background: #d1526a;
 }
 
 .contentWrapper {
@@ -69,7 +69,7 @@
 .sectionTitle {
     font-size: 18px;
     font-weight: 700;
-    color: #1a3c5a;
+    color: #1b2b34;
     margin: 0 0 4px;
 }
 
@@ -110,7 +110,7 @@
 
 .customerName {
     font-weight: 700;
-    color: #1a3c5a;
+    color: #1b2b34;
     transition: color 0.2s ease;
 
     &.clickable {
@@ -120,8 +120,8 @@
         transition: all 0.2s ease;
 
         &:hover {
-            color: #2563eb;
-            text-decoration-color: #2563eb;
+            color: #e5677d;
+            text-decoration-color: #e5677d;
         }
     }
 }
@@ -138,6 +138,26 @@
     letter-spacing: 2px;
 }
 
+.productInfo {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.loadingState {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6b7280;
+    font-size: 15px;
+}
+
+.emptyState {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6b7280;
+    font-size: 15px;
+}
+
 .comment {
     font-size: 15px;
     color: #1b2b34;
@@ -145,11 +165,40 @@
     margin: 0;
 }
 
+// CSS cho phần "CSKH đã trả lời" - lấy từ LuminaBook ProductDetail (giống 100%)
+.replySection {
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: #f9fafb;
+    border-left: 3px solid #e5677d; // NovaBeauty primary color (thay thế #1A3C5A từ LuminaBook)
+    border-radius: 4px;
+}
+
+.replyHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    gap: 12px;
+}
+
+.replyLabel {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e5677d; // NovaBeauty primary color (thay thế #1A3C5A từ LuminaBook)
+}
+
+.replyDate {
+    font-size: 12px;
+    color: #9ca3af;
+}
+
 .replyText {
     font-size: 14px;
     color: #374151;
+    line-height: 1.6;
     margin: 0;
-    font-style: italic;
+    white-space: pre-line;
 }
 
 .replyInputRow {
@@ -172,15 +221,15 @@
 
 .replyInput:focus {
     outline: none;
-    border-color: #1a3c5a;
-    box-shadow: 0 0 0 3px rgba(26, 60, 90, 0.12);
+    border-color: #e5677d;
+    box-shadow: 0 0 0 3px rgba(229, 103, 125, 0.12);
 }
 
 .replyButton {
     padding: 10px 20px;
     border: none;
     border-radius: 10px;
-    background: #1a3c5a;
+    background: #e5677d;
     color: #ffffff;
     font-size: 14px;
     font-weight: 600;
@@ -189,7 +238,7 @@
 }
 
 .replyButton:hover {
-    opacity: 0.92;
+    background: #d1526a;
 }
 
 .replyButton:disabled {
@@ -255,7 +304,7 @@
 .modalTitle {
     font-size: 20px;
     font-weight: 700;
-    color: #1a3c5a;
+    color: #1b2b34;
     margin: 0;
 }
 

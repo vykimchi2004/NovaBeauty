@@ -76,7 +76,7 @@ export default function ComplaintManagementPage() {
             try {
                 const data = await ticketService.getAllTickets();
 
-                // Map backend data to display format giống LuminaBook
+                // Map backend data to display format giống NovaBeauty
                 const mappedComplaints = (data || []).map((ticket) => ({
                     id: ticket.id,
                     orderCode: ticket.orderCode === 'KHAC' ? '-' : ticket.orderCode,
@@ -470,6 +470,14 @@ export default function ComplaintManagementPage() {
                                                         : 'Chưa có người xử lý'}
                                             </span>
                                         </div>
+                                        {selectedComplaint.handlerNote && selectedComplaint.handlerNote.trim() && (
+                                            <div className={cx('reply-row')}>
+                                                <div className={cx('reply-header')}>
+                                                    <span className={cx('reply-label')}>CSKH đã trả lời:</span>
+                                                </div>
+                                                <p className={cx('reply-text')}>{selectedComplaint.handlerNote}</p>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className={cx('notes-section')}>

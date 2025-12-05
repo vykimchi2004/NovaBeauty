@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from './ProductDetail.module.scss';
 import image1 from '~/assets/images/products/image1.jpg';
@@ -9,6 +9,7 @@ import { storage } from '~/services/utils';
 import { STORAGE_KEYS } from '~/services/config';
 import notify from '~/utils/notification';
 import { normalizeVariantRecords } from '~/utils/colorVariants';
+import { getReviewsByProduct, createReview } from '~/services/review';
 
 const TABS = [
   { id: 'description', label: 'Mô tả sản phẩm' },
@@ -24,6 +25,7 @@ const cx = classNames.bind(styles);
 
 function ProductDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,6 +37,18 @@ function ProductDetail() {
   const [selectedColorCode, setSelectedColorCode] = useState(null); // Mã màu đã chọn
   const tabsSectionRef = useRef(null);
   const tabsContainerRef = useRef(null);
+  
+  // Review states
+  const [reviews, setReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [newRating, setNewRating] = useState(5);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [newNameDisplay, setNewNameDisplay] = useState('');
+  const [newComment, setNewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [activeReviewTab, setActiveReviewTab] = useState('latest'); // 'latest' | 'top'
+  const [expandedReviews, setExpandedReviews] = useState({});
   const contentRefs = {
     description: useRef(null),
     ingredients: useRef(null),
@@ -325,6 +339,171 @@ function ProductDetail() {
   useEffect(() => {
     setSelectedColorCode(null);
   }, [product?.id]);
+
+  // Fetch reviews for product
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchReviews = async () => {
+      try {
+        setLoadingReviews(true);
+        const data = await getReviewsByProduct(id);
+        const serverReviews = Array.isArray(data) ? data : [];
+        console.log(`Fetched ${serverReviews.length} reviews for product ${id}`);
+        setReviews(serverReviews);
+      } catch (err) {
+        console.error('Error fetching reviews:', err);
+        setReviews([]);
+      } finally {
+        setLoadingReviews(false);
+      }
+    };
+
+    fetchReviews();
+  }, [id]);
+
+  // Check if user is logged in
+  const isLoggedIn = !!storage.get(STORAGE_KEYS.TOKEN);
+
+  // Format review date
+  const formatReviewDate = (isoString) => {
+    if (!isoString) return '';
+    const d = new Date(isoString);
+    return d.toLocaleDateString('vi-VN');
+  };
+
+  // Render stars
+  const renderStars = (rating = 0) => {
+    const resolved = Math.max(0, Math.min(5, rating || 0));
+    return Array.from({ length: 5 }, (_, idx) => {
+      const filled = idx < Math.round(resolved);
+      return (
+        <span key={idx} className={cx('star', { filled })}>
+          ★
+        </span>
+      );
+    });
+  };
+
+  // Sorted reviews based on active tab
+  const sortedReviews = useMemo(() => {
+    if (!Array.isArray(reviews)) return [];
+    const copy = [...reviews];
+    if (activeReviewTab === 'latest') {
+      return copy.sort(
+        (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
+      );
+    }
+    // "Đánh giá cao nhất" – chỉ hiển thị các đánh giá 5 sao, ưu tiên mới nhất
+    return copy
+      .filter((review) => Number(review?.rating) === 5)
+      .sort(
+        (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0),
+      );
+  }, [reviews, activeReviewTab]);
+
+  // Calculate average rating and review count (will be computed after displayProduct is defined)
+
+  // Rating distribution
+  const ratingDistribution = useMemo(() => {
+    const base = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    if (Array.isArray(reviews) && reviews.length > 0) {
+      reviews.forEach((r) => {
+        const star = Math.round(r.rating || 0);
+        if (base[star] !== undefined) {
+          base[star] += 1;
+        }
+      });
+      return base;
+    }
+    return base;
+  }, [reviews]);
+
+  const totalRatingCount = useMemo(
+    () => Object.values(ratingDistribution).reduce((sum, v) => sum + v, 0),
+    [ratingDistribution],
+  );
+
+  // Handle open login modal
+  const openLoginModal = () => {
+    window.dispatchEvent(new CustomEvent('openLoginModal'));
+  };
+
+  // Handle submit review - GIỐNG 100% LUMINABOOK
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    if (!id || !isLoggedIn || submittingReview) return;
+
+    try {
+      setSubmittingReview(true);
+      const trimmedName = newNameDisplay.trim();
+      const trimmedComment = newComment.trim();
+      // Payload structure giống LuminaBook
+      const payload = {
+        nameDisplay: trimmedName || undefined,
+        rating: newRating,
+        comment: trimmedComment || undefined,
+        product: {
+          id: id,
+        },
+      };
+      
+      console.log('[ProductDetail] Submitting review payload:', JSON.stringify(payload, null, 2));
+
+      const { ok, status, data } = await createReview(payload);
+      if (status === 401) {
+        notify.error('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại để viết đánh giá.');
+        setIsReviewModalOpen(false);
+        openLoginModal();
+        return;
+      }
+
+      // Kiểm tra kết quả từ server
+      if (!ok && status >= 400) {
+        const errorMessage = data?.message || data?.error || 'Không thể gửi đánh giá';
+        notify.error(`${errorMessage}${status ? ` (Lỗi: ${status})` : ''}`);
+        return;
+      }
+
+      // Đóng modal và reset form
+      setIsReviewModalOpen(false);
+      setNewRating(5);
+      setHoverRating(0);
+      setNewNameDisplay('');
+      setNewComment('');
+
+      // Reload reviews từ server ngay lập tức và retry nếu cần
+      const reloadReviews = async (retryCount = 0) => {
+        try {
+          setLoadingReviews(true);
+          const refreshedData = await getReviewsByProduct(id);
+          const refreshedReviews = Array.isArray(refreshedData) ? refreshedData : [];
+          console.log('Reloaded reviews:', refreshedReviews.length, 'reviews');
+          setReviews(refreshedReviews);
+        } catch (refreshErr) {
+          console.error('Error refreshing reviews:', refreshErr);
+          // Retry nếu chưa quá 2 lần
+          if (retryCount < 2) {
+            console.log(`Retrying reload reviews (attempt ${retryCount + 1})...`);
+            setTimeout(() => reloadReviews(retryCount + 1), 1000);
+            return;
+          }
+        } finally {
+          setLoadingReviews(false);
+        }
+      };
+
+      // Đợi một chút để đảm bảo database đã commit, sau đó reload
+      setTimeout(() => reloadReviews(), 500);
+
+      notify.success('Gửi đánh giá thành công');
+    } catch (err) {
+      console.error('Error submitting review:', err);
+      notify.error('Có lỗi xảy ra khi gửi đánh giá.');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   // Loading state
   if (loading) {
@@ -755,40 +934,252 @@ function ProductDetail() {
         </div>
       </div>
 
-      {/* Reviews Section - Moved to bottom */}
-      <div className={cx('description-section')}>
-        <h3 className={cx('reviews-title')}>Đánh giá sản phẩm</h3>
-        <div className={cx('reviews-summary')}>
-          <div className={cx('reviews-score')}>{displayProduct.rating > 0 ? displayProduct.rating.toFixed(1) : '0.0'}</div>
-          <div className={cx('reviews-summary-content')}>
-            <div className={cx('reviews-stars')}>
-              {REVIEW_STARS.map((star) => (
-                <span key={star} className={cx('reviews-star', { filled: star <= Math.floor(displayProduct.rating) })}>
-                  ★
-                </span>
-              ))}
+      {/* Reviews Section - Full width card like NovaBeauty */}
+      <div className={cx('review-card')}>
+        <h3 className={cx('card-title')}>Đánh giá sản phẩm</h3>
+        <div className={cx('review-content')}>
+          <div className={cx('review-summary')}>
+            <div className={cx('review-score')}>
+              <div className={cx('score-value-row')}>
+                <div className={cx('score-value')}>
+                  {(() => {
+                    const count = reviews.length > 0 ? reviews.length : (displayProduct.reviews || 0);
+                    const avg = reviews.length > 0
+                      ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length
+                      : (displayProduct.rating || 0);
+                    return count > 0 ? avg.toFixed(1) : '0';
+                  })()}
+                </div>
+                <div className={cx('score-max')}>/5</div>
+              </div>
+              <div className={cx('score-stars')}>
+                {renderStars((() => {
+                  const avg = reviews.length > 0
+                    ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length
+                    : (displayProduct.rating || 0);
+                  return avg;
+                })())}
+              </div>
+              <div className={cx('score-count')}>
+                ({(() => {
+                  const count = reviews.length > 0 ? reviews.length : (displayProduct.reviews || 0);
+                  return count;
+                })()} đánh giá)
+              </div>
             </div>
-            <div className={cx('reviews-count')}>Dựa trên {displayProduct.reviews} đánh giá</div>
+            <div className={cx('rating-bars')}>
+              {[5, 4, 3, 2, 1].map((star) => {
+                const count = ratingDistribution[star] || 0;
+                const percent =
+                  totalRatingCount > 0
+                    ? Math.round((count / totalRatingCount) * 100)
+                    : 0;
+
+                return (
+                  <div key={star} className={cx('rating-bar-row')}>
+                    <span>{star} sao</span>
+                    <div className={cx('rating-bar-track')}>
+                      <div
+                        className={cx('rating-bar-fill')}
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                    <span className={cx('rating-percent')}>
+                      {percent}%
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className={cx('review-action')}>
+            {!isLoggedIn ? (
+              <p className={cx('login-prompt')}>
+                Vui lòng{' '}
+                <button
+                  type="button"
+                  className={cx('inline-link')}
+                  onClick={openLoginModal}
+                >
+                  đăng nhập
+                </button>
+                {' '}để viết đánh giá.
+              </p>
+            ) : (
+              <div className={cx('write-review-container')}>
+                <button
+                  type="button"
+                  className={cx('write-review-button')}
+                  onClick={() => setIsReviewModalOpen(true)}
+                >
+                  Viết đánh giá
+                </button>
+                {isReviewModalOpen && (
+                  <div className={cx('review-modal-overlay')} onClick={() => setIsReviewModalOpen(false)}>
+                    <div className={cx('review-modal')} onClick={(e) => e.stopPropagation()}>
+                      <h4>Viết đánh giá sản phẩm</h4>
+                      <form onSubmit={handleSubmitReview}>
+                        <div className={cx('review-stars-input')}>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              className={cx(
+                                star <= (hoverRating || newRating)
+                                  ? 'star-input-active'
+                                  : 'star-input'
+                              )}
+                              onClick={() => setNewRating(star)}
+                              onMouseEnter={() => setHoverRating(star)}
+                              onMouseLeave={() => setHoverRating(0)}
+                            >
+                              ★
+                            </button>
+                          ))}
+                        </div>
+                        <input
+                          type="text"
+                          className={cx('review-name-input')}
+                          placeholder="Nhập tên hiển thị khi đánh giá (tùy chọn, có thể đặt tên bất kỳ)"
+                          value={newNameDisplay}
+                          onChange={(e) => setNewNameDisplay(e.target.value)}
+                          maxLength={100}
+                        />
+                        <textarea
+                          className={cx('review-textarea')}
+                          rows={4}
+                          placeholder="Nhập nhận xét của bạn về sản phẩm"
+                          value={newComment}
+                          onChange={(e) => setNewComment(e.target.value)}
+                        />
+                        <div className={cx('review-modal-actions')}>
+                          <button
+                            type="button"
+                            className={cx('review-cancel-btn')}
+                            onClick={() => {
+                              setIsReviewModalOpen(false);
+                              setHoverRating(0);
+                            }}
+                          >
+                            Hủy
+                          </button>
+                          <button
+                            type="submit"
+                            className={cx('review-submit-btn')}
+                            disabled={submittingReview}
+                          >
+                            {submittingReview ? 'Đang gửi...' : 'Gửi nhận xét'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className={cx('review-form')}>
-          <h4>Viết đánh giá của bạn</h4>
-          <div className={cx('review-rating-input')}>
-            {REVIEW_STARS.map((star) => (
-              <span key={star} className={cx('review-form-star')}>
-                ★
-              </span>
-            ))}
+        {/* Review list with tabs */}
+        <div className={cx('review-list-wrapper')}>
+          <div className={cx('review-tabs')}>
+            <button
+              type="button"
+              className={cx('review-tab', { 'review-tab-active': activeReviewTab === 'latest' })}
+              onClick={() => setActiveReviewTab('latest')}
+            >
+              Mới nhất
+            </button>
+            <button
+              type="button"
+              className={cx('review-tab', { 'review-tab-active': activeReviewTab === 'top' })}
+              onClick={() => setActiveReviewTab('top')}
+            >
+              Đánh giá cao nhất
+            </button>
           </div>
-          <textarea
-            rows={4}
-            placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm này..."
-            className={cx('review-textarea')}
-          />
-          <div className={cx('review-actions')}>
-            <button className={cx('review-submit')}>Gửi đánh giá</button>
-          </div>
+
+          {loadingReviews ? (
+            <div className={cx('loading-reviews')}>Đang tải đánh giá...</div>
+          ) : sortedReviews.length === 0 ? (
+            <p className={cx('no-review-text')}>
+              Chưa có đánh giá cho sản phẩm này.
+            </p>
+          ) : (
+            sortedReviews.map((review) => {
+              const reviewId = review.id || `${review.userId}-${review.createdAt}`;
+              const fullComment = review.comment || '';
+              const maxLength = 260;
+              const isLong = fullComment.length > maxLength;
+              const isExpanded = !!expandedReviews[reviewId];
+              const displayComment =
+                !isLong || isExpanded
+                  ? fullComment
+                  : `${fullComment.slice(0, maxLength)}...`;
+
+              // Xử lý tên hiển thị: ưu tiên nameDisplay, sau đó userName, cuối cùng là "Người dùng ẩn danh"
+              const displayName = (() => {
+                const nameDisplay = review.nameDisplay?.trim();
+                if (nameDisplay) return nameDisplay;
+                const userName = review.userName?.trim();
+                if (userName) return userName;
+                return 'Người dùng ẩn danh';
+              })();
+
+              // Đảm bảo rating luôn có giá trị hợp lệ
+              const reviewRating = review.rating !== undefined && review.rating !== null
+                ? Number(review.rating)
+                : 0;
+
+              return (
+                <div key={reviewId} className={cx('review-item')}>
+                  <div className={cx('review-item-header')}>
+                    <div className={cx('reviewer-name')}>
+                      {displayName}
+                    </div>
+                    <div className={cx('review-date')}>
+                      {formatReviewDate(review.createdAt)}
+                    </div>
+                  </div>
+                  <div className={cx('review-stars-row')}>
+                    {renderStars(reviewRating)}
+                  </div>
+                  {fullComment && fullComment.trim() && (
+                    <div className={cx('review-comment')}>
+                      <p>{displayComment}</p>
+                      {isLong && (
+                        <button
+                          type="button"
+                          className={cx('more-link')}
+                          onClick={() =>
+                            setExpandedReviews((prev) => ({
+                              ...prev,
+                              [reviewId]: !isExpanded,
+                            }))
+                          }
+                        >
+                          {isExpanded ? 'Thu gọn' : 'Xem thêm'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {review.reply && review.reply.trim() && (
+                    <div className={cx('review-reply')}>
+                      <div className={cx('reply-header')}>
+                        <span className={cx('reply-label')}>Phản hồi từ NovaBeauty:</span>
+                        {review.replyAt && (
+                          <span className={cx('reply-date')}>
+                            {formatReviewDate(review.replyAt)}
+                          </span>
+                        )}
+                      </div>
+                      <p className={cx('reply-text')}>{review.reply}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>

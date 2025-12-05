@@ -340,7 +340,7 @@ public class BrevoEmailService {
         }
     }
 
-    // ===== Stub methods for return/refund flow (ported from LuminaBook, simplified) =====
+    // ===== Stub methods for return/refund flow (ported from NovaBeauty, simplified) =====
 
     public void sendReturnRejectedEmail(Order order) {
         if (order == null || order.getUser() == null || order.getUser().getEmail() == null) {

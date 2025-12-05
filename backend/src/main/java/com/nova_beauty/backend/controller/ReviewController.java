@@ -57,9 +57,19 @@ public class ReviewController {
     @PostMapping
     ApiResponse<ReviewResponse> createReview(@RequestBody @Valid ReviewCreationRequest request) {
         log.info("Controller: create review");
-        return ApiResponse.<ReviewResponse>builder()
-                .result(reviewService.createReview(request))
-                .build();
+        log.info("Request payload - nameDisplay: {}, rating: {}, comment: {}", 
+            request.getNameDisplay(), request.getRating(), request.getComment());
+        log.info("Product object: {}", request.getProduct() != null 
+            ? (request.getProduct().getId() != null ? "id=" + request.getProduct().getId() : "id is null") 
+            : "product is null");
+        try {
+            return ApiResponse.<ReviewResponse>builder()
+                    .result(reviewService.createReview(request))
+                    .build();
+        } catch (Exception e) {
+            log.error("Error creating review", e);
+            throw e;
+        }
     }
 
     @PostMapping("/{reviewId}/reply")

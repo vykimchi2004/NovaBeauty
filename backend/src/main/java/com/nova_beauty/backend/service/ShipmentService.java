@@ -144,7 +144,7 @@ public class ShipmentService {
             }
 
             // Ở NovaBeauty hiện chưa có API GHN get order detail, bạn có thể bổ sung tương tự
-            // LuminaBook.
+            // NovaBeauty.
             // Ở đây ta chỉ log lại để không phá luồng.
             log.debug(
                     "syncOrderStatusFromGhn is not fully implemented for order {}. Shipment code: {}",

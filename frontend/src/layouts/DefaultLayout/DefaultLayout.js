@@ -134,6 +134,17 @@ function DefaultLayout({ children }) {
     };
   }, []);
 
+  // Lắng nghe event mở login modal từ các component con
+  React.useEffect(() => {
+    const handleOpenLoginModal = () => {
+      setActiveModal('login');
+    };
+    window.addEventListener('openLoginModal', handleOpenLoginModal);
+    return () => {
+      window.removeEventListener('openLoginModal', handleOpenLoginModal);
+    };
+  }, []);
+
   // Breadcrumb label mapping
   const BREADCRUMB_LABELS = {
     '/makeup': 'Trang điểm',

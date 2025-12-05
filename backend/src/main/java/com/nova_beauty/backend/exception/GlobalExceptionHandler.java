@@ -91,8 +91,18 @@ public class GlobalExceptionHandler {
 
             if (exception.getFieldError() != null) {
                 String validationMessage = exception.getFieldError().getDefaultMessage();
-                log.warn("Validation error - field: {}, message: {}", 
-                    exception.getFieldError().getField(), validationMessage);
+                String fieldName = exception.getFieldError().getField();
+                log.warn("Validation error - field: {}, message: {}", fieldName, validationMessage);
+                
+                // Log tất cả validation errors để debug
+                exception.getBindingResult().getAllErrors().forEach(error -> {
+                    log.warn("Validation error detail: field={}, message={}", 
+                        error instanceof org.springframework.validation.FieldError 
+                            ? ((org.springframework.validation.FieldError) error).getField() 
+                            : "unknown",
+                        error.getDefaultMessage());
+                });
+                
                 ApiResponse<?> apiResponse = new ApiResponse();
                 apiResponse.setCode(ErrorCode.INVALID_KEY.getCode());
                 apiResponse.setMessage(validationMessage);
