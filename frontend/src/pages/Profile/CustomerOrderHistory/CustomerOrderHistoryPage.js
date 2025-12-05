@@ -2,9 +2,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from './CustomerOrderHistoryPage.module.scss';
-import { formatCurrency, getApiBaseUrl, getStoredToken } from '../../../services';
-import orderService from '../../../services/order';
-import defaultProductImage from '../../../assets/images/products/image1.jpg';
+import { formatCurrency, getApiBaseUrl, getStoredToken } from '~/services/utils';
+import orderService from '~/services/order';
+import defaultProductImage from '~/assets/images/products/image1.jpg';
 
 const cx = classNames.bind(styles);
 
@@ -433,11 +433,7 @@ function CustomerOrderHistoryPage() {
                     {/* Header */}
                     <section className={cx('header-section')}>
                         <div className={cx('header-title')}>
-                            <img
-                                src={require('../../../assets/icons/icon_clock.png')}
-                                alt="clock"
-                                className={cx('header-icon')}
-                            />
+                            <div className={cx('header-icon-placeholder')} />
                             <h1>Lịch sử mua hàng</h1>
                         </div>
                     </section>
@@ -475,11 +471,7 @@ function CustomerOrderHistoryPage() {
                                     onChange={(e) => setSelectedDate(e.target.value)}
                                     placeholder="dd/mm/yyyy"
                                 />
-                                <img
-                                    src={require('../../../assets/icons/icon_clock.png')}
-                                    alt="calendar"
-                                    className={cx('calendar-icon')}
-                                />
+                                <span className={cx('calendar-icon')}>📅</span>
                             </div>
                             <button className={cx('search-btn')}>Tìm kiếm</button>
                             <div className={cx('sort-wrapper')}>

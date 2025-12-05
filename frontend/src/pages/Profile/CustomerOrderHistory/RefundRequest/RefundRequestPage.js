@@ -2,14 +2,16 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from './RefundRequestPage.module.scss';
-import { getApiBaseUrl, getStoredToken, formatCurrency } from '../../../../services';
-import { getMyInfo, getMyAddresses, uploadProductMedia } from '../../../../services';
-import { normalizeMediaUrl } from '../../../../services/productUtils';
-import { useNotification } from '../../../../components/Common/Notification';
-import AddressListModal from '../../../../components/Common/AddressModal/AddressListModal';
-import NewAddressModal from '../../../../components/Common/AddressModal/NewAddressModal';
-import AddressDetailModal from '../../../../components/Common/AddressModal/AddressDetailModal';
-import { formatFullAddress, normalizeAddressPayload } from '../../../../components/Common/AddressModal/useGhnLocations';
+import { getApiBaseUrl, getStoredToken, formatCurrency } from '~/services/utils';
+import { getMyInfo } from '~/services/user';
+import { getMyAddresses } from '~/services/address';
+import { uploadProductMedia } from '~/services/media';
+import { normalizeMediaUrl } from '~/services/productUtils';
+import { useNotification } from '~/components/Common/Notification';
+import AddressListModal from '~/components/Common/AddressModal/AddressListModal';
+import NewAddressModal from '~/components/Common/AddressModal/NewAddressModal';
+import AddressDetailModal from '~/components/Common/AddressModal/AddressDetailModal';
+import { formatFullAddress, normalizeAddressPayload } from '~/components/Common/AddressModal/useGhnLocations';
 
 const cx = classNames.bind(styles);
 

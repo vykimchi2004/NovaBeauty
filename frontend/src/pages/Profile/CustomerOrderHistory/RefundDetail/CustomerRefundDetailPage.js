@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from './CustomerRefundDetailPage.module.scss';
-import { getApiBaseUrl, getStoredToken, formatCurrency } from '../../../../services';
-import { normalizeMediaUrl } from '../../../../services/productUtils';
+import { getApiBaseUrl, getStoredToken, formatCurrency } from '~/services/utils';
+import { normalizeMediaUrl } from '~/services/productUtils';
 
 const cx = classNames.bind(styles);
 

@@ -6,11 +6,13 @@ import {
   faMagnifyingGlass,
   faCalendarDays,
   faArrowRight,
+  faXmark,
 } from '@fortawesome/free-solid-svg-icons';
 import styles from '../Profile.module.scss';
 import orderService from '~/services/order';
 import { STATUS_CLASS_MAP } from '../constants';
 import defaultProductImage from '~/assets/images/products/image1.jpg';
+import { formatCurrency } from '~/services/utils';
 
 const cx = classNames.bind(styles);
 
@@ -31,6 +33,10 @@ function OrdersSection({ getStatusClass, defaultTab }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [orderDate, setOrderDate] = useState('');
   const [sortOption, setSortOption] = useState('newest');
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [orderDetails, setOrderDetails] = useState({});
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -113,8 +119,14 @@ function OrdersSection({ getStatusClass, defaultTab }) {
                   _idx: idx,
                 })) || [];
 
+              const orderId = order.id || order.code || `DH${order.id || index}`;
+              const displayCode = order.code || order.id || `DH${order.id || index}`;
+
               return {
-                id: order.code || order.id || `DH${order.id || index}`,
+                key: orderId,
+                id: orderId,
+                orderId,
+                displayCode,
                 date: orderDate.toISOString().split('T')[0],
                 dateDisplay: orderDate.toLocaleDateString('vi-VN'),
                 total:
@@ -124,7 +136,6 @@ function OrdersSection({ getStatusClass, defaultTab }) {
                 status,
                 statusKey,
                 items: mappedItems,
-                orderId: order.id || order.code,
                 rawStatus,
               };
             })
@@ -137,6 +148,32 @@ function OrdersSection({ getStatusClass, defaultTab }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleViewDetail = async (orderId) => {
+    if (!orderId) return;
+    setSelectedOrderId(orderId);
+    setIsModalOpen(true);
+    
+    // Nếu đã có cache, không cần load lại
+    if (orderDetails[orderId]) {
+      return;
+    }
+    
+    try {
+      setDetailLoading(true);
+      const detail = await orderService.getOrderById(orderId);
+      setOrderDetails((prev) => ({ ...prev, [orderId]: detail || null }));
+    } catch (err) {
+      console.error('OrdersSection: Lỗi khi tải chi tiết đơn hàng', err);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedOrderId(null);
   };
 
   const filteredOrders = useMemo(() => {
@@ -233,7 +270,7 @@ function OrdersSection({ getStatusClass, defaultTab }) {
               <div key={order.id} className={cx('orderCard')}>
                 <div className={cx('orderHeaderRow')}>
                   <div>
-                    <p className={cx('orderCode')}>Đơn hàng #{order.id}</p>
+                    <p className={cx('orderCode')}>Đơn hàng #{order.displayCode || order.id}</p>
                     <span className={cx('orderDate')}>
                       Ngày đặt: {order.dateDisplay || order.date}
                     </span>
@@ -270,9 +307,7 @@ function OrdersSection({ getStatusClass, defaultTab }) {
                   <button
                     type="button"
                     className={cx('orderDetailBtn')}
-                    onClick={() =>
-                      navigate(`/customer-account/orders/${order.orderId || order.id || ''}`)
-                    }
+                    onClick={() => handleViewDetail(order.orderId || order.id)}
                   >
                     Xem chi tiết
                     <FontAwesomeIcon icon={faArrowRight} />
@@ -283,6 +318,134 @@ function OrdersSection({ getStatusClass, defaultTab }) {
           })
         )}
       </div>
+
+      {/* Order Detail Modal */}
+      {isModalOpen && (
+        <div className={cx('orderModalOverlay')} onClick={handleCloseModal}>
+          <div className={cx('orderModalContent')} onClick={(e) => e.stopPropagation()}>
+            <div className={cx('orderModalHeader')}>
+              <h3>Chi tiết đơn hàng</h3>
+              <button
+                type="button"
+                className={cx('orderModalClose')}
+                onClick={handleCloseModal}
+              >
+                <FontAwesomeIcon icon={faXmark} />
+              </button>
+            </div>
+
+            <div className={cx('orderModalBody')}>
+              {detailLoading ? (
+                <p className={cx('emptyMessage')}>Đang tải chi tiết...</p>
+              ) : (
+                <>
+                  {orderDetails[selectedOrderId] ? (
+                    <div className={cx('orderDetailGrid')}>
+                      <div>
+                        <p className={cx('detailLabel')}>Mã đơn hàng</p>
+                        <p className={cx('detailValue')}>
+                          #{orderDetails[selectedOrderId]?.code ||
+                            orderDetails[selectedOrderId]?.id ||
+                            '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={cx('detailLabel')}>Người nhận</p>
+                        <p className={cx('detailValue')}>
+                          {orderDetails[selectedOrderId]?.receiverName ||
+                            orderDetails[selectedOrderId]?.customerName ||
+                            '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={cx('detailLabel')}>Số điện thoại</p>
+                        <p className={cx('detailValue')}>
+                          {orderDetails[selectedOrderId]?.receiverPhone || '—'}
+                        </p>
+                      </div>
+                      <div className={cx('detailFull')}>
+                        <p className={cx('detailLabel')}>Địa chỉ</p>
+                        <p className={cx('detailValue')}>
+                          {orderDetails[selectedOrderId]?.shippingAddress || '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={cx('detailLabel')}>Phương thức thanh toán</p>
+                        <p className={cx('detailValue')}>
+                          {orderDetails[selectedOrderId]?.paymentMethod === 'COD'
+                            ? 'Thanh toán khi nhận hàng (COD)'
+                            : orderDetails[selectedOrderId]?.paymentMethod === 'MOMO'
+                            ? 'Thanh toán qua ví MoMo'
+                            : orderDetails[selectedOrderId]?.paymentMethod || '—'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className={cx('detailLabel')}>Tổng tiền</p>
+                        <p className={cx('detailValue', 'detailTotal')}>
+                          {formatCurrency(
+                            orderDetails[selectedOrderId]?.totalAmount || 0,
+                            'VND',
+                          )}
+                        </p>
+                      </div>
+                      {orderDetails[selectedOrderId]?.note && (
+                        <div className={cx('detailFull')}>
+                          <p className={cx('detailLabel')}>Ghi chú</p>
+                          <p className={cx('detailValue')}>
+                            {orderDetails[selectedOrderId]?.note}
+                          </p>
+                        </div>
+                      )}
+                      <div className={cx('detailFull')}>
+                        <p className={cx('detailLabel')}>Sản phẩm</p>
+                        <div className={cx('detailItems')}>
+                          {(orderDetails[selectedOrderId]?.items || []).map((item, idx) => (
+                            <div key={idx} className={cx('detailItem')}>
+                              <img
+                                src={
+                                  item.imageUrl ||
+                                  item.product?.defaultMedia?.mediaUrl ||
+                                  item.product?.mediaUrls?.[0] ||
+                                  defaultProductImage
+                                }
+                                alt={item.name}
+                                className={cx('detailItemImage')}
+                              />
+                              <div className={cx('detailItemInfo')}>
+                                <p className={cx('detailItemName')}>
+                                  {item.name || item.product?.name || 'Sản phẩm'}
+                                </p>
+                                <p className={cx('detailItemMeta')}>
+                                  Số lượng: {item.quantity || 0} • Giá:{' '}
+                                  {item.unitPrice != null
+                                    ? formatCurrency(item.unitPrice, 'VND')
+                                    : '—'}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className={cx('emptyMessage')}>Không tải được chi tiết đơn hàng</p>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className={cx('orderModalFooter')}>
+              <button
+                type="button"
+                className={cx('btn', 'btnPrimary')}
+                onClick={handleCloseModal}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

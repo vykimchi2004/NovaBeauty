@@ -2,13 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from './CustomerOrderDetailPage.scss';
-import CancelOrderDialog from '../../../../components/Common/ConfirmDialog/CancelOrderDialog';
-import {
-    formatCurrency,
-    getApiBaseUrl,
-    getStoredToken,
-    cancelOrder,
-} from '../../../../services';
+import { formatCurrency, getApiBaseUrl, getStoredToken } from '~/services/utils';
+import orderService from '~/services/order';
 
 const cx = classNames.bind(styles);
 
@@ -452,40 +447,9 @@ function OrderDetailPage() {
             String(order.status || order.rawStatus).toUpperCase(),
         );
 
+    // Hủy đơn: tạm thời vô hiệu hóa do chưa có API cancelOrder ở NovaBeauty
     const handleCancelOrder = () => {
-        if (!order?.id) return;
-        setShowCancelDialog(true);
-    };
-
-    const handleConfirmCancel = async (reason) => {
-        if (!order?.id) return;
-        try {
-            setCancelling(true);
-            const token = getStoredToken('token');
-            const { ok } = await cancelOrder(order.id, reason, token);
-            if (!ok) {
-                alert('Không thể hủy đơn hàng. Vui lòng thử lại sau.');
-                setCancelling(false);
-                return;
-            }
-            // Cập nhật trạng thái local và điều hướng về tab "Đã hủy"
-            setOrder((prev) =>
-                prev
-                    ? {
-                          ...prev,
-                          status: 'CANCELLED',
-                          rawStatus: 'CANCELLED',
-                      }
-                    : prev,
-            );
-            navigate('/customer-account/orders?tab=cancelled');
-        } catch (err) {
-            console.error('CustomerOrderDetail: lỗi khi hủy đơn', err);
-            alert('Có lỗi xảy ra khi hủy đơn. Vui lòng thử lại.');
-        } finally {
-            setCancelling(false);
-            setShowCancelDialog(false);
-        }
+        alert('Tính năng hủy đơn tạm thời chưa khả dụng.');
     };
 
     const normalizedStatus = String(order?.status || order?.rawStatus || '')
@@ -857,12 +821,6 @@ function OrderDetailPage() {
                         </>
                     )}
                 </div>
-                <CancelOrderDialog
-                    open={showCancelDialog}
-                    loading={cancelling}
-                    onConfirm={handleConfirmCancel}
-                    onCancel={() => !cancelling && setShowCancelDialog(false)}
-                />
             </div>
         </div>
     );
