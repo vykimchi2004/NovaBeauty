@@ -1,0 +1,607 @@
+.order-detail-wrapper {
+    background: #fff;
+    color: #111;
+    min-height: 70vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.order-detail-content {
+    display: flex;
+    flex-direction: column;
+    padding: 18px 20px;
+    gap: 24px;
+}
+
+// Rejection Alert - Hiển thị ở trên cùng, màu đỏ
+.rejection-alert {
+    border: 2px solid #e5677d;
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin: 20px 0 24px 0;
+    background: #fee2e2;
+
+    &.top-alert {
+        margin-top: 0;
+    }
+}
+
+.alert-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.alert-icon {
+    font-size: 24px;
+}
+
+.alert-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #991b1b;
+}
+
+.alert-message {
+    margin: 0;
+    font-size: 16px;
+    color: #7f1d1d;
+    font-weight: 500;
+    line-height: 1.6;
+}
+
+// Header
+.header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 10px;
+}
+
+.back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    border: 1px solid #e5e7eb;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #374151;
+
+    &:hover {
+        background: #f3f4f6;
+        border-color: #d1d5db;
+    }
+
+    svg {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+.title {
+    flex: 1;
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #111;
+}
+
+.status-badge-header {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: default;
+
+    &.pending {
+        background: #fee2e2;
+        color: #e5677d;
+    }
+
+    &.confirmed {
+        background: #dbeafe;
+        color: #e5677d;
+    }
+
+    &.shipping {
+        background: #fef3c7;
+        color: #d97706;
+    }
+
+    &.delivered {
+        background: #d1fae5;
+        color: #059669;
+    }
+
+    &.returning {
+        background: #fce7f3;
+        color: #db2777;
+    }
+
+    &.cancelled {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+}
+
+// Tabs Section
+.tabs-section {
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.tabs {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+.tab {
+    padding: 12px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #6b7280;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+
+    &:hover {
+        color: #e5677d;
+    }
+
+    &.active {
+        color: #e5677d;
+        border-bottom-color: #dc2626;
+    }
+}
+
+// Refund Progress
+.refund-progress-section {
+    padding: 20px;
+    background: #fef8f3;
+    border-radius: 10px;
+    border: 1px solid #cdd7ea;
+
+    &.rejected {
+        border-color: #fca5a5;
+        background: #fef2f2;
+    }
+}
+
+.progress-bar {
+    display: flex;
+    gap: 0;
+    flex-wrap: wrap;
+}
+
+.progress-step {
+    flex: 1;
+    min-width: 110px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    padding-bottom: 6px;
+    padding: 0 24px;
+}
+
+.step-circle {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2px solid #cdd7ea;
+    background: #fff;
+    color: #1a3c5a;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    transition: all 0.2s ease;
+
+    &.completed {
+        background: #1a3c5a;
+        border-color: #1a3c5a;
+        color: #fff;
+    }
+
+    &.active:not(.completed) {
+        border-color: #1a3c5a;
+        color: #1a3c5a;
+    }
+}
+
+.step-connector {
+    position: absolute;
+    top: 15px;
+    left: calc(50% + 15px);
+    right: calc(-50% + 15px);
+    height: 2px;
+    background: #cdd7ea;
+
+    &.completed {
+        background: #1a3c5a;
+    }
+
+}
+
+.progress-step:last-child .step-connector {
+    display: none;
+}
+
+.step-label {
+    margin-top: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1a3c5a;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.progress-rejection {
+    margin: 12px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #dc2626;
+}
+
+// Info Sections
+.info-section,
+.products-section,
+.payment-section {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.section-title {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #111;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    &.full-width {
+        grid-column: 1 / -1;
+    }
+}
+
+.info-label {
+    font-size: 14px;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.info-value {
+    font-size: 16px;
+    color: #111;
+    font-weight: 600;
+}
+
+// Products
+.products-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.cancel-reason-box {
+    margin: 12px 0 0 0;
+    padding: 16px;
+    border-radius: 8px;
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+
+    h3 {
+        margin: 0 0 8px 0;
+        font-size: 16px;
+        font-weight: 700;
+        color: #9a3412;
+    }
+
+    p {
+        margin: 0;
+        font-size: 15px;
+        color: #7c2d12;
+        line-height: 1.5;
+    }
+
+    .cancel-meta {
+        margin-top: 6px;
+        font-size: 14px;
+
+        span {
+            font-weight: 600;
+        }
+    }
+}
+
+.product-item {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f3f4f6;
+
+    &:last-child {
+        border-bottom: none;
+    }
+}
+
+.product-image {
+    width: 80px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+}
+
+.product-info {
+    flex: 1;
+}
+
+.product-name {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #111;
+}
+
+.product-price {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111;
+    white-space: nowrap;
+}
+
+.total-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 16px;
+    padding-top: 16px;
+    margin-top: 16px;
+    border-top: 1px solid #f3f4f6;
+}
+
+.total-label {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111;
+}
+
+.total-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #dc2626;
+}
+
+.refund-total-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 16px;
+    padding-top: 12px;
+    margin-top: 12px;
+}
+
+.refund-total-label {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111;
+}
+
+.refund-total-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #dc2626;
+}
+
+.refund-summary {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    background: #f9fafb;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 14px;
+        color: #111;
+
+        &.total {
+            font-weight: 700;
+            color: #e5677d;
+        }
+    }
+}
+
+// Payment
+.payment-info-box {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.payment-item {
+    display: flex;
+    gap: 12px;
+}
+
+.payment-label {
+    font-size: 14px;
+    color: #6b7280;
+    font-weight: 500;
+    min-width: 120px;
+}
+
+.payment-value {
+    font-size: 14px;
+    color: #111;
+    font-weight: 600;
+}
+
+// Refund Status
+.refund-status-section {
+    background: #fefce8;
+    border: 1px solid #fde047;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.refund-message {
+    font-size: 14px;
+    color: #713f12;
+    line-height: 1.6;
+    margin: 0;
+}
+
+// Actions
+.actions-section {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.contact-btn {
+    padding: 12px 24px;
+    background: transparent;
+    color: #2563eb;
+        border: 1px solid #e5677d;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+        background: #e5677d;
+        color: #fff;
+    }
+
+    &.refund-detail-btn {
+        background: #f3f4f6;
+        color: #374151;
+        border-color: #d1d5db;
+
+        &:hover {
+            background: #e5e7eb;
+            color: #111;
+        }
+    }
+
+    &.resubmit-btn {
+        background: #dc2626;
+        color: #fff;
+        border-color: #e5677d;
+
+        &:hover {
+            background: #b91c1c;
+            border-color: #b91c1c;
+        }
+    }
+
+    &.cancel-btn {
+        background: #fef2f2;
+        color: #b91c1c;
+        border-color: #fecaca;
+
+        &:hover {
+            background: #fee2e2;
+            border-color: #fca5a5;
+            color: #991b1b;
+        }
+    }
+}
+
+.buy-again-btn {
+    padding: 12px 24px;
+    background: #e5677d;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+
+    &:hover {
+        background: #0f2a3d;
+    }
+}
+
+.loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6b7280;
+    font-size: 16px;
+}
+
+// Responsive
+@media (max-width: 768px) {
+    .header {
+        flex-wrap: wrap;
+    }
+
+    .title {
+        font-size: 20px;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .progress-bar {
+        flex-direction: column;
+        gap: 16px;
+
+        &::before {
+            display: none;
+        }
+    }
+
+    .actions-section {
+        flex-direction: column;
+    }
+
+    .contact-btn,
+    .buy-again-btn {
+        width: 100%;
+    }
+}
+

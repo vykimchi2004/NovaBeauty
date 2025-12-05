@@ -10,6 +10,7 @@ import {
 import styles from '../Profile.module.scss';
 import orderService from '~/services/order';
 import { STATUS_CLASS_MAP } from '../constants';
+import defaultProductImage from '~/assets/images/products/image1.jpg';
 
 const cx = classNames.bind(styles);
 
@@ -40,12 +41,11 @@ function OrdersSection({ getStatusClass, defaultTab }) {
     if (!status) return 'Chờ xác nhận';
     const statusUpper = status.toUpperCase();
     // Map enum names từ backend
-    if (statusUpper === 'CREATED') return 'Chờ xác nhận';
-    if (statusUpper === 'CONFIRMED') return 'Chờ lấy hàng';
-    if (statusUpper === 'PAID') return 'Chờ lấy hàng';
+    if (statusUpper === 'CREATED' || statusUpper === 'PENDING') return 'Chờ xác nhận';
+    if (statusUpper === 'CONFIRMED' || statusUpper === 'PAID') return 'Chờ lấy hàng';
     if (statusUpper === 'SHIPPED') return 'Đang giao hàng';
     if (statusUpper === 'DELIVERED') return 'Đã giao';
-    if (statusUpper.includes('RETURN')) return 'Trả hàng';
+    if (statusUpper.startsWith('RETURN_') || statusUpper === 'RETURNED' || statusUpper === 'REFUNDED') return 'Trả hàng/hoàn tiền';
     if (statusUpper === 'CANCELLED') return 'Đã hủy';
     // Fallback: check Vietnamese text
     const statusLower = status.toLowerCase();
@@ -53,7 +53,7 @@ function OrdersSection({ getStatusClass, defaultTab }) {
     if (statusLower.includes('chờ lấy hàng') || statusLower.includes('ready')) return 'Chờ lấy hàng';
     if (statusLower.includes('đang giao') || statusLower.includes('shipping')) return 'Đang giao hàng';
     if (statusLower.includes('đã giao') || statusLower.includes('delivered')) return 'Đã giao';
-    if (statusLower.includes('trả hàng') || statusLower.includes('returned')) return 'Trả hàng';
+    if (statusLower.includes('trả hàng') || statusLower.includes('return') || statusLower.includes('refund')) return 'Trả hàng/hoàn tiền';
     if (statusLower.includes('đã hủy') || statusLower.includes('cancelled')) return 'Đã hủy';
     return 'Chờ xác nhận';
   };
@@ -63,19 +63,19 @@ function OrdersSection({ getStatusClass, defaultTab }) {
     if (!status) return 'pending';
     const statusUpper = status.toUpperCase();
     // Map enum names từ backend
-    if (statusUpper === 'CREATED') return 'pending';
+    if (statusUpper === 'CREATED' || statusUpper === 'PENDING') return 'pending';
     if (statusUpper === 'CONFIRMED' || statusUpper === 'PAID') return 'ready';
     if (statusUpper === 'SHIPPED') return 'shipping';
     if (statusUpper === 'DELIVERED') return 'delivered';
-    if (statusUpper.includes('RETURN')) return 'returned';
+    if (statusUpper.startsWith('RETURN_') || statusUpper === 'RETURNED' || statusUpper === 'REFUNDED') return 'returned';
     if (statusUpper === 'CANCELLED') return 'cancelled';
     // Fallback: check Vietnamese text or English keywords
     const statusLower = status.toLowerCase();
     if (statusLower.includes('chờ xác nhận') || statusLower.includes('pending')) return 'pending';
-    if (statusLower.includes('chờ lấy hàng') || statusLower.includes('ready')) return 'ready';
+    if (statusLower.includes('chờ lấy hàng') || statusLower.includes('ready') || statusLower.includes('paid')) return 'ready';
     if (statusLower.includes('đang giao') || statusLower.includes('shipping')) return 'shipping';
     if (statusLower.includes('đã giao') || statusLower.includes('delivered')) return 'delivered';
-    if (statusLower.includes('trả hàng') || statusLower.includes('returned')) return 'returned';
+    if (statusLower.includes('trả hàng') || statusLower.includes('return') || statusLower.includes('refund')) return 'returned';
     if (statusLower.includes('đã hủy') || statusLower.includes('cancelled')) return 'cancelled';
     return 'pending';
   };
@@ -85,29 +85,51 @@ function OrdersSection({ getStatusClass, defaultTab }) {
       setLoading(true);
       const data = await orderService.getMyOrders();
       // Map dữ liệu từ API về format cần thiết
-      const mappedOrders = Array.isArray(data) ? data.map((order) => {
-        const orderDate = order.orderDateTime ? new Date(order.orderDateTime) : (order.createdAt ? new Date(order.createdAt) : new Date());
-        const rawStatus = order.status || 'CREATED';
-        const status = mapStatusToVietnamese(rawStatus);
-        const statusKey = getStatusKey(rawStatus);
-        
-        return {
-          id: order.code || order.id || `DH${order.id}`,
-          date: orderDate.toISOString().split('T')[0],
-          dateDisplay: orderDate.toLocaleDateString('vi-VN'),
-          total: typeof order.totalAmount === 'number' 
-            ? `${order.totalAmount.toLocaleString('vi-VN')}đ` 
-            : order.totalAmount || '0đ',
-          status: status,
-          statusKey: statusKey,
-          items: order.items?.map(item => ({
-            name: item.name || 'Sản phẩm',
-            quantity: item.quantity || 1,
-            thumbnail: item.imageUrl || '',
-          })) || [],
-          orderId: order.id,
-        };
-      }) : [];
+      const mappedOrders = Array.isArray(data)
+        ? data
+            .map((order, index) => {
+              if (!order) return null;
+              const orderDate = order.orderDateTime
+                ? new Date(order.orderDateTime)
+                : order.createdAt
+                ? new Date(order.createdAt)
+                : order.orderDate
+                ? new Date(order.orderDate)
+                : new Date();
+
+              const rawStatus = order.status || 'CREATED';
+              const status = mapStatusToVietnamese(rawStatus);
+              const statusKey = getStatusKey(rawStatus);
+
+              const mappedItems =
+                order.items?.map((item, idx) => ({
+                  name: item.name || item.product?.name || 'Sản phẩm',
+                  quantity: item.quantity || 1,
+                  thumbnail:
+                    item.imageUrl ||
+                    item.product?.defaultMedia?.mediaUrl ||
+                    item.product?.mediaUrls?.[0] ||
+                    defaultProductImage,
+                  _idx: idx,
+                })) || [];
+
+              return {
+                id: order.code || order.id || `DH${order.id || index}`,
+                date: orderDate.toISOString().split('T')[0],
+                dateDisplay: orderDate.toLocaleDateString('vi-VN'),
+                total:
+                  typeof order.totalAmount === 'number'
+                    ? `${order.totalAmount.toLocaleString('vi-VN')}đ`
+                    : order.totalAmount || '0đ',
+                status,
+                statusKey,
+                items: mappedItems,
+                orderId: order.id || order.code,
+                rawStatus,
+              };
+            })
+            .filter(Boolean)
+        : [];
       setOrders(mappedOrders);
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -245,10 +267,12 @@ function OrdersSection({ getStatusClass, defaultTab }) {
                   <button type="button" className={cx('orderActionBtn')}>
                     {order.status}
                   </button>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className={cx('orderDetailBtn')}
-                    onClick={() => navigate('/staff/orders')}
+                    onClick={() =>
+                      navigate(`/customer-account/orders/${order.orderId || order.id || ''}`)
+                    }
                   >
                     Xem chi tiết
                     <FontAwesomeIcon icon={faArrowRight} />

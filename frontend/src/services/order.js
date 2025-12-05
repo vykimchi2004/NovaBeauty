@@ -33,7 +33,12 @@ const orderService = {
     async getMyOrders() {
         try {
             const response = await apiClient.get('/orders/my-orders');
-            return response.result || [];
+            // apiClient.get đã trả về data.result nếu backend có wrapper; nếu không, response là mảng
+            if (Array.isArray(response)) return response;
+            if (response && typeof response === 'object' && 'result' in response) {
+                return response.result || [];
+            }
+            return [];
         } catch (error) {
             console.error('[Order Service] getMyOrders error:', error);
             throw error;
@@ -46,7 +51,11 @@ const orderService = {
     async getOrderById(id) {
         try {
             const response = await apiClient.get(`/orders/${id}`);
-            return response.result;
+            // apiClient.get trả về data.result nếu có wrapper
+            if (response && typeof response === 'object' && 'result' in response) {
+                return response.result;
+            }
+            return response;
         } catch (error) {
             console.error('[Order Service] getOrderById error:', error);
             throw error;
