@@ -1,5 +1,6 @@
 package com.nova_beauty.backend.dto.request;
 
+
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -8,8 +9,8 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@FieldDefaults(level = lombok.AccessLevel.PRIVATE)
-public class CreateGhnShipmentItem {
+@FieldDefaults(level = AccessLevel.PRIVATE)
+public class GhnOrderItemRequest {
     String name;
     String code;
     Integer quantity;
@@ -18,5 +19,8 @@ public class CreateGhnShipmentItem {
     Integer width;
     Integer height;
     Integer weight;
-    CreateGhnShipmentCategory category;
+    GhnOrderItemCategoryRequest category;
 }
+
+
+

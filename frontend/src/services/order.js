@@ -124,7 +124,7 @@ const orderService = {
      */
     async createShipment(orderId, payload = null) {
         try {
-            const response = await apiClient.post(`/orders/${orderId}/shipment`, payload || {});
+            const response = await apiClient.post(`/shipments/create/${orderId}`, payload || {});
             return { ok: true, status: 200, data: response };
         } catch (error) {
             console.error('[Order Service] createShipment error:', error);

@@ -5,8 +5,8 @@ public final class GhnConstants {
 
     // Default shop info (có thể chỉnh lại cho NovaBeauty nếu cần)
     public static final String DEFAULT_FROM_NAME = "NovaBeauty";
-    public static final String DEFAULT_FROM_PHONE = "0123456789";
-    public static final String DEFAULT_FROM_ADDRESS = "Hà Nội, Vietnam";
+    public static final String DEFAULT_FROM_PHONE = "0973730527";
+    public static final String DEFAULT_FROM_ADDRESS = "136 Xuân Thủy, Dịch Vọng Hậu, Cầu Giấy, Hà Nội, Vietnam";
     public static final String DEFAULT_FROM_WARD_CODE = "1A0602";
     public static final Integer DEFAULT_FROM_DISTRICT_ID = 1485;
     public static final Integer DEFAULT_FROM_PROVINCE_ID = 201;

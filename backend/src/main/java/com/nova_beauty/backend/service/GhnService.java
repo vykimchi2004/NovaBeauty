@@ -4,133 +4,147 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-
-import com.nova_beauty.backend.configuration.GhnProperties;
-import com.nova_beauty.backend.dto.request.GhnShippingFeeRequest;
-import com.nova_beauty.backend.dto.response.GhnApiResponse;
-import com.nova_beauty.backend.dto.response.GhnDistrictResponse;
-import com.nova_beauty.backend.dto.response.GhnProvinceResponse;
-import com.nova_beauty.backend.dto.response.GhnWardResponse;
+import com.nova_beauty.backend.constant.ApiConstants;
+import com.nova_beauty.backend.dto.response.*;
 import com.nova_beauty.backend.exception.AppException;
 import com.nova_beauty.backend.exception.ErrorCode;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+import org.springframework.stereotype.Service;
 
+import com.nova_beauty.backend.configuration.GhnProperties;
+import com.nova_beauty.backend.dto.response.GhnOrderDetailResponse;
+import com.nova_beauty.backend.dto.request.GhnCalculateFeeRequest;
+import com.nova_beauty.backend.dto.request.GhnCreateOrderRequest;
+import com.nova_beauty.backend.util.ApiUtil;
+
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import reactor.core.publisher.Mono;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
-@Slf4j
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class GhnService {
-    private final GhnProperties ghnProperties;
-    private final WebClient ghnWebClient;
+    GhnProperties ghnProperties;
+    ApiUtil apiUtil;
 
     public List<GhnProvinceResponse> getProvinces() {
         try {
             log.info("Fetching GHN provinces from: {}", ghnProperties.getBaseUrl());
-            GhnProvinceResponse[] data = callGhnApi(
-                    "/shiip/public-api/master-data/province",
+            GhnProvinceResponse[] data = apiUtil.callGhnApi(
+                    ApiConstants.GHN_MASTER_DATA_PROVINCE,
                     HttpMethod.GET,
                     null,
-                    new ParameterizedTypeReference<GhnApiResponse<GhnProvinceResponse[]>>() {});
+                    new ParameterizedTypeReference<GhnApiResponse<GhnProvinceResponse[]>>() {},
+                    ghnProperties.getToken(),
+                    ghnProperties.getShopId());
 
             return data == null ? List.of() : Arrays.asList(data);
-        } catch (AppException e) {
-            log.error("Failed to fetch GHN provinces: {}", e.getMessage());
-            throw e;
         } catch (Exception e) {
-            log.error("Unexpected error fetching GHN provinces", e);
+            log.error("Failed to fetch GHN provinces", e);
             throw new AppException(ErrorCode.EXTERNAL_SERVICE_ERROR);
         }
     }
 
     public List<GhnDistrictResponse> getDistricts(Integer provinceId) {
-        GhnDistrictResponse[] data = callGhnApi(
-                "/shiip/public-api/master-data/district",
+        GhnDistrictResponse[] data = apiUtil.callGhnApi(
+                ApiConstants.GHN_MASTER_DATA_DISTRICT,
                 HttpMethod.POST,
                 Map.of("province_id", provinceId),
-                new ParameterizedTypeReference<GhnApiResponse<GhnDistrictResponse[]>>() {});
+                new ParameterizedTypeReference<GhnApiResponse<GhnDistrictResponse[]>>() {},
+                ghnProperties.getToken(),
+                ghnProperties.getShopId());
 
         return data == null ? List.of() : Arrays.asList(data);
     }
 
     public List<GhnWardResponse> getWards(Integer districtId) {
-        GhnWardResponse[] data = callGhnApi(
-                "/shiip/public-api/master-data/ward",
+        GhnWardResponse[] data = apiUtil.callGhnApi(
+                ApiConstants.GHN_MASTER_DATA_WARD,
                 HttpMethod.POST,
                 Map.of("district_id", districtId),
-                new ParameterizedTypeReference<GhnApiResponse<GhnWardResponse[]>>() {});
+                new ParameterizedTypeReference<GhnApiResponse<GhnWardResponse[]>>() {},
+                ghnProperties.getToken(),
+                ghnProperties.getShopId());
 
         return data == null ? List.of() : Arrays.asList(data);
     }
 
-    public Object calculateShippingFee(GhnShippingFeeRequest request) {
-        return callGhnApi(
-                "/shiip/public-api/v2/shipping-order/fee",
+    public GhnFeeResponse calculateShippingFee(GhnCalculateFeeRequest request) {
+        return apiUtil.callGhnApi(
+                ApiConstants.GHN_SHIPPING_ORDER_FEE,
                 HttpMethod.POST,
                 request,
-                new ParameterizedTypeReference<GhnApiResponse<Object>>() {});
+                new ParameterizedTypeReference<GhnApiResponse<GhnFeeResponse>>() {},
+                ghnProperties.getToken(),
+                ghnProperties.getShopId());
     }
 
-    private <T> T callGhnApi(
-            String path,
-            HttpMethod method,
-            Object payload,
-            ParameterizedTypeReference<GhnApiResponse<T>> responseType) {
-        try {
-            GhnApiResponse<T> response = executeRequest(path, method, payload, responseType);
+    public List<GhnPickShiftResponse> getPickShifts() {
+        GhnPickShiftResponse[] data = apiUtil.callGhnApi(
+                ApiConstants.GHN_SHIFT_DATE,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<GhnApiResponse<GhnPickShiftResponse[]>>() {},
+                ghnProperties.getToken(),
+                ghnProperties.getShopId());
 
-            if (response == null || response.getCode() == null || response.getCode() != 200) {
-                log.error("GHN API error: {}", response != null ? response.getMessage() : "Null response");
-                throw new AppException(ErrorCode.EXTERNAL_SERVICE_ERROR);
-            }
-
-            return response.getData();
-        } catch (AppException ex) {
-            throw ex;
-        } catch (Exception e) {
-            log.error("Error calling GHN API [{} {}]", method, path, e);
-            throw new AppException(ErrorCode.EXTERNAL_SERVICE_ERROR);
-        }
+        return data == null ? List.of() : Arrays.asList(data);
     }
 
-    private <T> GhnApiResponse<T> executeRequest(
-            String path,
-            HttpMethod method,
-            Object payload,
-            ParameterizedTypeReference<GhnApiResponse<T>> responseType) {
+    public GhnLeadtimeResponse getLeadtime(
+            Integer fromDistrictId,
+            String fromWardCode,
+            Integer toDistrictId,
+            String toWardCode,
+            Integer serviceTypeId) {
+        Map<String, Object> payload = Map.of(
+                "from_district_id", fromDistrictId,
+                "from_ward_code", fromWardCode,
+                "to_district_id", toDistrictId,
+                "to_ward_code", toWardCode,
+                "service_type_id", serviceTypeId);
 
-        WebClient.RequestBodySpec requestSpec = ghnWebClient
-                .method(method)
-                .uri(path)
-                .headers(this::applyDefaultHeaders);
-
-        WebClient.RequestHeadersSpec<?> headersSpec = payload != null
-                ? requestSpec.bodyValue(payload)
-                : requestSpec;
-
-        return headersSpec
-                .retrieve() // bắt đầu gửi request và nhận response
-                .onStatus(HttpStatusCode::isError, clientResponse -> clientResponse.bodyToMono(String.class)
-                        .flatMap(body -> {
-                            log.error("GHN API HTTP error {} - {}", clientResponse.statusCode(), body);
-                            return Mono.error(new AppException(ErrorCode.EXTERNAL_SERVICE_ERROR));
-                        }))
-                .bodyToMono(responseType)
-                .block();
+        return apiUtil.callGhnApi(
+                ApiConstants.GHN_SHIPPING_ORDER_LEADTIME,
+                HttpMethod.POST,
+                payload,
+                new ParameterizedTypeReference<GhnApiResponse<GhnLeadtimeResponse>>() {},
+                ghnProperties.getToken(),
+                ghnProperties.getShopId());
     }
 
-    private void applyDefaultHeaders(HttpHeaders headers) {
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Token", ghnProperties.getToken());
-        headers.set("ShopId", String.valueOf(ghnProperties.getShopId()));
+    public GhnShipmentDataResponse previewOrder(GhnCreateOrderRequest request) {
+        return apiUtil.callGhnApi(
+                ApiConstants.GHN_SHIPPING_ORDER_PREVIEW,
+                HttpMethod.POST,
+                request,
+                new ParameterizedTypeReference<GhnApiResponse<GhnShipmentDataResponse>>() {},
+                ghnProperties.getToken(),
+                ghnProperties.getShopId());
+    }
+
+    public GhnShipmentDataResponse createOrder(GhnCreateOrderRequest request) {
+        return apiUtil.callGhnApi(
+                ApiConstants.GHN_SHIPPING_ORDER_CREATE,
+                HttpMethod.POST,
+                request,
+                new ParameterizedTypeReference<GhnApiResponse<GhnShipmentDataResponse>>() {},
+                ghnProperties.getToken(),
+                ghnProperties.getShopId());
+    }
+
+    public GhnOrderDetailResponse getOrderDetail(String orderCode) {
+        Map<String, Object> payload = Map.of("order_code", orderCode);
+        return apiUtil.callGhnApi(
+                ApiConstants.GHN_SHIPPING_ORDER_DETAIL,
+                HttpMethod.POST,
+                payload,
+                new ParameterizedTypeReference<GhnApiResponse<com.nova_beauty.backend.dto.response.GhnOrderDetailResponse>>() {},
+                ghnProperties.getToken(),
+                ghnProperties.getShopId());
     }
 }
-

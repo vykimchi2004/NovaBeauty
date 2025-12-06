@@ -12,6 +12,5 @@ import lombok.experimental.FieldDefaults;
 public class GhnShipmentResponse {
     Integer code;
     String message;
-    String message_display;
-    GhnShipmentData data;
+    GhnShipmentDataResponse data;
 }

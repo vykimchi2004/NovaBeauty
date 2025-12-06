@@ -1,8 +1,6 @@
-package com.nova_beauty.backend.entity;
+package com.nova_beauty.backend.dto.response;
 
 import java.time.LocalDate;
-
-import jakarta.persistence.*;
 
 import com.nova_beauty.backend.enums.ShipmentProvider;
 import com.nova_beauty.backend.enums.ShipmentStatus;
@@ -16,26 +14,15 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@Entity
-public class Shipment {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+public class ShipmentResponse {
     String id;
-
-    @OneToOne
-    @JoinColumn(name = "order_id")
-    Order order;
-
-    @Enumerated(EnumType.STRING)
-    ShipmentProvider provider;
-
-    @Enumerated(EnumType.STRING)
-    ShipmentStatus status;
-
-    String orderCode; // GHN order code để tracking
-
+    String orderCode; // GHN order code
+    String orderId; // Internal order ID
     LocalDate shippedDate;
     LocalDate estimatedDelivery;
+    ShipmentProvider provider;
+    ShipmentStatus status;
 
     Long totalFee; // Tổng phí vận chuyển (VND)
 }
+

@@ -1,5 +1,6 @@
 package com.nova_beauty.backend.dto.response;
 
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.*;

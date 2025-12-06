@@ -439,12 +439,10 @@ export default function StaffOrderPage() {
             setOrders((prev) => prev.map((o) => (o.id === orderId ? mapped : o)));
             setActionMessage(`Đã xác nhận đơn #${mapped.code}.`);
 
+            // Tạo vận đơn GHN qua endpoint mới /shipments/create/{orderId}
             try {
-                const {
-                    ok: shipmentOk,
-                    status: shipmentStatus,
-                    data: shipmentData,
-                } = await orderService.createShipment(orderId, {});
+                const { ok: shipmentOk, status: shipmentStatus, data: shipmentData } =
+                    await orderService.createShipment(orderId, {});
 
                 if (!shipmentOk || !shipmentData) {
                     throw new Error(

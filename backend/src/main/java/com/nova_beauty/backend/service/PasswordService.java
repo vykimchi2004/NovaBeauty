@@ -4,8 +4,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.nova_beauty.backend.entity.User;
-import com.nova_beauty.backend.exception.AppException;
-import com.nova_beauty.backend.exception.ErrorCode;
 import com.nova_beauty.backend.repository.UserRepository;
 
 import lombok.AccessLevel;
@@ -35,7 +33,7 @@ public class PasswordService {
 
     public void changePassword(User user, String currentPassword, String newPassword) {
         if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
-            throw new AppException(ErrorCode.CURRENT_PASSWORD_INCORRECT);
+            throw new RuntimeException("Mật khẩu hiện tại không đúng");
         }
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);

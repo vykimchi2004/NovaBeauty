@@ -11,19 +11,11 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class GhnShipmentFeeResponse {
-    Long main_service;
-    Long insurance;
-    Long station_do;
-    Long station_pu;
+public class GhnLeadtimeResponse {
+    Long leadtime;
 
-    @JsonProperty("return")
-    Long returnFee;
-
-    Long r2s;
-    Long coupon;
-
-    @JsonProperty("cod_failed_fee")
-    Long cod_failed_fee;
+    @JsonProperty("leadtime_order")
+    GhnLeadtimeOrderResponse leadtimeOrder;
 }
+
 

@@ -181,7 +181,28 @@ function OrdersSection({ getStatusClass, defaultTab }) {
 
     return orders
       .filter((order) => {
-        const matchesTab = order.statusKey === activeTab;
+        // Kiểm tra statusKey trước (cách chính)
+        let matchesTab = order.statusKey === activeTab;
+        
+        // Fallback: nếu statusKey không khớp, kiểm tra rawStatus trực tiếp
+        // Điều này giúp xử lý trường hợp statusKey không được set đúng
+        if (!matchesTab && order.rawStatus) {
+          const rawStatus = String(order.rawStatus).trim().toUpperCase();
+          const statusKeyFromRaw = getStatusKey(rawStatus);
+          matchesTab = statusKeyFromRaw === activeTab;
+          
+          // Log để debug nếu có vấn đề với DELIVERED orders
+          if (!matchesTab && activeTab === 'delivered' && rawStatus === 'DELIVERED') {
+            console.warn('OrdersSection: DELIVERED order has mismatched statusKey:', {
+              id: order.id,
+              rawStatus: rawStatus,
+              expectedStatusKey: 'delivered',
+              actualStatusKey: order.statusKey,
+              recalculatedStatusKey: statusKeyFromRaw
+            });
+          }
+        }
+        
         const matchesSearch =
           !search ||
           order.id.toLowerCase().includes(search) ||
