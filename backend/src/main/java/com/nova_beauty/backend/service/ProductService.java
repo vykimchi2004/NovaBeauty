@@ -6,9 +6,15 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.Map;
 
 import java.time.LocalDateTime;
 import java.time.LocalDate;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -99,6 +105,9 @@ public class ProductService {
         }
         product.setUnitPrice(request.getUnitPrice());
         product.setPrice(computeFinalPrice(request.getUnitPrice(), request.getTax(), request.getDiscountValue()));
+
+        // Validate color variant codes không được trùng nhau
+        validateColorVariantCodes(request.getManufacturingLocation());
 
         // Xử lý stockQuantity để tạo Inventory
         if (request.getStockQuantity() != null) {
@@ -205,6 +214,9 @@ public class ProductService {
                 product.getInventory().setLastUpdated(java.time.LocalDate.now());
             }
         }
+
+        // Validate color variant codes không được trùng nhau
+        validateColorVariantCodes(request.getManufacturingLocation());
 
         // Xử lý manufacturingLocation (color variants)
         // Luôn cập nhật manufacturingLocation từ request để đảm bảo đồng bộ
@@ -870,6 +882,60 @@ public class ProductService {
             }
         } catch (Exception e) {
             log.warn("Could not delete media file for url {}: {}", url, e.getMessage());
+        }
+    }
+
+    /**
+     * Validate color variant codes không được trùng nhau trong cùng một sản phẩm
+     * @param manufacturingLocation JSON string chứa thông tin color variants
+     * @throws AppException nếu có mã màu trùng nhau
+     */
+    private void validateColorVariantCodes(String manufacturingLocation) {
+        if (manufacturingLocation == null || manufacturingLocation.trim().isEmpty()) {
+            return; // Không có color variants, không cần validate
+        }
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            // Parse JSON string thành List<Map>
+            List<Map<String, Object>> variants = mapper.readValue(
+                manufacturingLocation,
+                new TypeReference<List<Map<String, Object>>>() {}
+            );
+
+            if (variants == null || variants.isEmpty()) {
+                return; // Không có variants, không cần validate
+            }
+
+            Set<String> codeSet = new HashSet<>();
+            for (int i = 0; i < variants.size(); i++) {
+                Map<String, Object> variant = variants.get(i);
+                Object codeObj = variant.get("code");
+                
+                if (codeObj != null) {
+                    String code = codeObj.toString().trim();
+                    if (!code.isEmpty()) {
+                        // Case-insensitive comparison
+                        String codeLower = code.toLowerCase();
+                        if (codeSet.contains(codeLower)) {
+                            String variantName = variant.get("name") != null 
+                                ? variant.get("name").toString() 
+                                : "Mã màu " + (i + 1);
+                            throw new AppException(
+                                ErrorCode.UNCATEGORIZED_EXCEPTION,
+                                "Mã màu \"" + code + "\" bị trùng lặp. Mỗi mã màu phải là duy nhất trong cùng một sản phẩm."
+                            );
+                        }
+                        codeSet.add(codeLower);
+                    }
+                }
+            }
+        } catch (AppException e) {
+            throw e; // Re-throw AppException
+        } catch (Exception e) {
+            // Nếu không parse được JSON, có thể là format không đúng, nhưng không throw error
+            // vì có thể manufacturingLocation có format khác
+            log.warn("Could not parse manufacturingLocation for validation: {}", e.getMessage());
         }
     }
 }

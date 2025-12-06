@@ -472,6 +472,11 @@ function ProductFormModal({
                         onChange={(e) => onVariantChange(index, 'code', e.target.value)}
                         placeholder="VD: #FF0000"
                       />
+                      {formErrors[`variantCode_${index}`] && (
+                        <span className={cx('errorText')} style={{ fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                          {formErrors[`variantCode_${index}`]}
+                        </span>
+                      )}
                     </div>
                     <div className={cx('formGroup')}>
                       <label>Tồn kho</label>

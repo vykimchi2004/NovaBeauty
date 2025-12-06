@@ -404,11 +404,59 @@ function StaffProducts() {
     });
   };
 
+  // Helper function để validate tất cả mã màu và cập nhật errors
+  const validateAllVariantCodes = (variants) => {
+    const newErrors = {};
+    const codeMap = new Map();
+    
+    // Kiểm tra trùng lặp mã màu
+    for (let i = 0; i < variants.length; i += 1) {
+      const variant = variants[i];
+      const code = variant.code?.trim();
+      
+      if (code) {
+        // Case-insensitive comparison
+        const codeLower = code.toLowerCase();
+        if (codeMap.has(codeLower)) {
+          const duplicateIndex = codeMap.get(codeLower);
+          const duplicateName = variants[duplicateIndex].name || `Mã màu ${duplicateIndex + 1}`;
+          const currentName = variant.name || `Mã màu ${i + 1}`;
+          newErrors[`variantCode_${i}`] = `Mã màu "${code}" đã được sử dụng ở "${duplicateName}".`;
+          // Cũng set error cho variant bị trùng đầu tiên
+          if (!newErrors[`variantCode_${duplicateIndex}`]) {
+            newErrors[`variantCode_${duplicateIndex}`] = `Mã màu "${code}" đã được sử dụng ở "${currentName}".`;
+          }
+        } else {
+          codeMap.set(codeLower, i);
+        }
+      }
+    }
+    
+    // Cập nhật errors
+    setFormErrors((prevErrors) => {
+      const updatedErrors = { ...prevErrors };
+      // Xóa tất cả variantCode errors cũ
+      Object.keys(updatedErrors).forEach((key) => {
+        if (key.startsWith('variantCode_')) {
+          delete updatedErrors[key];
+        }
+      });
+      // Thêm errors mới
+      Object.assign(updatedErrors, newErrors);
+      return updatedErrors;
+    });
+  };
+
   const handleAddVariant = () => {
-    setFormData((prev) => ({
-      ...prev,
-      colorVariants: [...(prev.colorVariants || []), createEmptyVariantFormState()],
-    }));
+    setFormData((prev) => {
+      const newVariants = [...(prev.colorVariants || []), createEmptyVariantFormState()];
+      // Validate lại tất cả mã màu sau khi thêm
+      validateAllVariantCodes(newVariants);
+      return {
+        ...prev,
+        colorVariants: newVariants,
+      };
+    });
   };
 
   const handleRemoveVariant = (index) => {
@@ -418,9 +466,12 @@ function StaffProducts() {
       if (target) {
         cleanupVariantPreviews([target]);
       }
+      const newVariants = variants.filter((_, i) => i !== index);
+      // Validate lại tất cả mã màu sau khi xóa
+      validateAllVariantCodes(newVariants);
       return {
         ...prev,
-        colorVariants: variants.filter((_, i) => i !== index),
+        colorVariants: newVariants,
       };
     });
   };
@@ -433,6 +484,12 @@ function StaffProducts() {
         ...variants[index],
         [field]: value,
       };
+      
+      // Nếu đang thay đổi mã màu, validate lại tất cả mã màu
+      if (field === 'code') {
+        validateAllVariantCodes(variants);
+      }
+      
       return {
         ...prev,
         colorVariants: variants,
@@ -547,24 +604,47 @@ function StaffProducts() {
       if (!formData.colorVariants || formData.colorVariants.length === 0) {
         errors.colorVariants = 'Vui lòng thêm ít nhất một mã màu.';
       } else {
+        // Kiểm tra mã màu không được trùng nhau (case-insensitive)
+        const codeMap = new Map();
         for (let i = 0; i < formData.colorVariants.length; i += 1) {
           const variant = formData.colorVariants[i];
-          const displayName = variant.name || variant.code || `Mã màu ${i + 1}`;
-          if (!variant.name?.trim() && !variant.code?.trim()) {
-            errors.colorVariants = `Mã màu thứ ${i + 1} cần tên hoặc mã màu.`;
-            break;
+          const code = variant.code?.trim();
+          
+          // Nếu có mã màu, kiểm tra trùng lặp (case-insensitive)
+          if (code) {
+            const codeLower = code.toLowerCase();
+            if (codeMap.has(codeLower)) {
+              const duplicateIndex = codeMap.get(codeLower);
+              const duplicateName = formData.colorVariants[duplicateIndex].name || `Mã màu ${duplicateIndex + 1}`;
+              const currentName = variant.name || `Mã màu ${i + 1}`;
+              errors.colorVariants = `Mã màu "${code}" bị trùng lặp giữa "${duplicateName}" và "${currentName}". Mỗi mã màu phải là duy nhất.`;
+              break;
+            }
+            codeMap.set(codeLower, i);
           }
-          if (variant.stockQuantity === '' || variant.stockQuantity === undefined) {
-            errors.colorVariants = `Vui lòng nhập tồn kho cho ${displayName}.`;
-            break;
-          }
-          if (!/^\d+$/.test(String(variant.stockQuantity))) {
-            errors.colorVariants = `Tồn kho của ${displayName} phải là số nguyên không âm.`;
-            break;
-          }
-          if (!variant.imageUrl && !variant.imageFile) {
-            errors.colorVariants = `Vui lòng chọn ảnh cho ${displayName}.`;
-            break;
+        }
+
+        // Nếu chưa có lỗi trùng mã màu, tiếp tục kiểm tra các validation khác
+        if (!errors.colorVariants) {
+          for (let i = 0; i < formData.colorVariants.length; i += 1) {
+            const variant = formData.colorVariants[i];
+            const displayName = variant.name || variant.code || `Mã màu ${i + 1}`;
+            if (!variant.name?.trim() && !variant.code?.trim()) {
+              errors.colorVariants = `Mã màu thứ ${i + 1} cần tên hoặc mã màu.`;
+              break;
+            }
+            if (variant.stockQuantity === '' || variant.stockQuantity === undefined) {
+              errors.colorVariants = `Vui lòng nhập tồn kho cho ${displayName}.`;
+              break;
+            }
+            if (!/^\d+$/.test(String(variant.stockQuantity))) {
+              errors.colorVariants = `Tồn kho của ${displayName} phải là số nguyên không âm.`;
+              break;
+            }
+            if (!variant.imageUrl && !variant.imageFile) {
+              errors.colorVariants = `Vui lòng chọn ảnh cho ${displayName}.`;
+              break;
+            }
           }
         }
       }
