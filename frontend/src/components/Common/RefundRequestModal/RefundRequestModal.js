@@ -10,6 +10,7 @@ import { getMyAddresses } from '~/services/address';
 import { formatFullAddress } from '~/components/Common/AddressModal/useGhnLocations';
 import AddressListModal from '~/components/Common/AddressModal/AddressListModal';
 import { useNotification } from '~/components/Common/Notification';
+import { uploadProductMedia } from '~/services/media';
 
 const cx = classNames.bind(styles);
 
@@ -51,6 +52,36 @@ export default function RefundRequestModal({ open, orderId, onClose, onSuccess }
     const [fieldErrors, setFieldErrors] = useState({});
     const [showAddressList, setShowAddressList] = useState(false);
     const [selectedAddress, setSelectedAddress] = useState(null);
+    const [attachedFiles, setAttachedFiles] = useState([]);
+    const [imagePreviews, setImagePreviews] = useState([]);
+    const [selectedImagePreview, setSelectedImagePreview] = useState(null);
+
+    // Reset state when modal closes
+    useEffect(() => {
+        if (!open) {
+            // Reset all state when modal closes
+            setStep(1);
+            setSelectedReasonType(null);
+            setFormData({
+                customerName: '',
+                description: '',
+                email: '',
+                phone: '',
+                returnAddress: '',
+                refundMethod: 'Hoàn tiền bằng tài khoản ngân hàng',
+                bank: '',
+                accountNumber: '',
+                accountHolder: '',
+            });
+            setError('');
+            setFieldErrors({});
+            setSelectedAddress(null);
+            setAttachedFiles([]);
+            setImagePreviews([]);
+            setSelectedImagePreview(null);
+            return;
+        }
+    }, [open]);
 
     useEffect(() => {
         if (!open || !orderId) return;
@@ -149,6 +180,62 @@ export default function RefundRequestModal({ open, orderId, onClose, onSuccess }
         setStep(2);
     };
 
+    const handleFileChange = (e) => {
+        const newFiles = Array.from(e.target.files);
+        const remainingSlots = 5 - attachedFiles.length;
+        
+        if (remainingSlots <= 0) {
+            e.target.value = '';
+            return;
+        }
+
+        const filesToAdd = newFiles.slice(0, remainingSlots);
+        const updatedFiles = [...attachedFiles, ...filesToAdd];
+        setAttachedFiles(updatedFiles);
+
+        // Create previews for new images and videos
+        filesToAdd.forEach((file, index) => {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setImagePreviews(prev => [...prev, {
+                        id: Date.now() + Math.random() + index,
+                        url: reader.result,
+                        file: file,
+                        name: file.name
+                    }]);
+                };
+                reader.readAsDataURL(file);
+            } else if (file.type.startsWith('video/')) {
+                const videoUrl = URL.createObjectURL(file);
+                setImagePreviews(prev => [...prev, {
+                    id: Date.now() + Math.random() + index,
+                    url: videoUrl,
+                    file: file,
+                    name: file.name,
+                    isVideo: true
+                }]);
+            }
+        });
+
+        e.target.value = '';
+    };
+
+    const handleRemoveImage = (imageId) => {
+        setImagePreviews(prev => {
+            const imageToRemove = prev.find(img => img.id === imageId);
+            if (imageToRemove) {
+                if (imageToRemove.url && imageToRemove.url.startsWith('blob:')) {
+                    URL.revokeObjectURL(imageToRemove.url);
+                }
+                setAttachedFiles(prevFiles => 
+                    prevFiles.filter(file => file !== imageToRemove.file)
+                );
+            }
+            return prev.filter(img => img.id !== imageId);
+        });
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         
@@ -157,10 +244,11 @@ export default function RefundRequestModal({ open, orderId, onClose, onSuccess }
         if (!formData.returnAddress || !formData.returnAddress.trim()) {
             errors.returnAddress = 'Vui lòng chọn địa chỉ gửi hàng';
         }
-        if (formData.refundMethod === 'Hoàn tiền bằng tài khoản ngân hàng') {
-            if (!formData.bank) errors.bank = 'Vui lòng chọn ngân hàng';
-            if (!formData.accountNumber) errors.accountNumber = 'Vui lòng nhập số tài khoản';
-            if (!formData.accountHolder) errors.accountHolder = 'Vui lòng nhập tên chủ tài khoản';
+        if (!formData.bank) errors.bank = 'Vui lòng chọn ngân hàng';
+        if (!formData.accountNumber) errors.accountNumber = 'Vui lòng nhập số tài khoản';
+        if (!formData.accountHolder) errors.accountHolder = 'Vui lòng nhập tên chủ tài khoản';
+        if (imagePreviews.length === 0) {
+            errors.media = 'Vui lòng đính kèm ít nhất một ảnh hoặc video làm bằng chứng';
         }
         
         if (Object.keys(errors).length > 0) {
@@ -177,20 +265,43 @@ export default function RefundRequestModal({ open, orderId, onClose, onSuccess }
                 ? 'Sản phẩm gặp sự cố từ cửa hàng'
                 : 'Thay đổi nhu cầu / Mua nhầm';
 
+            // Upload media files if any
+            let mediaUrls = [];
+            if (attachedFiles.length > 0) {
+                try {
+                    const uploadResult = await uploadProductMedia(attachedFiles);
+                    // Handle different response formats
+                    if (uploadResult && Array.isArray(uploadResult)) {
+                        mediaUrls = uploadResult;
+                    } else if (uploadResult && uploadResult.urls && Array.isArray(uploadResult.urls)) {
+                        mediaUrls = uploadResult.urls;
+                    } else if (uploadResult && uploadResult.data && Array.isArray(uploadResult.data)) {
+                        mediaUrls = uploadResult.data;
+                    } else if (uploadResult && uploadResult.result && Array.isArray(uploadResult.result)) {
+                        mediaUrls = uploadResult.result;
+                    }
+                    
+                    if (mediaUrls.length === 0) {
+                        throw new Error('Upload ảnh/video thất bại');
+                    }
+                } catch (uploadError) {
+                    console.error('Error uploading media:', uploadError);
+                    throw new Error('Không thể upload ảnh/video. Vui lòng thử lại.');
+                }
+            }
+
             const payload = {
                 refundReasonType: selectedReasonType,
                 refundDescription: formData.description || reasonText,
                 refundEmail: formData.email,
                 refundReturnAddress: formData.returnAddress,
-                refundMethod: formData.refundMethod,
-                note: `Yêu cầu hoàn tiền/trả hàng - ${reasonText}\nĐịa chỉ gửi hàng: ${formData.returnAddress}\nPhương thức hoàn tiền: ${formData.refundMethod}`,
+                refundMethod: 'Hoàn tiền bằng tài khoản ngân hàng',
+                refundBank: formData.bank,
+                refundAccountNumber: formData.accountNumber,
+                refundAccountHolder: formData.accountHolder,
+                refundMediaUrls: mediaUrls.length > 0 ? JSON.stringify(mediaUrls) : null,
+                note: `Yêu cầu hoàn tiền/trả hàng - ${reasonText}\nĐịa chỉ gửi hàng: ${formData.returnAddress}\nPhương thức hoàn tiền: Hoàn tiền bằng tài khoản ngân hàng`,
             };
-
-            if (formData.refundMethod === 'Hoàn tiền bằng tài khoản ngân hàng') {
-                payload.refundBank = formData.bank;
-                payload.refundAccountNumber = formData.accountNumber;
-                payload.refundAccountHolder = formData.accountHolder;
-            }
 
             const response = await fetch(`${apiBaseUrl}/orders/${encodeURIComponent(orderId)}/request-return`, {
                 method: 'POST',
@@ -319,61 +430,112 @@ export default function RefundRequestModal({ open, orderId, onClose, onSuccess }
                             </div>
 
                             <div className={cx('form-group')}>
-                                <label>Phương thức hoàn tiền *</label>
-                                <select
-                                    value={formData.refundMethod}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, refundMethod: e.target.value }))}
-                                >
-                                    <option value="Hoàn tiền bằng tài khoản ngân hàng">Hoàn tiền bằng tài khoản ngân hàng</option>
-                                    <option value="Hoàn tiền vào ví MoMo">Hoàn tiền vào ví MoMo</option>
-                                </select>
+                                <label>Ảnh/Video bằng chứng *</label>
+                                <div className={cx('media-upload')}>
+                                    <input
+                                        type="file"
+                                        id="media-upload"
+                                        accept="image/*,video/*"
+                                        multiple
+                                        onChange={handleFileChange}
+                                        style={{ display: 'none' }}
+                                    />
+                                    <label htmlFor="media-upload" className={cx('upload-button')}>
+                                        <span>+ Chọn ảnh/video</span>
+                                        <span className={cx('upload-hint')}>(Tối đa 5 tệp, {imagePreviews.length}/5)</span>
+                                    </label>
+                                    {fieldErrors.media && (
+                                        <span className={cx('error')}>{fieldErrors.media}</span>
+                                    )}
+                                    {imagePreviews.length > 0 && (
+                                        <div className={cx('image-previews')}>
+                                            {imagePreviews.map((preview) => {
+                                                const isVideo = preview.isVideo || /\.(mp4|webm|ogg|mov|avi|mkv|flv|wmv)$/i.test(preview.url || '');
+                                                return (
+                                                    <div key={preview.id} className={cx('image-preview-item')}>
+                                                        {preview.url ? (
+                                                            <>
+                                                        {isVideo ? (
+                                                            <video 
+                                                                src={preview.url} 
+                                                                className={cx('preview-image', 'preview-video')}
+                                                                preload="metadata"
+                                                                muted
+                                                                onClick={() => setSelectedImagePreview(preview)}
+                                                                style={{ cursor: 'pointer' }}
+                                                            />
+                                                        ) : (
+                                                            <img 
+                                                                src={preview.url} 
+                                                                alt={preview.name}
+                                                                className={cx('preview-image')}
+                                                                onClick={() => setSelectedImagePreview(preview)}
+                                                                style={{ cursor: 'pointer' }}
+                                                            />
+                                                        )}
+                                                            </>
+                                                        ) : null}
+                                                        <button
+                                                            type="button"
+                                                            className={cx('remove-image-btn')}
+                                                            onClick={() => handleRemoveImage(preview.id)}
+                                                            title="Xóa tệp"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
-                            {formData.refundMethod === 'Hoàn tiền bằng tài khoản ngân hàng' && (
-                                <>
-                                    <div className={cx('form-group')}>
-                                        <label>Ngân hàng *</label>
-                                        <select
-                                            value={formData.bank}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, bank: e.target.value }))}
-                                        >
-                                            <option value="">Chọn ngân hàng</option>
-                                            {BANKS.map(bank => (
-                                                <option key={bank} value={bank}>{bank}</option>
-                                            ))}
-                                        </select>
-                                        {fieldErrors.bank && (
-                                            <span className={cx('error')}>{fieldErrors.bank}</span>
-                                        )}
-                                    </div>
+                            <div className={cx('form-group')}>
+                                <label>Thông tin tài khoản ngân hàng *</label>
+                            </div>
 
-                                    <div className={cx('form-group')}>
-                                        <label>Số tài khoản *</label>
-                                        <input
-                                            type="text"
-                                            value={formData.accountNumber}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, accountNumber: e.target.value }))}
-                                            placeholder="Nhập số tài khoản"
-                                        />
-                                        {fieldErrors.accountNumber && (
-                                            <span className={cx('error')}>{fieldErrors.accountNumber}</span>
-                                        )}
-                                    </div>
+                            <div className={cx('form-group')}>
+                                <label>Ngân hàng *</label>
+                                <select
+                                    value={formData.bank}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, bank: e.target.value }))}
+                                >
+                                    <option value="">Chọn ngân hàng</option>
+                                    {BANKS.map(bank => (
+                                        <option key={bank} value={bank}>{bank}</option>
+                                    ))}
+                                </select>
+                                {fieldErrors.bank && (
+                                    <span className={cx('error')}>{fieldErrors.bank}</span>
+                                )}
+                            </div>
 
-                                    <div className={cx('form-group')}>
-                                        <label>Tên chủ tài khoản *</label>
-                                        <input
-                                            type="text"
-                                            value={formData.accountHolder}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, accountHolder: e.target.value }))}
-                                            placeholder="Nhập tên chủ tài khoản"
-                                        />
-                                        {fieldErrors.accountHolder && (
-                                            <span className={cx('error')}>{fieldErrors.accountHolder}</span>
-                                        )}
-                                    </div>
-                                </>
-                            )}
+                            <div className={cx('form-group')}>
+                                <label>Số tài khoản *</label>
+                                <input
+                                    type="text"
+                                    value={formData.accountNumber}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, accountNumber: e.target.value }))}
+                                    placeholder="Nhập số tài khoản"
+                                />
+                                {fieldErrors.accountNumber && (
+                                    <span className={cx('error')}>{fieldErrors.accountNumber}</span>
+                                )}
+                            </div>
+
+                            <div className={cx('form-group')}>
+                                <label>Tên chủ tài khoản *</label>
+                                <input
+                                    type="text"
+                                    value={formData.accountHolder}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, accountHolder: e.target.value }))}
+                                    placeholder="Nhập tên chủ tài khoản"
+                                />
+                                {fieldErrors.accountHolder && (
+                                    <span className={cx('error')}>{fieldErrors.accountHolder}</span>
+                                )}
+                            </div>
 
                             {error && <div className={cx('error-message')}>{error}</div>}
 
@@ -407,8 +569,46 @@ export default function RefundRequestModal({ open, orderId, onClose, onSuccess }
                         setFormData(prev => ({ ...prev, returnAddress: formatted }));
                         setSelectedAddress(address);
                         setShowAddressList(false);
+                        if (fieldErrors.returnAddress) {
+                            setFieldErrors(prev => {
+                                const newErrors = { ...prev };
+                                delete newErrors.returnAddress;
+                                return newErrors;
+                            });
+                        }
                     }}
                 />
+            )}
+
+            {/* Image Preview Modal */}
+            {selectedImagePreview && (
+                <div className={cx('image-modal')} onClick={() => setSelectedImagePreview(null)}>
+                    <div className={cx('image-modal-content')} onClick={(e) => e.stopPropagation()}>
+                        <button
+                            className={cx('image-modal-close')}
+                            onClick={() => setSelectedImagePreview(null)}
+                        >
+                            ×
+                        </button>
+                        {selectedImagePreview.isVideo || /\.(mp4|webm|ogg|mov|avi|mkv|flv|wmv)$/i.test(selectedImagePreview.url || '') ? (
+                            <video 
+                                src={selectedImagePreview.url} 
+                                controls
+                                autoPlay
+                                className={cx('image-modal-media')}
+                            >
+                                Trình duyệt của bạn không hỗ trợ video.
+                            </video>
+                        ) : (
+                            <img 
+                                src={selectedImagePreview.url} 
+                                alt={selectedImagePreview.name}
+                                className={cx('image-modal-image')}
+                            />
+                        )}
+                        <p className={cx('image-modal-name')}>{selectedImagePreview.name}</p>
+                    </div>
+                </div>
             )}
         </div>
     );
