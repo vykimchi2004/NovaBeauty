@@ -57,6 +57,7 @@ const getInitialFormData = (overrides = {}) => ({
   usageInstructions: '',
   weight: '',
   price: '',
+  purchasePrice: '',
   tax: '8', // Thuế cố định 8%
   publicationDate: '',
   categoryId: '',
@@ -305,6 +306,7 @@ function StaffProducts() {
             : product.price
             ? (product.price / 1.08).toFixed(0)
             : ''),
+        purchasePrice: product.purchasePrice?.toString() || '',
         tax: product.tax ? (product.tax * 100).toString() : '8',
         publicationDate: product.publicationDate || new Date().toISOString().split('T')[0],
         categoryId: product.categoryId || product.category?.id || '',
@@ -765,6 +767,7 @@ function StaffProducts() {
         stockQuantity,
         manufacturingLocation,
         unitPrice: parseFloat(formData.price),
+        purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : null,
         tax: formData.tax ? parseFloat(formData.tax) / 100 : 0.08,
         publicationDate: formData.publicationDate || null,
         categoryId: formData.categoryId,

@@ -66,6 +66,9 @@ public class ProductCreationRequest {
     @DecimalMin(value = "0.0", message = "Giá niêm yết phải lớn hơn hoặc bằng 0")
     Double unitPrice;
 
+    @DecimalMin(value = "0.0", message = "Giá nhập phải lớn hơn hoặc bằng 0")
+    Double purchasePrice;
+
     @DecimalMin(value = "0.0", message = "Thuế phải lớn hơn hoặc bằng 0")
     Double tax;
 

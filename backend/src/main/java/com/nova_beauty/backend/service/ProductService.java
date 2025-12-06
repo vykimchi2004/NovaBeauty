@@ -104,6 +104,7 @@ public class ProductService {
             throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
         }
         product.setUnitPrice(request.getUnitPrice());
+        product.setPurchasePrice(request.getPurchasePrice());
         product.setPrice(computeFinalPrice(request.getUnitPrice(), request.getTax(), request.getDiscountValue()));
 
         // Validate color variant codes không được trùng nhau
@@ -177,6 +178,11 @@ public class ProductService {
                 product.setUnitPrice(unitPrice);
                 product.setPrice(computeFinalPrice(unitPrice, tax, discountValue));
             }
+        }
+
+        // Cập nhật giá nhập nếu có
+        if (request.getPurchasePrice() != null) {
+            product.setPurchasePrice(request.getPurchasePrice());
         }
 
 

@@ -34,6 +34,7 @@ public class ProductResponse {
     Double width;
     Double height;
     Double unitPrice;
+    Double purchasePrice;
     Double price;
     Double tax;
     Double discountValue;

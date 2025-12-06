@@ -153,6 +153,32 @@ function ProductFormModal({
               {renderError('price')}
             </div>
 
+            <div className={cx('formGroup', { error: formErrors.purchasePrice })}>
+              <label>Giá nhập (đồng)</label>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={formData.purchasePrice}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Chỉ cho phép số nguyên (không có dấu thập phân)
+                  if (value === '' || /^\d+$/.test(value)) {
+                    onFormDataChange('purchasePrice', value);
+                  }
+                }}
+                placeholder="VD: 80000 (tám mươi nghìn đồng)"
+              />
+              {formData.purchasePrice && (
+                <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                  Giá nhập: {new Intl.NumberFormat('vi-VN').format(parseFloat(formData.purchasePrice || 0))} ₫
+                </small>
+              )}
+              {renderError('purchasePrice')}
+            </div>
+          </div>
+
+          <div className={cx('formRow')}>
             <div className={cx('formGroup')}>
               <label>Giá hiển thị (tự động tính)</label>
               <input

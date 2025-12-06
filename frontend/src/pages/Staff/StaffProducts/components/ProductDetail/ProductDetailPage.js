@@ -141,6 +141,10 @@ function ProductDetailPage({
       label: 'Giá niêm yết',
       value: formatPriceWithTax(detailProduct.unitPrice, detailProduct.price),
     },
+    {
+      label: 'Giá nhập',
+      value: detailProduct.purchasePrice ? formatPrice(detailProduct.purchasePrice) : '-',
+    },
     { label: 'Thuế', value: '8%' },
     { label: 'Trọng lượng', value: formatWeight(detailProduct.weight) },
     { label: 'Kết cấu', value: textureInfo },
