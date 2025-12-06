@@ -43,5 +43,8 @@ public class CreateOrderRequest {
      * Phương thức thanh toán khách chọn (momo | cod).
      */
     String paymentMethod;
+
+    // Mã đơn hàng được tạo trước (dùng cho thanh toán MoMo để đảm bảo idempotent).
+    String orderCode;
 }
 

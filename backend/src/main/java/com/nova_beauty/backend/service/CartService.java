@@ -455,6 +455,19 @@ public class CartService {
     }
 
     @Transactional
+    public void clearVoucherForUser(User user) {
+        if (user == null || user.getId() == null) {
+            return;
+        }
+
+        cartRepository.findByUserId(user.getId()).ifPresent(cart -> {
+            cart.setAppliedVoucherCode(null);
+            cart.setVoucherDiscount(0.0);
+            recalcCartTotals(cart);
+        });
+    }
+
+    @Transactional
     public void removeCartItemsForOrder(User user, java.util.List<String> cartItemIds) {
         if (user == null || cartItemIds == null || cartItemIds.isEmpty()) {
             return;
