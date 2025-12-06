@@ -30,7 +30,9 @@ public class SecurityConfig {
         "/auth/send-otp",
         "/auth/verify-otp",
         "/auth/reset-password",
-        "/ghn/shipping-fees"
+        "/shipments/ghn/fees",
+        "/shipments/ghn/leadtime",
+        "/api/momo/ipn-handler"
     };
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {
@@ -46,9 +48,9 @@ public class SecurityConfig {
         "/uploads/**",
         "/assets/**",
         "/banners/active",
-        "/ghn/provinces",
-        "/ghn/districts",
-        "/ghn/wards",
+        "/shipments/ghn/provinces",
+        "/shipments/ghn/districts",
+        "/shipments/ghn/wards",
         "/error"  // Allow error endpoint to be accessed without authentication
     };
 
@@ -58,14 +60,14 @@ public class SecurityConfig {
         this.customJwtDecoder = customJwtDecoder;
     }
 
-    // Cáº¥u hÃ¬nh security: Quáº£n lÃ½ quyá»n truy cáº­p endpoint
+    // Cấu hình security: Quản lý quyền truy cập endpoint
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity.authorizeHttpRequests(request -> request
                 .requestMatchers(HttpMethod.GET,PUBLIC_GET_ENDPOINTS).permitAll()
                 .requestMatchers(HttpMethod.POST, PUBLIC_POST_ENDPOINTS).permitAll()
                 .anyRequest()
-                .authenticated()); // Táº¥t cáº£ request khÃ¡c Ä‘á» buá»™c pháº£i cÃ³ JWT há»£p lá»‡
+                .authenticated()); // Tất cả request khác đều buộc phải có JWT hợp lệ
 
         // Báº­t cháº¿ Ä‘á»™ resource server theo chuáº©n OAuth2, xÃ¡c thá»±c request báº±ng JWT
         httpSecurity.oauth2ResourceServer(
@@ -78,20 +80,20 @@ public class SecurityConfig {
 
         httpSecurity.csrf(
                 AbstractHttpConfigurer
-                        ::disable); // Táº¯t CSRF, thÆ°á»ng lÃ m vá»›i REST API vÃ¬ khÃ´ng cáº§n báº£o vá»‡ form nhÆ° web app
+                        ::disable); // Tắt CSRF, thường làm với REST API vì không cần bảo vệ form như web app
 
         return httpSecurity.build();
     }
 
-    // Cáº¥u hÃ¬nh CORS cho API
+    // Cấu hình CORS cho API
     @Bean
     public CorsFilter corsFilter() { 
         CorsConfiguration corsConfiguration = new CorsConfiguration();
 
-        // Cáº¥u hÃ¬nh core
-        corsConfiguration.addAllowedOrigin("*"); // Cho web truy cáº­p API nÃ y vÃ o nhá»¯ng trang web nÃ o
-        corsConfiguration.addAllowedMethod("*"); // Cho phÃ©p method nÃ o Ä‘Æ°á»£c gá»i tá»« origin nÃ y
-        corsConfiguration.addAllowedHeader("*"); // Cho phÃ©p táº¥t cáº£ header Ä‘Æ°á»£c truy cáº­p
+        // Cấu hình core
+        corsConfiguration.addAllowedOrigin("*"); // Cho web truy cập API này vào những trang web nào
+        corsConfiguration.addAllowedMethod("*"); // Cho phép method nào được gọi từ origin này
+        corsConfiguration.addAllowedHeader("*"); // Cho phép tất cả header được truy cập
 
         UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource = new UrlBasedCorsConfigurationSource();
         urlBasedCorsConfigurationSource.registerCorsConfiguration("/**", corsConfiguration);

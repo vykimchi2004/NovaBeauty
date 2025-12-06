@@ -38,7 +38,7 @@ public class CustomJwtDecoder implements JwtDecoder {
         }
 
         try {
-            // Check token cÃ²n hiá»‡u lá»±c khÃ´ng, náº¿u khÃ´ng -> Exception
+            // Check token còn hiệu lực không, nếu không -> Exception
             var response = authenticationService.introspect(
                     IntrospectRequest.builder().token(token).build());
 
@@ -55,7 +55,7 @@ public class CustomJwtDecoder implements JwtDecoder {
             throw new JwtException("Token validation failed: " + e.getMessage());
         }
 
-        // Náº¿u token cÃ²n hiá»‡u lá»±c
+        // Nếu token còn hiệu lực
         try {
             if (Objects.isNull(nimbusJwtDecoder)) {
                 SecretKeySpec secretKeySpec = new SecretKeySpec(getSignerKeyBytes(), "HS512");
@@ -72,7 +72,7 @@ public class CustomJwtDecoder implements JwtDecoder {
     }
 
     private byte[] getSignerKeyBytes() {
-        String sanitized = (signerKey == null) ? "" : signerKey.replaceAll("\\s", "");  // xÃ³a khoáº£ng tráº¯ng
+        String sanitized = (signerKey == null) ? "" : signerKey.replaceAll("\\s", "");  // xóa khoảng trắng
         return sanitized.getBytes();
     }
 }

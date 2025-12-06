@@ -800,6 +800,18 @@ public class OrderService {
     public List<Order> getMyOrders() {
         try {
             String email = SecurityUtil.getAuthentication().getName();
+            List<Order> orders = orderRepository.findByUserEmail(email);
+            // Đồng bộ trạng thái từ GHN cho các đơn có shipment
+            for (Order order : orders) {
+                if (order.getShipment() != null && order.getShipment().getOrderCode() != null) {
+                    try {
+                        shipmentService.syncOrderStatusFromGhn(order.getId());
+                    } catch (Exception e) {
+                        log.warn("Không thể đồng bộ trạng thái từ GHN cho order: {}", order.getId(), e);
+                    }
+                }
+            }
+            // Reload để lấy status mới nhất
             return orderRepository.findByUserEmail(email);
         } catch (Exception e) {
             log.error("Error fetching orders for user: {}", e.getMessage(), e);

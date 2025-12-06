@@ -34,6 +34,11 @@ public class GhnService {
     public List<GhnProvinceResponse> getProvinces() {
         try {
             log.info("Fetching GHN provinces from: {}", ghnProperties.getBaseUrl());
+            log.debug("Using GHN Token: {}***, Shop ID: {}", 
+                ghnProperties.getToken() != null && ghnProperties.getToken().length() > 4 
+                    ? ghnProperties.getToken().substring(0, 4) : "N/A", 
+                ghnProperties.getShopId());
+            
             GhnProvinceResponse[] data = apiUtil.callGhnApi(
                     ApiConstants.GHN_MASTER_DATA_PROVINCE,
                     HttpMethod.GET,
@@ -42,10 +47,20 @@ public class GhnService {
                     ghnProperties.getToken(),
                     ghnProperties.getShopId());
 
-            return data == null ? List.of() : Arrays.asList(data);
+            if (data == null || data.length == 0) {
+                log.warn("GHN returned empty provinces list");
+                return List.of();
+            }
+            
+            log.info("Successfully fetched {} provinces from GHN", data.length);
+            return Arrays.asList(data);
+        } catch (AppException e) {
+            log.error("Failed to fetch GHN provinces: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
-            log.error("Failed to fetch GHN provinces", e);
-            throw new AppException(ErrorCode.EXTERNAL_SERVICE_ERROR);
+            log.error("Failed to fetch GHN provinces - Unexpected error", e);
+            throw new AppException(ErrorCode.EXTERNAL_SERVICE_ERROR, 
+                "Không thể kết nối đến GHN. Vui lòng kiểm tra cấu hình GHN_TOKEN và GHN_SHOP_ID.");
         }
     }
 

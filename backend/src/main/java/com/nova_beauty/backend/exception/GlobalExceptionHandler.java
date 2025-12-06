@@ -36,9 +36,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = AppException.class)
     ResponseEntity<ApiResponse<?>> handlingAppException(AppException exception) {
         ErrorCode errorCode = exception.getErrorCode();
+        // Sử dụng custom message từ exception nếu có, nếu không thì dùng message mặc định từ ErrorCode
+        String message = exception.getMessage() != null && !exception.getMessage().equals(errorCode.getMessage())
+                ? exception.getMessage()
+                : errorCode.getMessage();
         ApiResponse<?> apiResponse = ApiResponse.builder()
                 .code(errorCode.getCode())
-                .message(errorCode.getMessage())
+                .message(message)
                 .build();
         return ResponseEntity.status(errorCode.getStatusCode()).body(apiResponse);
     }

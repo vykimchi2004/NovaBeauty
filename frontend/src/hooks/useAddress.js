@@ -8,6 +8,10 @@ import {
   createAddress,
   setDefaultAddress,
 } from '~/services/address';
+import {
+  GHN_DEFAULT_FROM_WARD_CODE,
+  GHN_DEFAULT_FROM_DISTRICT_ID,
+} from '~/services/config';
 import notify from '~/utils/notification';
 
 /**
@@ -42,6 +46,11 @@ export const useAddress = ({
   const [selectedProvinceId, setSelectedProvinceId] = useState('');
   const [selectedDistrictId, setSelectedDistrictId] = useState('');
   const [selectedWardCode, setSelectedWardCode] = useState('');
+  
+  // Manual input fields when GHN is not available
+  const [manualProvinceName, setManualProvinceName] = useState('');
+  const [manualDistrictName, setManualDistrictName] = useState('');
+  const [manualWardName, setManualWardName] = useState('');
 
   // UI state
   const [showProvinceDropdown, setShowProvinceDropdown] = useState(false);
@@ -101,7 +110,7 @@ export const useAddress = ({
     }
   }, []);
 
-  // Load danh sách tỉnh từ GHN
+  // Load danh sách tỉnh từ GHN - BẮT BUỘC phải thành công
   const loadProvinces = useCallback(async () => {
     try {
       const data = await getProvinces();
@@ -109,6 +118,17 @@ export const useAddress = ({
       setGhnAvailable(true);
     } catch (error) {
       console.error('[useAddress] Error loading provinces:', error);
+      // Log chi tiết lỗi để debug
+      if (error.isNetworkError) {
+        console.error('[useAddress] Network error - Backend có thể chưa chạy hoặc không kết nối được');
+        notify.error('Không thể kết nối đến backend. Vui lòng kiểm tra backend đã chạy chưa.');
+      } else if (error.status === 500) {
+        console.error('[useAddress] Server error - Có thể GHN service chưa được cấu hình đúng');
+        notify.error('Lỗi cấu hình GHN. Vui lòng kiểm tra GHN_TOKEN và GHN_SHOP_ID trong application.yaml');
+      } else {
+        console.error('[useAddress] API error:', error.status, error.message);
+        notify.error('Không thể kết nối đến dịch vụ GHN. Vui lòng kiểm tra cấu hình.');
+      }
       setGhnAvailable(false);
     }
   }, []);
@@ -217,22 +237,20 @@ export const useAddress = ({
           .filter(Boolean)
           .join(', ');
       } else {
-        if (!detailAddress.trim()) {
-          setAddressError('Vui lòng nhập đầy đủ địa chỉ giao hàng.');
-          return false;
-        }
-        fullAddressString = detailAddress.trim();
+        // Bắt buộc phải dùng GHN - không cho phép nhập thủ công
+        setAddressError('Hệ thống yêu cầu GHN để chọn địa chỉ. Vui lòng kiểm tra cấu hình GHN hoặc liên hệ quản trị viên.');
+        return false;
       }
 
       try {
         const addressData = {
           recipientName: fullName.trim(),
           recipientPhoneNumber: normalizedPhone,
-          provinceID: selectedProvinceId,
+          provinceID: ghnAvailable ? selectedProvinceId : '', // Khi GHN không available, để rỗng
           provinceName: finalProvinceName,
-          districtID: selectedDistrictId,
+          districtID: ghnAvailable ? selectedDistrictId : '', // Khi GHN không available, để rỗng
           districtName: finalDistrictName,
-          wardCode: selectedWardCode,
+          wardCode: ghnAvailable ? selectedWardCode : '', // Khi GHN không available, để rỗng
           wardName: finalWardName,
           address: detailAddress.trim(),
           defaultAddress: isDefault,
@@ -261,6 +279,9 @@ export const useAddress = ({
       selectedProvinceId,
       selectedDistrictId,
       selectedWardCode,
+      manualProvinceName,
+      manualDistrictName,
+      manualWardName,
       ghnAvailable,
       provinces,
       districts,
@@ -280,6 +301,9 @@ export const useAddress = ({
     setSelectedWardCode('');
     setDistricts([]);
     setWards([]);
+    setManualProvinceName('');
+    setManualDistrictName('');
+    setManualWardName('');
     setAddressError('');
     setPhoneError('');
   }, []);
@@ -374,14 +398,15 @@ export const useAddress = ({
   useEffect(() => {
     if (ghnAvailable && selectedDistrictId && selectedWardCode && detailAddress.trim()) {
       setShippingFeeLoading(true);
+      
       const feePayload = {
-        serviceId: null,
+        serviceTypeId: null, // Sẽ được backend xác định dựa trên weight
         insuranceValue: Math.round(totalAfterDiscount || subtotal || 0),
         coupon: null,
-        fromDistrictId: null,
-        fromWardCode: null,
+        fromDistrictId: GHN_DEFAULT_FROM_DISTRICT_ID,
+        fromWardCode: GHN_DEFAULT_FROM_WARD_CODE,
         toDistrictId: Number(selectedDistrictId),
-        toWardCode: Number(selectedWardCode) || selectedWardCode,
+        toWardCode: String(selectedWardCode), // WardCode phải là string
         weight: totalWeight > 0 ? totalWeight : 500,
         length: 20,
         width: 15,
@@ -438,6 +463,14 @@ export const useAddress = ({
     setSelectedDistrictId,
     selectedWardCode,
     setSelectedWardCode,
+
+    // Manual input fields (when GHN not available)
+    manualProvinceName,
+    setManualProvinceName,
+    manualDistrictName,
+    setManualDistrictName,
+    manualWardName,
+    setManualWardName,
 
     // Computed names
     selectedProvinceName,

@@ -1,8 +1,10 @@
 package com.nova_beauty.backend.mapper;
 
+import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValuePropertyMappingStrategy;
 
 import com.nova_beauty.backend.dto.request.AddressCreationRequest;
 import com.nova_beauty.backend.dto.request.AddressUpdateRequest;
@@ -24,7 +26,8 @@ public interface AddressMapper {
     @Mapping(target = "id", source = "addressId")
     AddressResponse toAddressResponse(Address address);
 
-    // Update Entity
+    // Update Entity - Bỏ qua các giá trị null để không làm mất dữ liệu
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     @Mapping(target = "addressId", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)

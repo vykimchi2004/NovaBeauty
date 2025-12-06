@@ -170,6 +170,12 @@ function CheckoutDetailPage() {
     selectedProvinceName,
     selectedDistrictName,
     selectedWardName,
+    manualProvinceName,
+    setManualProvinceName,
+    manualDistrictName,
+    setManualDistrictName,
+    manualWardName,
+    setManualWardName,
     showProvinceDropdown,
     setShowProvinceDropdown,
     showDistrictDropdown,
@@ -979,7 +985,7 @@ function CheckoutDetailPage() {
                   <p className={cx('addressHint')} style={{ margin: 0 }}>
                     {ghnAvailable
                       ? 'Địa chỉ được xác định theo dữ liệu khu vực của GHN. Vui lòng chọn Tỉnh/Thành phố, Quận/Huyện, Phường/Xã và nhập số nhà, tên đường thật chính xác.'
-                      : 'Hiện không kết nối được dịch vụ GHN. Bạn vẫn có thể nhập đầy đủ địa chỉ giao hàng theo dạng: Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành.'}
+                      : '⚠️ Hệ thống yêu cầu GHN để chọn địa chỉ. Vui lòng kiểm tra cấu hình GHN hoặc liên hệ quản trị viên.'}
                   </p>
                   {savedAddresses.length > 0 && (
                     <button
@@ -1120,13 +1126,21 @@ function CheckoutDetailPage() {
                   </div>
                 </>
               ) : (
-                <div className={cx('addressFormRow')}>
-                  <input
-                    type="text"
-                    placeholder="Nhập đầy đủ địa chỉ: Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
-                    value={detailAddress}
-                    onChange={(e) => setDetailAddress(e.target.value)}
-                  />
+                <div className={cx('addressFormRow')} style={{ padding: '20px', textAlign: 'center', backgroundColor: '#fff3cd', borderRadius: '8px', border: '1px solid #ffc107' }}>
+                  <p style={{ margin: 0, color: '#856404', fontWeight: 'bold' }}>
+                    ⚠️ Không thể kết nối đến dịch vụ GHN
+                  </p>
+                  <p style={{ margin: '8px 0 0 0', color: '#856404', fontSize: '14px' }}>
+                    Vui lòng kiểm tra:
+                  </p>
+                  <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', textAlign: 'left', color: '#856404', fontSize: '14px' }}>
+                    <li>Backend đã được khởi động chưa?</li>
+                    <li>Cấu hình GHN_TOKEN và GHN_SHOP_ID trong application.yaml</li>
+                    <li>Kết nối mạng có ổn định không?</li>
+                  </ul>
+                  <p style={{ margin: '12px 0 0 0', color: '#856404', fontSize: '13px', fontStyle: 'italic' }}>
+                    Hệ thống yêu cầu GHN để chọn địa chỉ. Vui lòng liên hệ quản trị viên để được hỗ trợ.
+                  </p>
                 </div>
               )}
 
@@ -1161,6 +1175,8 @@ function CheckoutDetailPage() {
                   type="button"
                   className={cx('btn', 'btnApply')}
                   onClick={handleSaveAddress}
+                  disabled={!ghnAvailable}
+                  style={!ghnAvailable ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                 >
                   Lưu địa chỉ
                 </button>

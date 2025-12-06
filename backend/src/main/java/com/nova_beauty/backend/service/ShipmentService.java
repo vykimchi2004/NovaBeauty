@@ -230,24 +230,40 @@ public class ShipmentService {
             // Gọi GHN API để lấy trạng thái mới nhất
             GhnOrderDetailResponse ghnDetail;
             try {
+                log.info("Gọi GHN API để lấy trạng thái cho orderCode: {}", shipment.getOrderCode());
                 ghnDetail = ghnService.getOrderDetail(shipment.getOrderCode());
+                log.info("GHN API response cho orderCode {}: status = {}", shipment.getOrderCode(), 
+                    ghnDetail != null ? ghnDetail.getStatus() : "null");
             } catch (Exception e) {
                 // Nếu GHN API lỗi, chỉ log warning và return (không throw exception để không ảnh hưởng đến các thao tác khác)
-                log.warn("Không thể lấy trạng thái từ GHN cho order: {} - Error: {}", orderId, e.getMessage());
+                log.error("Không thể lấy trạng thái từ GHN cho order: {} (orderCode: {}) - Error: {}", 
+                    orderId, shipment.getOrderCode(), e.getMessage(), e);
                 return;
             }
 
-            if (ghnDetail == null || ghnDetail.getStatus() == null) {
-                log.warn("Không thể lấy trạng thái từ GHN cho order: {} - Response null hoặc không có status", orderId);
+            if (ghnDetail == null) {
+                log.warn("GHN API trả về null response cho order: {} (orderCode: {})", orderId, shipment.getOrderCode());
+                return;
+            }
+            
+            if (ghnDetail.getStatus() == null || ghnDetail.getStatus().isBlank()) {
+                log.warn("GHN API response không có status cho order: {} (orderCode: {}), full response: {}", 
+                    orderId, shipment.getOrderCode(), ghnDetail);
                 return;
             }
 
-            String ghnStatus = ghnDetail.getStatus().toLowerCase();
-            OrderStatus newStatus = mapGhnStatusToOrderStatus(ghnStatus);
+            String ghnStatus = ghnDetail.getStatus();
+            if (ghnStatus == null || ghnStatus.isBlank()) {
+                log.warn("GHN status is null or blank for order: {}", orderId);
+                return;
+            }
+            
+            String ghnStatusLower = ghnStatus.toLowerCase().trim();
+            OrderStatus newStatus = mapGhnStatusToOrderStatus(ghnStatusLower);
             
             // Log để debug
-            log.info("Sync status từ GHN cho order {}: GHN status = '{}', mapped = {}, current = {}", 
-                    orderId, ghnStatus, newStatus, currentStatus);
+            log.info("Sync status từ GHN cho order {}: GHN status = '{}' (original: '{}'), mapped = {}, current = {}", 
+                    orderId, ghnStatusLower, ghnStatus, newStatus, currentStatus);
             
             if (newStatus != null && newStatus != currentStatus) {
                 log.info("Cập nhật trạng thái đơn hàng {} từ {} sang {}", orderId, currentStatus, newStatus);

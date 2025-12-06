@@ -46,16 +46,24 @@ public class ApiUtil {
             GhnApiResponse<T> response = executeGhnRequest(path, method, payload, responseType, token, shopId);
 
             if (response == null || response.getCode() == null || response.getCode() != 200) {
-                log.error("GHN API error: {}", response != null ? response.getMessage() : "Null response");
-                throw new AppException(ErrorCode.EXTERNAL_SERVICE_ERROR);
+                String errorMsg = response != null ? response.getMessage() : "Null response from GHN";
+                log.error("GHN API error [{} {}]: Code={}, Message={}", 
+                    method, path, 
+                    response != null ? response.getCode() : "null", 
+                    errorMsg);
+                throw new AppException(ErrorCode.EXTERNAL_SERVICE_ERROR, 
+                    "Lỗi GHN: " + errorMsg + ". Vui lòng kiểm tra cấu hình GHN_TOKEN và GHN_SHOP_ID.");
             }
 
             return response.getData();
         } catch (AppException e) {
+            // Re-throw AppException để giữ nguyên error message
             throw e;
         } catch (Exception e) {
-            log.error("Error calling GHN API [{} {}]", method, path, e);
-            throw new AppException(ErrorCode.EXTERNAL_SERVICE_ERROR);
+            log.error("Unexpected error calling GHN API [{} {}]: {}", method, path, e.getMessage(), e);
+            String errorDetail = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            throw new AppException(ErrorCode.EXTERNAL_SERVICE_ERROR, 
+                "Lỗi kết nối dịch vụ GHN: " + errorDetail + ". Vui lòng kiểm tra cấu hình và kết nối mạng.");
         }
     }
 

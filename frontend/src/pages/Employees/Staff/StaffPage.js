@@ -22,7 +22,7 @@ import StaffProducts from './StaffProducts';
 import StaffVouchers from './StaffVouchers';
 import StaffBanners from './StaffBanners';
 import StaffOrder from './StaffOrder';
-import StaffProfile from './StaffProfile';
+import StaffProfile from './StaffProfile/StaffProfile';
 
 const cx = classNames.bind(styles);
 
