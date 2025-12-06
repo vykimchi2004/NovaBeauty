@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -7,17 +7,16 @@ import {
   faCalendarDays,
   faArrowRight,
   faXmark,
-  faChevronLeft,
-  faChevronRight,
   faAngleRight,
   faAngleLeft,
 } from '@fortawesome/free-solid-svg-icons';
 import styles from '../Profile.module.scss';
 import orderService from '~/services/order';
-import { STATUS_CLASS_MAP } from '../constants';
+
 import defaultProductImage from '~/assets/images/products/image1.jpg';
 import { formatCurrency } from '~/services/utils';
 import CancelOrderDialog from '~/components/Common/ConfirmDialog/CancelOrderDialog';
+import RefundRequestModal from '~/components/Common/RefundRequestModal/RefundRequestModal';
 
 const cx = classNames.bind(styles);
 
@@ -32,9 +31,18 @@ const ORDER_TABS = [
 
 function OrdersSection({ getStatusClass, defaultTab }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Get initial tab from URL query params, defaultTab prop, or default to first tab
+  const getInitialTab = () => {
+    const searchParams = new URLSearchParams(location.search);
+    const tabFromUrl = searchParams.get('tab');
+    return tabFromUrl || defaultTab || ORDER_TABS[0].id;
+  };
+  
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState(defaultTab || ORDER_TABS[0].id);
+  const [activeTab, setActiveTab] = useState(() => getInitialTab());
   const [searchTerm, setSearchTerm] = useState('');
   const [orderDate, setOrderDate] = useState('');
   const [sortOption, setSortOption] = useState('newest');
@@ -45,7 +53,8 @@ function OrdersSection({ getStatusClass, defaultTab }) {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [loadingDetails, setLoadingDetails] = useState({});
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundOrderId, setRefundOrderId] = useState(null);
   const itemsPerPage = 3;
 
   useEffect(() => {
@@ -284,6 +293,17 @@ function OrdersSection({ getStatusClass, defaultTab }) {
       );
   }, [orders, activeTab, orderDate, searchTerm, sortOption]);
 
+  // Sync activeTab with URL query params when URL changes (e.g., browser back/forward or reload)
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const tabFromUrl = searchParams.get('tab');
+    const tabToUse = tabFromUrl || defaultTab || ORDER_TABS[0].id;
+    // Always sync with URL to ensure reload keeps the correct tab
+    if (tabToUse !== activeTab) {
+      setActiveTab(tabToUse);
+    }
+  }, [location.search]);
+
   // Reset về trang 1 khi thay đổi tab, search, filter
   useEffect(() => {
     setCurrentPage(1);
@@ -340,7 +360,23 @@ function OrdersSection({ getStatusClass, defaultTab }) {
             type="button"
             key={tab.id}
             className={cx('ordersTab', activeTab === tab.id && 'ordersTabActive')}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => {
+              setActiveTab(tab.id);
+              // Update URL query params to persist tab on reload
+              const searchParams = new URLSearchParams(location.search);
+              if (tab.id === ORDER_TABS[0].id) {
+                // If selecting default tab, remove tab param
+                searchParams.delete('tab');
+              } else {
+                searchParams.set('tab', tab.id);
+              }
+              // Preserve section param if exists
+              if (!searchParams.get('section')) {
+                searchParams.set('section', 'orders');
+              }
+              const newSearch = searchParams.toString();
+              navigate(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`, { replace: true });
+            }}
           >
             {tab.label}
           </button>
@@ -443,6 +479,19 @@ function OrdersSection({ getStatusClass, defaultTab }) {
                   <button type="button" className={cx('orderActionBtn')}>
                     {order.status}
                   </button>
+                  {order.statusKey === 'delivered' && (
+                    <button
+                      type="button"
+                      className={cx('orderRefundBtn')}
+                      onClick={() => {
+                        const orderId = order.orderId || order.id;
+                        setRefundOrderId(orderId);
+                        setShowRefundModal(true);
+                      }}
+                    >
+                      Trả hàng/hoàn tiền
+                    </button>
+                  )}
                   <button
                     type="button"
                     className={cx('orderDetailBtn')}
@@ -730,6 +779,19 @@ function OrdersSection({ getStatusClass, defaultTab }) {
           </div>
         </div>
       )}
+
+      {/* Refund Request Modal */}
+      <RefundRequestModal
+        open={showRefundModal}
+        orderId={refundOrderId}
+        onClose={() => {
+          setShowRefundModal(false);
+          setRefundOrderId(null);
+        }}
+        onSuccess={() => {
+          fetchOrders(); // Refresh orders list after successful refund request
+        }}
+      />
     </div>
   );
 }

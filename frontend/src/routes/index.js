@@ -7,20 +7,20 @@ import BestSellersPage from '../pages/BestSellers/BestSellers';
 import ProductDetail from '../pages/ProductDetail/ProductDetail';
 import Profile from '../pages/Profile/Profile';
 import AdminPage from '../pages/Admin/AdminPage';
-import StaffPage from '../pages/Staff/StaffPage';
+import StaffPage from '../pages/Employees/Staff/StaffPage';
 import Support from '../pages/CustomerSupport/Support';
 import PaymentPolicyPage from '../pages/CustomerSupport/policies/PaymentPolicyPage';
 import ShippingPolicyPage from '../pages/CustomerSupport/policies/ShippingPolicyPage';
 import ReturnPolicyPage from '../pages/CustomerSupport/policies/ReturnPolicyPage';
-import CustomerSupportPage from '../pages/CustomerSupportStaff/CustomerSupportPage';
+import CustomerSupportPage from '../pages/Employees/CustomerSupport/CustomerSupportPage';
 import Cart from '../pages/Cart/Cart';
 import CheckoutDetailPage from '../pages/CheckoutPage/CheckoutDetails/CheckoutDetailPage';
 import ConfirmCheckoutPage from '../pages/CheckoutPage/ConfirmCheckout/ConfirmCheckoutPage';
 import OrderSuccessPage from '../pages/CheckoutPage/OrderSuccess/OrderSuccessPage';
-import CustomerOrderHistoryPage from '../pages/Profile/CustomerOrderHistory/CustomerOrderHistoryPage';
-import CustomerOrderDetailPage from '../pages/Profile/CustomerOrderHistory/CustomerOrderDetailPage/CustomerOrderDetailPage';
-import RefundRequestPage from '../pages/Profile/CustomerOrderHistory/RefundRequest/RefundRequestPage';
-import CustomerRefundDetailPage from '../pages/Profile/CustomerOrderHistory/RefundDetail/CustomerRefundDetailPage';
+import OrderHistoryPage from '../pages/Profile/pages/OrderHistory';
+import OrderDetailPage from '../pages/Profile/pages/OrderDetail';
+import RefundRequestPage from '../pages/Profile/pages/RefundRequest';
+import RefundDetailPage from '../pages/Profile/pages/RefundDetail';
 import Vouchers from '../pages/Vouchers/Vouchers';
 
 // Layouts
@@ -49,10 +49,10 @@ const publicRoutes = [
   { path: '/checkout', component: CheckoutDetailPage, layout: DefaultLayout },
   { path: '/checkout/confirm', component: ConfirmCheckoutPage, layout: DefaultLayout },
   { path: '/order-success', component: OrderSuccessPage, layout: DefaultLayout },
-  { path: '/customer-account/orders', component: CustomerOrderHistoryPage, layout: DefaultLayout },
-  { path: '/customer-account/orders/:id', component: CustomerOrderDetailPage, layout: DefaultLayout },
+  { path: '/customer-account/orders', component: OrderHistoryPage, layout: DefaultLayout },
+  { path: '/customer-account/orders/:id', component: OrderDetailPage, layout: DefaultLayout },
   { path: '/customer-account/orders/:id/refund', component: RefundRequestPage, layout: DefaultLayout },
-  { path: '/customer-account/orders/:id/refund-detail', component: CustomerRefundDetailPage, layout: DefaultLayout },
+  { path: '/customer-account/orders/:id/refund-detail', component: RefundDetailPage, layout: DefaultLayout },
   { path: '/vouchers', component: Vouchers, layout: DefaultLayout },
   // Admin shell with nested routes
   { path: '/admin/*', component: AdminPage },

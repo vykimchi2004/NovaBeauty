@@ -17,10 +17,6 @@ import { storage, validatePassword } from '~/services/utils';
 import { STORAGE_KEYS } from '~/services/config';
 import notifier from '~/utils/notification';
 import { getMyAddresses, formatFullAddress, setDefaultAddress } from '~/services/address';
-import {
-  STATUS_CLASS_MAP,
-  PLACEHOLDER_CONTENT,
-} from './constants';
 import ProfileSection from './sections/ProfileSection';
 import PasswordSection from './sections/PasswordSection';
 import OrdersSection from './sections/OrdersSection';
@@ -28,6 +24,23 @@ import ComplaintSection from './sections/ComplaintSection';
 import VouchersSection from './sections/VouchersSection';
 
 const cx = classNames.bind(styles);
+
+// Constants
+const STATUS_CLASS_MAP = {
+  'Chờ xác nhận': 'pending',
+  'Chờ lấy hàng': 'ready',
+  'Đang giao hàng': 'shipping',
+  'Đã giao': 'delivered',
+  'Trả hàng': 'returned',
+  'Đã hủy': 'cancelled',
+};
+
+const PLACEHOLDER_CONTENT = {
+  complaint: {
+    title: 'Đơn khiếu nại',
+    description: 'Bạn sẽ sớm có thể gửi và theo dõi các đơn khiếu nại tại đây.',
+  },
+};
 
 const normalizeUserProfile = (user = {}) => ({
   fullName: user.fullName || '',
@@ -48,9 +61,17 @@ function ProfilePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { success } = notifier;
-  // Check if navigating from order success page
-  const sectionFromState = location.state?.section || 'profile';
-  const [activeSection, setActiveSection] = useState(sectionFromState);
+  
+  // Get section from URL query params, location state, or default to 'profile'
+  const getInitialSection = () => {
+    const searchParams = new URLSearchParams(location.search);
+    const sectionFromUrl = searchParams.get('section');
+    const sectionFromState = location.state?.section;
+    // Priority: URL query param > location state > default 'profile'
+    return sectionFromUrl || sectionFromState || 'profile';
+  };
+  
+  const [activeSection, setActiveSection] = useState(() => getInitialSection());
   const [profileForm, setProfileForm] = useState({
     fullName: '',
     email: '',
@@ -100,6 +121,15 @@ function ProfilePage() {
 
   const handleSectionSelect = (sectionId) => {
     setActiveSection(sectionId);
+    // Update URL query params to persist section on reload
+    const searchParams = new URLSearchParams(location.search);
+    if (sectionId === 'profile') {
+      searchParams.delete('section');
+    } else {
+      searchParams.set('section', sectionId);
+    }
+    const newSearch = searchParams.toString();
+    navigate(`${location.pathname}${newSearch ? `?${newSearch}` : ''}`, { replace: true });
   };
 
   const handleSectionKeyDown = (event, sectionId) => {
@@ -379,6 +409,15 @@ function ProfilePage() {
     setShowLogoutConfirm(false);
   };
 
+  // Sync activeSection with URL query params when URL changes (e.g., browser back/forward or reload)
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const sectionFromUrl = searchParams.get('section');
+    const sectionToUse = sectionFromUrl || 'profile';
+    // Always sync with URL to ensure reload keeps the correct section
+    setActiveSection(sectionToUse);
+  }, [location.search]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -542,7 +581,9 @@ function ProfilePage() {
     }
 
     if (activeSection === 'orders') {
-      const defaultTab = location.state?.orderTab || 'pending';
+      const searchParams = new URLSearchParams(location.search);
+      const tabFromUrl = searchParams.get('tab');
+      const defaultTab = tabFromUrl || location.state?.orderTab || 'pending';
       return <OrdersSection getStatusClass={getStatusClass} defaultTab={defaultTab} />;
     }
 
