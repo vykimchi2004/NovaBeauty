@@ -170,9 +170,14 @@ function ProductDetailPage({
     }
   }
 
-  if (detailProduct.quantitySold !== undefined && detailProduct.quantitySold !== null) {
-    infoRows.push({ label: 'Số lượng đã bán', value: detailProduct.quantitySold });
-  }
+  // Hiển thị số lượng đã bán tổng (luôn hiển thị, kể cả khi là 0)
+  const totalQuantitySold = detailProduct.quantitySold !== undefined && detailProduct.quantitySold !== null 
+    ? detailProduct.quantitySold 
+    : 0;
+  infoRows.push({ 
+    label: 'Số lượng đã bán', 
+    value: totalQuantitySold.toLocaleString('vi-VN') 
+  });
 
   const handleEdit = () => {
     if (onEdit) onEdit(detailProduct);
@@ -355,6 +360,9 @@ function ProductDetailPage({
                             </div>
                             <div className={cx('variantDetailStock')}>
                               Tồn kho: {variant.stockQuantity ?? 'Chưa cập nhật'}
+                            </div>
+                            <div className={cx('variantDetailSold')}>
+                              Đã bán: {variant.quantitySold !== null && variant.quantitySold !== undefined ? variant.quantitySold : 0}
                             </div>
                           </div>
                         </div>

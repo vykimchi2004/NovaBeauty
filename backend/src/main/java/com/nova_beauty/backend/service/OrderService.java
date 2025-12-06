@@ -1603,6 +1603,9 @@ public class OrderService {
             log.info("updateInventoryAndSales: Updating color variant for product {} with colorCode {}", product.getId(), colorCode);
             // Cập nhật tồn kho và số lượng đã bán của variant cụ thể
             updateColorVariantStockAndSales(product, colorCode, quantity);
+            
+            // Cập nhật số lượng đã bán tổng của product (bằng tổng của tất cả variants)
+            updateTotalQuantitySold(product);
         } else {
             log.info("updateInventoryAndSales: Updating total inventory for product {} (no colorCode or no manufacturingLocation)", product.getId());
             // Nếu không có colorCode, cập nhật tổng của product
@@ -1760,6 +1763,69 @@ public class OrderService {
         } catch (Exception e) {
             log.error("updateColorVariantStockAndSales: Could not update color variant for product {} with colorCode {}: {}", 
                 product.getId(), colorCode, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Cập nhật số lượng đã bán tổng của product bằng tổng quantitySold của tất cả variants
+     * @param product Sản phẩm cần cập nhật
+     */
+    private void updateTotalQuantitySold(Product product) {
+        try {
+            String manufacturingLocation = product.getManufacturingLocation();
+            if (manufacturingLocation == null || manufacturingLocation.trim().isEmpty()) {
+                log.warn("updateTotalQuantitySold: Product {} has no manufacturingLocation", product.getId());
+                return;
+            }
+
+            // Parse JSON string - có thể là object với {type, variants} hoặc array trực tiếp
+            List<Map<String, Object>> variants = null;
+            try {
+                JsonNode rootNode = objectMapper.readTree(manufacturingLocation);
+                
+                // Kiểm tra xem có phải là object với field "variants" không
+                if (rootNode.isObject() && rootNode.has("variants")) {
+                    JsonNode variantsNode = rootNode.get("variants");
+                    if (variantsNode.isArray()) {
+                        variants = objectMapper.convertValue(variantsNode, new TypeReference<List<Map<String, Object>>>() {});
+                    }
+                } else if (rootNode.isArray()) {
+                    // Nếu là array trực tiếp
+                    variants = objectMapper.convertValue(rootNode, new TypeReference<List<Map<String, Object>>>() {});
+                }
+            } catch (Exception e) {
+                log.error("updateTotalQuantitySold: Failed to parse manufacturingLocation: {}", e.getMessage(), e);
+                return;
+            }
+
+            if (variants == null || variants.isEmpty()) {
+                log.warn("updateTotalQuantitySold: No variants found in manufacturingLocation for product {}", product.getId());
+                return;
+            }
+
+            // Tính tổng quantitySold của tất cả variants
+            int totalSold = 0;
+            for (Map<String, Object> variant : variants) {
+                Object soldObj = variant.get("quantitySold");
+                if (soldObj != null) {
+                    if (soldObj instanceof Number) {
+                        totalSold += ((Number) soldObj).intValue();
+                    } else {
+                        try {
+                            totalSold += Integer.parseInt(soldObj.toString());
+                        } catch (NumberFormatException e) {
+                            log.warn("Cannot parse quantitySold for variant: {}", soldObj);
+                        }
+                    }
+                }
+            }
+
+            // Cập nhật quantitySold tổng của product
+            product.setQuantitySold(totalSold);
+            log.info("updateTotalQuantitySold: Updated total quantitySold for product {} to {}", product.getId(), totalSold);
+        } catch (Exception e) {
+            log.error("updateTotalQuantitySold: Could not update total quantitySold for product {}: {}", 
+                product.getId(), e.getMessage(), e);
         }
     }
 }

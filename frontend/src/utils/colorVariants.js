@@ -19,12 +19,15 @@ const convertEntryToVariant = (entry) => {
     const code = ensureString(entry.code || entry.hex || entry.colorCode || entry.value);
     const stockQuantity =
       entry.stockQuantity ?? entry.quantity ?? entry.inventory ?? entry.stock ?? null;
+    const quantitySold =
+      entry.quantitySold ?? entry.sold ?? entry.soldQuantity ?? null;
     const imageUrl = ensureString(entry.imageUrl || entry.photoUrl || entry.thumbnailUrl);
 
     return {
       name,
       code,
       stockQuantity: stockQuantity !== null && stockQuantity !== undefined ? Number(stockQuantity) : null,
+      quantitySold: quantitySold !== null && quantitySold !== undefined ? Number(quantitySold) : null,
       imageUrl,
     };
   }
@@ -99,6 +102,10 @@ export const buildVariantPayload = (variants = []) =>
         variant.stockQuantity !== undefined && variant.stockQuantity !== null && variant.stockQuantity !== ''
           ? Number(variant.stockQuantity)
           : null,
+      quantitySold:
+        variant.quantitySold !== undefined && variant.quantitySold !== null && variant.quantitySold !== ''
+          ? Number(variant.quantitySold)
+          : 0, // Mặc định là 0 khi tạo variant mới
       imageUrl: ensureString(variant.imageUrl),
     }))
     .filter((variant) => variant.name || variant.code);
