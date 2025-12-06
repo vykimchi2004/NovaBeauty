@@ -198,9 +198,11 @@ public class ShipmentService {
     // Đồng bộ trạng thái đơn hàng từ GHN API.
     @Transactional
     public void syncOrderStatusFromGhn(String orderId) {
+        log.info("Bắt đầu sync status từ GHN cho order: {}", orderId);
         try {
             Shipment shipment = shipmentRepository.findByOrderId(orderId).orElse(null);
             if (shipment == null || shipment.getOrderCode() == null || shipment.getOrderCode().isBlank()) {
+                log.warn("Không tìm thấy shipment hoặc orderCode cho order: {}", orderId);
                 return;
             }
 
@@ -211,15 +213,17 @@ public class ShipmentService {
             }
 
             OrderStatus currentStatus = order.getStatus();
+            log.info("Order {} hiện tại có status: {}", orderId, currentStatus);
             // Không sync GHN nếu đơn đang trong luồng hoàn tiền/trả hàng
             // (RETURN_REQUESTED, RETURN_CS_CONFIRMED, RETURN_STAFF_CONFIRMED, REFUNDED, RETURN_REJECTED)
             // để tránh override status từ GHN (ví dụ: GHN có thể trả về DELIVERED nhưng đơn đang ở RETURN_CS_CONFIRMED)
             if (currentStatus == OrderStatus.CANCELLED ||
-                    currentStatus == OrderStatus.RETURN_REQUESTED ||
-                    currentStatus == OrderStatus.RETURN_CS_CONFIRMED ||
-                    currentStatus == OrderStatus.RETURN_STAFF_CONFIRMED ||
-                    currentStatus == OrderStatus.REFUNDED ||
-                    currentStatus == OrderStatus.RETURN_REJECTED) {
+                currentStatus == OrderStatus.RETURN_REQUESTED ||
+                currentStatus == OrderStatus.RETURN_CS_CONFIRMED ||
+                currentStatus == OrderStatus.RETURN_STAFF_CONFIRMED ||
+                currentStatus == OrderStatus.REFUNDED ||
+                currentStatus == OrderStatus.RETURN_REJECTED) {
+                log.info("Bỏ qua sync cho order {} vì đang ở trạng thái cuối cùng: {}", orderId, currentStatus);
                 return;
             }
 
@@ -240,8 +244,13 @@ public class ShipmentService {
 
             String ghnStatus = ghnDetail.getStatus().toLowerCase();
             OrderStatus newStatus = mapGhnStatusToOrderStatus(ghnStatus);
-
+            
+            // Log để debug
+            log.info("Sync status từ GHN cho order {}: GHN status = '{}', mapped = {}, current = {}", 
+                    orderId, ghnStatus, newStatus, currentStatus);
+            
             if (newStatus != null && newStatus != currentStatus) {
+                log.info("Cập nhật trạng thái đơn hàng {} từ {} sang {}", orderId, currentStatus, newStatus);
                 order.setStatus(newStatus);
                 orderRepository.save(order);
 
@@ -269,6 +278,7 @@ public class ShipmentService {
     // Map trạng thái GHN sang OrderStatus.
     private OrderStatus mapGhnStatusToOrderStatus(String ghnStatus) {
         if (ghnStatus == null || ghnStatus.isBlank()) {
+            log.warn("GHN status is null or blank");
             return null;
         }
 
@@ -288,6 +298,9 @@ public class ShipmentService {
         if (status.equals("delivered") || status.equals("money_collected")) {
             return OrderStatus.DELIVERED;
         }
+
+        // Log nếu không map được để debug
+        log.warn("Không thể map GHN status '{}' sang OrderStatus", ghnStatus);
 
         // return, returned, cancel, cancelled → không xử lý (tự quản lý)
         return null;
