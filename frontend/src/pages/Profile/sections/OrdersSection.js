@@ -7,6 +7,10 @@ import {
   faCalendarDays,
   faArrowRight,
   faXmark,
+  faChevronLeft,
+  faChevronRight,
+  faAngleRight,
+  faAngleLeft,
 } from '@fortawesome/free-solid-svg-icons';
 import styles from '../Profile.module.scss';
 import orderService from '~/services/order';
@@ -40,6 +44,8 @@ function OrdersSection({ getStatusClass, defaultTab }) {
   const [detailLoading, setDetailLoading] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 3;
 
   useEffect(() => {
     fetchOrders();
@@ -255,6 +261,49 @@ function OrdersSection({ getStatusClass, defaultTab }) {
       );
   }, [orders, activeTab, orderDate, searchTerm, sortOption]);
 
+  // Reset về trang 1 khi thay đổi tab, search, filter
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchTerm, orderDate, sortOption]);
+
+  // Tính toán phân trang
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    // Scroll mượt mà lên đầu danh sách đơn hàng
+    // Sử dụng requestAnimationFrame để đảm bảo DOM đã render xong
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        // Tìm phần header của ordersCard để scroll đến đó
+        const ordersCardElement = document.querySelector(`.${cx('ordersCard')}`);
+        const ordersHeaderElement = document.querySelector(`.${cx('ordersHeader')}`);
+        const ordersListElement = document.querySelector(`.${cx('ordersList')}`);
+        
+        const targetElement = ordersHeaderElement || ordersCardElement || ordersListElement;
+        
+        if (targetElement) {
+          const elementTop = targetElement.getBoundingClientRect().top + window.pageYOffset;
+          const offset = 100; // Offset để không sát quá đầu trang
+          
+          window.scrollTo({
+            top: elementTop - offset,
+            behavior: 'smooth'
+          });
+        } else {
+          // Fallback: scroll lên đầu trang
+          window.scrollTo({ 
+            top: 0, 
+            behavior: 'smooth' 
+          });
+        }
+      }, 50);
+    });
+  };
+
   return (
     <div className={cx('card', 'ordersCard')}>
       <div className={cx('ordersHeader')}>
@@ -322,7 +371,7 @@ function OrdersSection({ getStatusClass, defaultTab }) {
               : 'Không có đơn hàng nào phù hợp với bộ lọc hiện tại.'}
           </p>
         ) : (
-          filteredOrders.map((order) => {
+          paginatedOrders.map((order) => {
             const [firstItem] = order.items || [];
             return (
               <div key={order.id} className={cx('orderCard')}>
@@ -376,6 +425,125 @@ function OrdersSection({ getStatusClass, defaultTab }) {
           })
         )}
       </div>
+
+      {/* Pagination */}
+      {!loading && filteredOrders.length > 0 && totalPages > 1 && (
+        <div className={cx('ordersPagination')}>
+          <div className={cx('paginationPages')}>
+            {(() => {
+              const pages = [];
+              const showPages = 5; // Số trang hiển thị xung quanh trang hiện tại
+              
+              // Luôn hiển thị trang đầu tiên
+              pages.push(
+                <button
+                  key={1}
+                  type="button"
+                  className={cx('paginationPage', currentPage === 1 && 'active')}
+                  onClick={() => handlePageChange(1)}
+                >
+                  1
+                </button>
+              );
+              
+              if (totalPages <= showPages + 2) {
+                // Nếu tổng số trang ít, hiển thị tất cả
+                for (let i = 2; i <= totalPages; i++) {
+                  pages.push(
+                    <button
+                      key={i}
+                      type="button"
+                      className={cx('paginationPage', currentPage === i && 'active')}
+                      onClick={() => handlePageChange(i)}
+                    >
+                      {i}
+                    </button>
+                  );
+                }
+              } else {
+                // Logic hiển thị thông minh cho nhiều trang
+                let startPage = Math.max(2, currentPage - 1);
+                let endPage = Math.min(totalPages - 1, currentPage + 1);
+                
+                // Điều chỉnh để luôn hiển thị 5 trang ở giữa (nếu có thể)
+                if (currentPage <= 3) {
+                  startPage = 2;
+                  endPage = Math.min(5, totalPages - 1);
+                } else if (currentPage >= totalPages - 2) {
+                  startPage = Math.max(2, totalPages - 4);
+                  endPage = totalPages - 1;
+                }
+                
+                // Thêm dấu "..." sau trang 1 nếu cần
+                if (startPage > 2) {
+                  pages.push(
+                    <span key="dots-start" className={cx('paginationDots')}>
+                      ...
+                    </span>
+                  );
+                }
+                
+                // Thêm các trang ở giữa
+                for (let i = startPage; i <= endPage; i++) {
+                  pages.push(
+                    <button
+                      key={i}
+                      type="button"
+                      className={cx('paginationPage', currentPage === i && 'active')}
+                      onClick={() => handlePageChange(i)}
+                    >
+                      {i}
+                    </button>
+                  );
+                }
+                
+                // Thêm dấu "..." trước trang cuối nếu cần
+                if (endPage < totalPages - 1) {
+                  pages.push(
+                    <span key="dots-end" className={cx('paginationDots')}>
+                      ...
+                    </span>
+                  );
+                }
+                
+                // Luôn hiển thị trang cuối cùng
+                pages.push(
+                  <button
+                    key={totalPages}
+                    type="button"
+                    className={cx('paginationPage', currentPage === totalPages && 'active')}
+                    onClick={() => handlePageChange(totalPages)}
+                  >
+                    {totalPages}
+                  </button>
+                );
+              }
+              
+              return pages;
+            })()}
+          </div>
+          
+          {currentPage > 1 && (
+            <button
+              type="button"
+              className={cx('paginationPrev')}
+              onClick={() => handlePageChange(currentPage - 1)}
+            >
+              <FontAwesomeIcon icon={faAngleLeft} />
+            </button>
+          )}
+          
+          {currentPage < totalPages && (
+            <button
+              type="button"
+              className={cx('paginationNext')}
+              onClick={() => handlePageChange(currentPage + 1)}
+            >
+              <FontAwesomeIcon icon={faAngleRight} />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Order Detail Modal */}
       {isModalOpen && (

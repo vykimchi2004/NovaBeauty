@@ -1991,3 +1991,121 @@ $white: #fff;
   padding-top: 20px;
   border-top: 1px solid #f1f3f5;
 }
+
+// Pagination Styles
+.ordersPagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #f1f3f5;
+}
+
+.paginationPages {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.paginationPage {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  background: #fff;
+  color: #212529;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+
+  &:hover:not(.active) {
+    background: #f8f9fa;
+    border-color: #dee2e6;
+    color: $primary-700;
+  }
+
+  &.active {
+    background: $primary-600;
+    color: #fff;
+    border-color: $primary-600;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(224, 77, 106, 0.2);
+  }
+}
+
+.paginationDots {
+  padding: 0 8px;
+  color: #6c757d;
+  font-size: 14px;
+  user-select: none;
+}
+
+.paginationPrev,
+.paginationNext {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 6px;
+  background: $primary;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: $primary-600;
+    box-shadow: 0 2px 8px rgba(242, 95, 124, 0.3);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.paginationPrev {
+  margin-right: 8px;
+
+  &:hover {
+    transform: translateX(-2px);
+  }
+
+  &:active {
+    transform: translateX(-1px) scale(0.95);
+  }
+}
+
+.paginationNext {
+  margin-left: 8px;
+
+  &:hover {
+    transform: translateX(2px);
+  }
+
+  &:active {
+    transform: translateX(1px) scale(0.95);
+  }
+}
