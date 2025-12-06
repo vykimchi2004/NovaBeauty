@@ -11,7 +11,7 @@
   padding: 0 24px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start; /* Cố định tiêu đề/cột cùng bắt đầu từ top */
   gap: 160px;
   flex-wrap: wrap;
 }

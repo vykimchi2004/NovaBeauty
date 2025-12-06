@@ -1,66 +1,68 @@
-// Styles mirrored from NovaBeauty ComplaintManagementPage.module.scss
 .wrapper {
     width: 100%;
-    padding: 0;
+    max-width: 95%;
+    margin: 0;
+    padding: 24px;
+    background: #f5f5f5;
+    min-height: 100vh;
+    border-radius: 20px;
 }
 
 .top-line {
-    width: 100%;
-    height: 2px;
-    background: #e5677d; // dùng màu chủ đạo NovaBeauty (giống Staff)
-    margin-bottom: 0;
+    display: none;
 }
 
 .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #ffffff;
-    padding: 16px 24px;
-    margin-bottom: 0;
-    border-bottom: 1px solid #f2ebdd;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 16px;
 }
 
 .page-title {
-    font-size: 20px;
+    font-size: 28px;
     font-weight: 700;
-    color: #1b2b34;
+    color: #1a1a1a;
     margin: 0;
 }
 
 .dashboard-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
     background: #e5677d;
     color: #fff;
     border: none;
     border-radius: 8px;
-    padding: 10px 16px;
+    font-weight: 600;
     font-size: 14px;
     cursor: pointer;
-    font-weight: 500;
-    transition: background 0.2s ease;
-}
+    transition: all 0.2s;
 
-.dashboard-btn:hover {
-    background: #d1526a;
+    &:hover {
+        background: #d4556b;
+        transform: translateY(-1px);
+    }
 }
 
 .content-wrapper {
-    padding: 20px 24px;
-    background: #F5F0E6;
-    min-height: calc(100vh - 60px);
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-.cards-container {
-    display: grid;
-    grid-template-columns: 70% 30%;
-    gap: 24px;
-}
 
 .card {
     background: #ffffff;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f0f0f0;
 }
 
 .card-header {
@@ -68,10 +70,10 @@
 }
 
 .card-title {
+    font-size: 18px;
     font-weight: 700;
     color: #1b2b34;
-    margin-bottom: 8px;
-    font-size: 18px;
+    margin: 0 0 4px;
 }
 
 .card-desc {
@@ -91,16 +93,16 @@
 }
 
 .complaint-table thead {
-    background: #f8f9fa;
+    background: #e5677d;
 }
 
 .complaint-table th {
-    padding: 12px;
+    padding: 16px;
     text-align: left;
     font-weight: 600;
     font-size: 14px;
-    color: #1b2b34;
-    border-bottom: 2px solid #e5e7eb;
+    color: #ffffff;
+    border-bottom: none;
 }
 
 .complaint-table td {
@@ -111,32 +113,56 @@
 }
 
 .complaint-table tbody tr:hover {
-    background: #f9fafb;
+    background: #fff5f8;
 }
 
 .status {
     display: inline-block;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 500;
-    background: #e5e7eb;
-    color: #374151;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
 }
 
+.status-new {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-in_progress {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.status-resolved {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-escalated {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+// Fallback cho các status cũ (nếu có)
 .status-mới {
-    background: #e5e7eb;
-    color: #374151;
+    background: #dbeafe;
+    color: #1e40af;
 }
 
 .status-đang-xử-lý {
-    background: #e5e7eb;
-    color: #374151;
+    background: #e0e7ff;
+    color: #3730a3;
 }
 
 .status-đã-giải-quyết {
-    background: #e5e7eb;
-    color: #374151;
+    background: #d1fae5;
+    color: #065f46;
 }
 
 .authority-tag {
@@ -168,7 +194,8 @@
 }
 
 .view-btn:hover {
-    background: #d1526a;
+    background: #d4556b;
+    transform: translateY(-1px);
 }
 
 .detail-content {
@@ -201,7 +228,7 @@
 }
 
 .detail-value {
-    font-size: 16px;
+    font-size: 14px;
     color: #1b2b34;
     white-space: pre-wrap;
     word-break: break-word;
@@ -227,20 +254,17 @@
     gap: 12px;
 }
 
-// LuminaBook: .replyLabel { font-size: 13px; font-weight: 600; color: #1A3C5A; }
 .reply-label {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
-    color: #e5677d; // NovaBeauty primary color (thay thế #1A3C5A từ LuminaBook)
+    color: #e5677d;
 }
 
-// LuminaBook: .replyDate { font-size: 12px; color: #9ca3af; }
 .reply-date {
-    font-size: 12px;
+    font-size: 14px;
     color: #9ca3af;
 }
 
-// LuminaBook: .replyText { font-size: 14px; color: #374151; line-height: 1.6; margin: 0; white-space: pre-line; }
 .reply-text {
     font-size: 14px;
     color: #374151;
@@ -265,6 +289,7 @@
 
 .notes-input {
     width: 100%;
+    max-width: 600px;
     padding: 12px;
     border: 1px solid #d1d5db;
     border-radius: 8px;
@@ -275,11 +300,24 @@
     white-space: pre-wrap;
     word-wrap: break-word;
     line-height: 1.6;
+    transition: border-color 0.2s;
+
+    &:focus {
+        outline: none;
+        border-color: #e5677d;
+    }
+
+    &.has-error {
+        border-color: #dc2626;
+        background: #fef2f2;
+    }
 }
 
-.notes-input:focus {
-    outline: none;
-    border-color: #e5677d;
+.note-error {
+    color: #dc2626;
+    font-size: 14px;
+    margin-top: 6px;
+    font-weight: 500;
 }
 
 .action-buttons {
@@ -307,7 +345,8 @@
 }
 
 .btn-resolved:hover {
-    background: #d1526a;
+    background: #d4556b;
+    transform: translateY(-1px);
 }
 
 .btn-save-note {
@@ -330,11 +369,92 @@
     background: #B03A3A;
 }
 
-.empty-detail {
+// Modal styles
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 200px;
-    color: #9ca3af;
+    z-index: 1000;
+    padding: 20px;
+    backdrop-filter: blur(2px);
+}
+
+.modal-content {
+    background: #fff;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 700px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 1px solid #f0f0f0;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 10;
+    border-radius: 16px 16px 0 0;
+}
+
+.modal-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0;
+}
+
+.modal-close-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: #f5f5f5;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: #666;
+    transition: all 0.2s;
+
+    &:hover {
+        background: #e0e0e0;
+        color: #333;
+    }
+}
+
+.modal-body {
+    padding: 24px;
+    flex: 1;
+}
+
+.alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
     font-size: 14px;
+    font-weight: 500;
+}
+
+.alert-error {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.alert-success {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
 }

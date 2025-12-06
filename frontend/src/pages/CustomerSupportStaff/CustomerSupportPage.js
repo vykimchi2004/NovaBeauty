@@ -8,24 +8,100 @@ import { storage } from '../../services/utils';
 import { logout } from '../../services/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBell } from '@fortawesome/free-solid-svg-icons';
-import CustomerSupportMain from './CustomerSupportMain/CustomerSupportMainPage';
 import ComplaintManagementPage from './ComplaintManagement/ComplaintManagementPage';
 import ReviewCommentManagementPage from './ReviewCommentManagement/ReviewCommentManagementPage';
 import RefundManagementPage from './RefundManagement/RefundManagementPage';
 import RefundDetailPage from './RefundManagement/RefundDetail/RefundDetailPage';
-import CustomerSupportNotificationPage from './CustomerSupportNotification/CustomerSupportNotificationPage';
 import ProfileCustomerSupportPage from './ProfileCustomerSupport/ProfileCustomerSupportPage';
 
 const cx = classNames.bind(styles);
 
 const MENU_ITEMS = [
-    { title: 'Tổng quan', path: '/customer-support', end: true },
     { title: 'Khiếu nại', path: '/customer-support/complaints' },
     { title: 'Đánh giá & bình luận', path: '/customer-support/reviews' },
     { title: 'Trả hàng / Hoàn tiền', path: '/customer-support/refund-management' },
-    { title: 'Thông báo', path: '/customer-support/notifications' },
     { title: 'Hồ sơ cá nhân', path: '/customer-support/profile' },
 ];
+
+// Dashboard component - gộp từ CustomerSupportMainPage
+function Dashboard() {
+    const navigate = useNavigate();
+
+    return (
+        <div className={cx('dashboard')}>
+            <h1 className={cx('dashboardTitle')}>Trung tâm hỗ trợ khách hàng</h1>
+
+            <div className={cx('dashboardGrid')}>
+                <div
+                    className={cx('card')}
+                    onClick={() => navigate('/customer-support/complaints')}
+                >
+                    <h2 className={cx('cardTitle')}>Quản lý khiếu nại</h2>
+                    <p className={cx('cardDescription')}>
+                        Xem và xử lý các đơn khiếu nại từ khách hàng, theo dõi trạng thái và kết quả xử lý.
+                    </p>
+                </div>
+
+                <div
+                    className={cx('card')}
+                    onClick={() => navigate('/customer-support/reviews')}
+                >
+                    <h2 className={cx('cardTitle')}>Đánh giá &amp; bình luận</h2>
+                    <p className={cx('cardDescription')}>
+                        Quản lý đánh giá, bình luận về sản phẩm, phản hồi lại khách và xử lý nội dung vi phạm.
+                    </p>
+                </div>
+
+                <div
+                    className={cx('card')}
+                    onClick={() => navigate('/customer-support/refund-management')}
+                >
+                    <h2 className={cx('cardTitle')}>Trả hàng / Hoàn tiền</h2>
+                    <p className={cx('cardDescription')}>
+                        Theo dõi và xử lý yêu cầu trả hàng, hoàn tiền theo quy trình CSKH hiện tại.
+                    </p>
+                </div>
+
+                <div
+                    className={cx('card')}
+                    onClick={() => navigate('/customer-support/profile')}
+                >
+                    <h2 className={cx('cardTitle')}>Hồ sơ nhân viên CSKH</h2>
+                    <p className={cx('cardDescription')}>
+                        Cập nhật thông tin cá nhân và mật khẩu cho tài khoản chăm sóc khách hàng.
+                    </p>
+                </div>
+
+                <div className={cx('card', 'quickActions')}>
+                    <h2 className={cx('cardTitle')}>Tác vụ nhanh</h2>
+                    <div className={cx('quickActionButtons')}>
+                        <button
+                            type="button"
+                            className={cx('quickActionBtn')}
+                            onClick={() => navigate('/customer-support/complaints')}
+                        >
+                            Xử lý khiếu nại mới
+                        </button>
+                        <button
+                            type="button"
+                            className={cx('quickActionBtn')}
+                            onClick={() => navigate('/customer-support/refund-management')}
+                        >
+                            Yêu cầu hoàn tiền
+                        </button>
+                        <button
+                            type="button"
+                            className={cx('quickActionBtn')}
+                            onClick={() => navigate('/customer-support/reviews')}
+                        >
+                            Theo dõi đánh giá
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default function CustomerSupportPage() {
     const navigate = useNavigate();
@@ -65,15 +141,23 @@ export default function CustomerSupportPage() {
     const renderLogoutConfirm = () => {
         if (!showLogoutConfirm) return null;
         return (
-            <div className={cx('logoutConfirm')}>
-                <div className={cx('logoutCard')}>
-                    <h3 className={cx('logoutTitle')}>Đăng xuất khỏi hệ thống?</h3>
-                    <p>Phiên làm việc hiện tại sẽ kết thúc.</p>
-                    <div className={cx('logoutActions')}>
-                        <button className={cx('btn', 'btnSecondary')} onClick={() => setShowLogoutConfirm(false)}>
+            <div className={cx('logoutModalOverlay')} onClick={() => setShowLogoutConfirm(false)}>
+                <div className={cx('logoutModal')} onClick={(e) => e.stopPropagation()}>
+                    <h3 className={cx('logoutModalTitle')}>Xác nhận đăng xuất</h3>
+                    <p className={cx('logoutModalMessage')}>Bạn có chắc chắn muốn đăng xuất không?</p>
+                    <div className={cx('logoutModalActions')}>
+                        <button
+                            type="button"
+                            className={cx('logoutModalBtn', 'logoutModalBtnCancel')}
+                            onClick={() => setShowLogoutConfirm(false)}
+                        >
                             Hủy
                         </button>
-                        <button className={cx('btn', 'btnPrimary')} onClick={handleLogout}>
+                        <button
+                            type="button"
+                            className={cx('logoutModalBtn', 'logoutModalBtnConfirm')}
+                            onClick={handleLogout}
+                        >
                             Đăng xuất
                         </button>
                     </div>
@@ -133,7 +217,7 @@ export default function CustomerSupportPage() {
                         )}
                     </div>
                     <span className={cx('userName')}>{user?.fullName || 'CSKH'}</span>
-                    <button className={cx('logoutBtn')} onClick={() => setShowLogoutConfirm(true)}>
+                    <button className={cx('logoutBtnTop')} onClick={() => setShowLogoutConfirm(true)}>
                         Đăng xuất
                     </button>
                 </div>
@@ -165,12 +249,11 @@ export default function CustomerSupportPage() {
                 </aside>
                 <section className={cx('content')}>
                     <Routes>
-                        <Route index element={<CustomerSupportMain />} />
+                        <Route index element={<Dashboard />} />
                         <Route path="complaints" element={<ComplaintManagementPage />} />
                         <Route path="reviews" element={<ReviewCommentManagementPage />} />
                         <Route path="refund-management" element={<RefundManagementPage />} />
                         <Route path="refund-management/:id" element={<RefundDetailPage />} />
-                        <Route path="notifications" element={<CustomerSupportNotificationPage />} />
                         <Route path="profile" element={<ProfileCustomerSupportPage />} />
                         <Route path="*" element={<Navigate to="/customer-support" replace />} />
                     </Routes>

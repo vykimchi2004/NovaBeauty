@@ -1,18 +1,73 @@
-import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheckCircle } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from '../CheckoutPage.module.scss';
+import orderService from '~/services/order';
 
 const cx = classNames.bind(styles);
 
 function OrderSuccessPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const [loading, setLoading] = useState(false);
+  const [orderData, setOrderData] = useState(null);
 
   const state = location.state || {};
   const { fullName, address, total, order, paymentMethod, subtotal, shippingFee, voucherDiscount } = state;
+
+  // Kiểm tra nếu có orderId từ MoMo redirect (query params)
+  const orderIdFromMoMo = searchParams.get('orderId');
+  const resultCode = searchParams.get('resultCode');
+
+  useEffect(() => {
+    // Nếu có orderId từ MoMo redirect và chưa có order data từ state
+    if (orderIdFromMoMo && !order) {
+      fetchOrderFromMoMo(orderIdFromMoMo);
+    }
+  }, [orderIdFromMoMo, order]);
+
+  const fetchOrderFromMoMo = async (orderCode) => {
+    try {
+      setLoading(true);
+      // Tìm đơn hàng theo code
+      const orders = await orderService.getMyOrders();
+      const foundOrder = orders.find(o => o.code === orderCode || o.id === orderCode);
+      
+      if (foundOrder) {
+        setOrderData({
+          order: foundOrder,
+          paymentMethod: 'momo',
+          total: foundOrder.totalAmount,
+          subtotal: (foundOrder.totalAmount || 0) - (foundOrder.shippingFee || 0),
+          shippingFee: foundOrder.shippingFee || 0,
+          voucherDiscount: 0, // Có thể cần tính lại từ order
+          fullName: foundOrder.receiverName || foundOrder.customerName,
+          address: foundOrder.shippingAddress,
+        });
+      } else {
+        console.error('Không tìm thấy đơn hàng với mã:', orderCode);
+      }
+    } catch (error) {
+      console.error('Error fetching order from MoMo:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Sử dụng orderData nếu có (từ MoMo redirect), nếu không dùng state
+  const displayData = orderData || {
+    order,
+    paymentMethod,
+    total,
+    subtotal,
+    shippingFee,
+    voucherDiscount,
+    fullName,
+    address,
+  };
 
   const formatPrice = (price) =>
     new Intl.NumberFormat('vi-VN', {
@@ -52,48 +107,52 @@ function OrderSuccessPage() {
         </p>
 
         {/* Thông tin đơn hàng */}
-        <div className={cx('orderInfoList')}>
-          {order?.code && (
+        {loading ? (
+          <p className={cx('successMessage')}>Đang tải thông tin đơn hàng...</p>
+        ) : (
+          <div className={cx('orderInfoList')}>
+            {displayData.order?.code && (
+              <div className={cx('orderInfoRow')}>
+                <span className={cx('orderInfoLabel')}>Mã đơn hàng:</span>
+                <span className={cx('orderInfoValue', 'orderCode')}>#{displayData.order.code}</span>
+              </div>
+            )}
+            {displayData.fullName && (
+              <div className={cx('orderInfoRow')}>
+                <span className={cx('orderInfoLabel')}>Người nhận:</span>
+                <span className={cx('orderInfoValue')}>{displayData.fullName}</span>
+              </div>
+            )}
             <div className={cx('orderInfoRow')}>
-              <span className={cx('orderInfoLabel')}>Mã đơn hàng:</span>
-              <span className={cx('orderInfoValue', 'orderCode')}>#{order.code}</span>
+              <span className={cx('orderInfoLabel')}>Phương thức thanh toán:</span>
+              <span className={cx('orderInfoValue')}>
+                {displayData.paymentMethod === 'cod' ? 'Thanh toán khi nhận hàng (COD)' : 'Thanh toán qua ví MoMo'}
+              </span>
             </div>
-          )}
-          {fullName && (
-            <div className={cx('orderInfoRow')}>
-              <span className={cx('orderInfoLabel')}>Người nhận:</span>
-              <span className={cx('orderInfoValue')}>{fullName}</span>
+            {displayData.subtotal !== undefined && (
+              <div className={cx('orderInfoRow')}>
+                <span className={cx('orderInfoLabel')}>Tạm tính:</span>
+                <span className={cx('orderInfoValue')}>{formatPrice(displayData.subtotal)}</span>
+              </div>
+            )}
+            {displayData.shippingFee !== undefined && (
+              <div className={cx('orderInfoRow')}>
+                <span className={cx('orderInfoLabel')}>Phí vận chuyển:</span>
+                <span className={cx('orderInfoValue')}>{formatPrice(displayData.shippingFee)}</span>
+              </div>
+            )}
+            {displayData.voucherDiscount > 0 && (
+              <div className={cx('orderInfoRow')}>
+                <span className={cx('orderInfoLabel')}>Giảm giá:</span>
+                <span className={cx('orderInfoValue', 'discount')}>-{formatPrice(displayData.voucherDiscount)}</span>
+              </div>
+            )}
+            <div className={cx('orderInfoRow', 'totalRow')}>
+              <span className={cx('orderInfoLabel')}>Tổng cộng:</span>
+              <span className={cx('orderInfoValue', 'totalValue')}>{formatPrice(displayData.total || 0)}</span>
             </div>
-          )}
-          <div className={cx('orderInfoRow')}>
-            <span className={cx('orderInfoLabel')}>Phương thức thanh toán:</span>
-            <span className={cx('orderInfoValue')}>
-              {paymentMethod === 'cod' ? 'Thanh toán khi nhận hàng (COD)' : 'Thanh toán qua ví MoMo'}
-            </span>
           </div>
-          {subtotal !== undefined && (
-            <div className={cx('orderInfoRow')}>
-              <span className={cx('orderInfoLabel')}>Tạm tính:</span>
-              <span className={cx('orderInfoValue')}>{formatPrice(subtotal)}</span>
-            </div>
-          )}
-          {shippingFee !== undefined && (
-            <div className={cx('orderInfoRow')}>
-              <span className={cx('orderInfoLabel')}>Phí vận chuyển:</span>
-              <span className={cx('orderInfoValue')}>{formatPrice(shippingFee)}</span>
-            </div>
-          )}
-          {voucherDiscount > 0 && (
-            <div className={cx('orderInfoRow')}>
-              <span className={cx('orderInfoLabel')}>Giảm giá:</span>
-              <span className={cx('orderInfoValue', 'discount')}>-{formatPrice(voucherDiscount)}</span>
-            </div>
-          )}
-          <div className={cx('orderInfoRow', 'totalRow')}>
-            <span className={cx('orderInfoLabel')}>Tổng cộng:</span>
-            <span className={cx('orderInfoValue', 'totalValue')}>{formatPrice(total || 0)}</span>
-          </div>
-        </div>
+        )}
 
         {/* Buttons */}
         <div className={cx('successActions')}>

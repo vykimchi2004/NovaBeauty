@@ -10,6 +10,7 @@ import { STORAGE_KEYS } from '~/services/config';
 import notify from '~/utils/notification';
 import { normalizeVariantRecords } from '~/utils/colorVariants';
 import { getReviewsByProduct, createReview } from '~/services/review';
+import orderService from '~/services/order';
 
 const TABS = [
   { id: 'description', label: 'Mô tả sản phẩm' },
@@ -154,7 +155,11 @@ function ProductDetail() {
     // Kiểm tra đăng nhập trước
     const token = storage.get(STORAGE_KEYS.TOKEN);
     if (!token) {
-      notify.warning('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
+      // Hiển thị cảnh báo và đợi người dùng đóng, sau đó mới mở modal đăng nhập
+      notify.warning('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng').then(() => {
+        // Mở modal đăng nhập khi người dùng đóng cảnh báo
+        window.dispatchEvent(new CustomEvent('openLoginModal'));
+      });
       return;
     }
 
@@ -240,6 +245,109 @@ function ProductDetail() {
           notify.error('Bạn không có quyền thêm sản phẩm vào giỏ hàng. Vui lòng đăng nhập bằng tài khoản khách hàng.');
         }
         return; // Không reload nếu là lỗi permission
+      }
+      
+      // Các lỗi khác
+      if (error.message && error.message.includes('Sản phẩm không tồn tại')) {
+        notify.error('Sản phẩm không tồn tại trong hệ thống. Vui lòng chọn sản phẩm khác.');
+      } else {
+        notify.error(error.message || 'Không thể thêm sản phẩm vào giỏ hàng. Vui lòng thử lại.');
+      }
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
+  const handleBuyNow = async () => {
+    // Kiểm tra đăng nhập trước
+    const token = storage.get(STORAGE_KEYS.TOKEN);
+    if (!token) {
+      // Hiển thị cảnh báo và đợi người dùng đóng, sau đó mới mở modal đăng nhập
+      notify.warning('Vui lòng đăng nhập để mua sản phẩm').then(() => {
+        // Mở modal đăng nhập khi người dùng đóng cảnh báo
+        window.dispatchEvent(new CustomEvent('openLoginModal'));
+      });
+      return;
+    }
+
+    // Kiểm tra user role
+    let user = null;
+    try {
+      const userRaw = storage.get(STORAGE_KEYS.USER);
+      if (userRaw) user = typeof userRaw === 'string' ? JSON.parse(userRaw) : userRaw;
+    } catch (e) {
+      console.error('[ProductDetail] Error parsing user from storage:', e);
+    }
+    
+    const userRole = user?.role?.name || user?.roleName || '';
+    
+    if (!product || !product.id) {
+      notify.error('Sản phẩm không tồn tại');
+      return;
+    }
+
+    // Kiểm tra nếu sản phẩm có mã màu thì phải chọn màu trước
+    const hasColorVariants = colorOptions.length > 0;
+    if (hasColorVariants && !selectedColorCode) {
+      notify.warning('Vui lòng chọn mã màu trước khi mua');
+      return;
+    }
+
+    try {
+      setAddingToCart(true);
+      console.log('[ProductDetail] Buy now (direct) - productId:', product.id, 'quantity:', quantity, 'colorCode:', selectedColorCode);
+      
+      // Chuyển đến trang checkout với thông tin sản phẩm để checkout trực tiếp (không thêm vào giỏ hàng)
+      navigate('/checkout', { 
+        state: { 
+          directCheckout: true,
+          productId: product.id,
+          quantity: quantity,
+          colorCode: selectedColorCode || null
+        } 
+      });
+    } catch (error) {
+      console.error('[ProductDetail] Error in buy now:', {
+        error,
+        code: error.code,
+        status: error.status,
+        message: error.message,
+        response: error.response
+      });
+      
+      // Kiểm tra lỗi authentication (401)
+      if (error.code === 401 || error.status === 401 || 
+          error.message?.includes('authentication') || 
+          error.message?.includes('Full authentication is required')) {
+        console.warn('[ProductDetail] 401 Unauthorized - Token may be missing or invalid');
+        notify.warning('Phiên đăng nhập đã hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.');
+        storage.remove(STORAGE_KEYS.TOKEN);
+        storage.remove(STORAGE_KEYS.USER);
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+        return;
+      }
+      
+      // Kiểm tra lỗi permission (403)
+      if (error.code === 403 || error.status === 403) {
+        console.warn('[ProductDetail] 403 Forbidden - User may not have CUSTOMER role');
+        let user = null;
+        try {
+          const userRaw = storage.get(STORAGE_KEYS.USER);
+          if (userRaw) user = typeof userRaw === 'string' ? JSON.parse(userRaw) : userRaw;
+        } catch (e) {
+          console.error('Error parsing user from storage:', e);
+        }
+        
+        const userRole = user?.role?.name || user?.roleName || '';
+        
+        if (userRole && userRole !== 'CUSTOMER') {
+          notify.error(`Tài khoản ${userRole} không thể mua sản phẩm. Vui lòng đăng nhập bằng tài khoản CUSTOMER.`);
+        } else {
+          notify.error('Bạn không có quyền mua sản phẩm. Vui lòng đăng nhập bằng tài khoản khách hàng.');
+        }
+        return;
       }
       
       // Các lỗi khác
@@ -770,18 +878,16 @@ function ProductDetail() {
             </button>
             <button 
               className={cx('btn-buy-now')}
-              disabled={colorOptions.length > 0 && !selectedColorCode}
+              onClick={handleBuyNow}
+              disabled={addingToCart || (colorOptions.length > 0 && !selectedColorCode)}
               title={colorOptions.length > 0 && !selectedColorCode ? 'Vui lòng chọn mã màu trước' : ''}
             >
-              MUA NGAY
+              {addingToCart ? 'Đang xử lý...' : 'MUA NGAY'}
             </button>
-            <button className={cx('btn-favorite')}>❤️</button>
+           
           </div>
 
           <div className={cx('benefits')}>
-            <div className={cx('benefit-item')}>
-              <span>✓</span> Miễn phí giao hàng 24h
-            </div>
             <div className={cx('benefit-item')}>
               <span>✓</span> Cam kết hàng chính hãng
             </div>

@@ -21,7 +21,7 @@
 }
 
 .heroTitle {
-  font-weight: 800;
+  font-weight: 700;
   font-size: clamp(22px, 3vw, 36px);
   margin-bottom: 24px;
 }
@@ -38,6 +38,50 @@
   border: 2px solid rgba(17, 17, 17, 0.06);
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.08);
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.heroSearchBox {
+  position: relative;
+  
+}
+
+.suggestList {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 83%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  
+  z-index: 5;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.suggestItem {
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: #ffffff;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #111;
+  line-height: 1.45;
+  transition: background-color 140ms ease, transform 140ms ease;
+  display: block;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.suggestItem:hover {
+  background: #fff2f7;
+  transform: translateY(-1px);
 }
 
 .heroSearch:hover {
@@ -110,7 +154,7 @@
 
 .quickGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 24px;
   margin-bottom: 32px;
 }
@@ -198,6 +242,71 @@
 
 .sectionContent {
   margin-bottom: 32px;
+}
+
+.policies {
+  background: linear-gradient(145deg, #ffffff 0%, #fef7fa 100%);
+  border-radius: 20px;
+  padding: 24px 24px 20px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(229, 103, 125, 0.1);
+}
+
+.policiesIntro {
+  margin-bottom: 14px;
+  color: #2c2c2c;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.policiesList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+}
+
+.policiesList a {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 14px;
+  color: #0f0f0f;
+  background: linear-gradient(135deg, #ffffff 0%, #fdf5f8 100%);
+  text-decoration: none;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.06);
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease, background-color 140ms ease;
+}
+
+.policiesList a::before {
+  display: none;
+}
+
+.policiesList a:hover {
+  border-color: #e5677d;
+  box-shadow: 0 16px 28px rgba(229, 103, 125, 0.14);
+  transform: translateY(-2px);
+  background: #fff2f7;
+}
+
+.policiesList a:active {
+  transform: translateY(0);
+  box-shadow: 0 8px 16px rgba(229, 103, 125, 0.12);
+}
+
+.policiesList a span {
+  position: relative;
+  font-weight: 700;
+  font-size: 15px;
+  color: #111;
+}
+
+.policiesList a small {
+  position: relative;
+  color: #555;
+  line-height: 1.5;
 }
 
 .infoCard,

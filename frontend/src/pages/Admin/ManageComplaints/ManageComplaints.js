@@ -190,7 +190,6 @@ function ManageComplaints() {
               <th>Mã đơn hàng</th>
               <th>Khách hàng</th>
               <th>Email</th>
-              <th>SĐT</th>
               <th>Ngày tạo</th>
               <th>Trạng thái</th>
               <th>Thao tác</th>
@@ -199,7 +198,7 @@ function ManageComplaints() {
           <tbody>
             {filteredTickets.length === 0 ? (
               <tr>
-                <td colSpan="8" className={cx('empty')}>
+                <td colSpan="7" className={cx('empty')}>
                   Không có khiếu nại nào
                 </td>
               </tr>
@@ -210,7 +209,6 @@ function ManageComplaints() {
                   <td>{ticket.orderCode || '-'}</td>
                   <td className={cx('nameCell')}>{ticket.customerName || '-'}</td>
                   <td>{ticket.email || '-'}</td>
-                  <td>{ticket.phone || '-'}</td>
                   <td>{formatDate(ticket.createdAt)}</td>
                   <td>{getStatusBadge(ticket.status)}</td>
                   <td>

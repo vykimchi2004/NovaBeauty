@@ -8,8 +8,11 @@ import ProductDetail from '../pages/ProductDetail/ProductDetail';
 import Profile from '../pages/Profile/Profile';
 import AdminPage from '../pages/Admin/AdminPage';
 import StaffPage from '../pages/Staff/StaffPage';
-import Support from '../pages/Support/Support';
-import CustomerSupportPage from '../pages/CustomerSupport/CustomerSupportPage';
+import Support from '../pages/CustomerSupport/Support';
+import PaymentPolicyPage from '../pages/CustomerSupport/policies/PaymentPolicyPage';
+import ShippingPolicyPage from '../pages/CustomerSupport/policies/ShippingPolicyPage';
+import ReturnPolicyPage from '../pages/CustomerSupport/policies/ReturnPolicyPage';
+import CustomerSupportPage from '../pages/CustomerSupportStaff/CustomerSupportPage';
 import Cart from '../pages/Cart/Cart';
 import CheckoutDetailPage from '../pages/CheckoutPage/CheckoutDetails/CheckoutDetailPage';
 import ConfirmCheckoutPage from '../pages/CheckoutPage/ConfirmCheckout/ConfirmCheckoutPage';
@@ -39,6 +42,9 @@ const publicRoutes = [
   { path: '/product/:id', component: ProductDetail, layout: DefaultLayout },
   { path: '/profile', component: Profile, layout: DefaultLayout },
   { path: '/support', component: Support, layout: DefaultLayout },
+  { path: '/support/payment-policy', component: PaymentPolicyPage, layout: DefaultLayout },
+  { path: '/support/shipping-policy', component: ShippingPolicyPage, layout: DefaultLayout },
+  { path: '/support/return-policy', component: ReturnPolicyPage, layout: DefaultLayout },
   { path: '/cart', component: Cart, layout: DefaultLayout },
   { path: '/checkout', component: CheckoutDetailPage, layout: DefaultLayout },
   { path: '/checkout/confirm', component: ConfirmCheckoutPage, layout: DefaultLayout },

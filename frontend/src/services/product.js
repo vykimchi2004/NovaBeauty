@@ -133,7 +133,22 @@ export async function updateProduct(productId, productData) {
 // Delete product (requires authentication)
 export async function deleteProduct(productId) {
     try {
-        return await apiClient.delete(API_ENDPOINTS.PRODUCTS.DELETE(productId));
+        // Validate productId
+        if (!productId || typeof productId !== 'string' || productId.trim() === '') {
+            throw new Error('Product ID is required and must be a non-empty string');
+        }
+        
+        // Encode productId to handle special characters like ':'
+        const encodedId = encodeURIComponent(productId);
+        const endpoint = API_ENDPOINTS.PRODUCTS.DELETE(encodedId);
+        
+        console.log('[Product Service] Deleting product:', {
+            originalId: productId,
+            encodedId: encodedId,
+            endpoint: endpoint
+        });
+        
+        return await apiClient.delete(endpoint);
     } catch (error) {
         console.error('[Product Service] deleteProduct error:', error);
         throw error;

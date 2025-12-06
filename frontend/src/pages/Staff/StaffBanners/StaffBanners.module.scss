@@ -107,16 +107,30 @@
 
 .radioGroup {
   display: flex;
-  gap: 16px;
+  gap: 50px;
   margin-top: 8px;
+  white-space: nowrap;
 
   label {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     font-size: 14px;
     color: #30374b;
     cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 8px;
+
+
+    &:hover {
+      background-color: #f8f9fa;
+    }
+
+    input[type='radio'] {
+      margin: 0;
+      cursor: pointer;
+      accent-color: #e5677d;
+    }
   }
 }
 
@@ -132,6 +146,30 @@
   strong {
     color: #e5677d;
     margin: 0 4px;
+  }
+}
+
+// Override mediaUpload for banner - make preview wider/longer
+.mediaUpload {
+  .preview {
+    width: 300px;
+    height: 120px;
+    min-width: 300px;
+    border-radius: 12px;
+    background: #f8f8fb;
+    border: 1px dashed #d5d9e6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: inherit;
+    }
   }
 }
 
@@ -234,8 +272,20 @@
   font-style: italic;
 }
 
+// Actions container - ensure buttons stay on one line
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+}
+
 // Action button disabled state (inherited from StaffVouchers but ensure it works)
 .actionBtn {
+  flex-shrink: 0;
+  white-space: nowrap;
+  
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -245,6 +295,90 @@
     &:hover {
       transform: none;
       background: #e0e0e0 !important;
+    }
+  }
+}
+
+// Status badge - ensure text stays on one line
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: 12px;
+  font-weight: 600;
+
+  &.pending {
+    background: #fff4d6;
+    color: #aa7a00;
+  }
+
+  &.approved {
+    background: #e0f5eb;
+    color: #1b7f43;
+  }
+
+  &.rejected {
+    background: #ffe1e5;
+    color: #c62828;
+  }
+
+  &.expired {
+    background: #eceef3;
+    color: #4f5563;
+  }
+}
+
+// Override table styles to have white background like product management
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #ffffff;
+  border-radius: 10px;
+
+  thead {
+    background: #e5677d;
+    color: #fff;
+
+    th {
+      padding: 16px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 14px;
+      color: #ffffff;
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid #f0f0f0;
+      transition: background 0.2s;
+
+      &:nth-child(even) {
+        background: #ffffff;
+      }
+
+      &:hover {
+        background: #fff5f8;
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+
+    td {
+      padding: 16px;
+      font-size: 14px;
+      color: #333;
+      vertical-align: middle;
     }
   }
 }

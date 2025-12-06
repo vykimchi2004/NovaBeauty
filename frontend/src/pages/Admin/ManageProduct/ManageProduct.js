@@ -356,6 +356,14 @@ function ManageProduct() {
                           >
                             <FontAwesomeIcon icon={faEye} />
                           </button>
+                          <button
+                            type="button"
+                            className={cx('actionBtn', 'deleteBtn')}
+                            onClick={() => openDeletePrompt(product)}
+                            title="Xóa sản phẩm"
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
                         </div>
                       </td>
                     </tr>

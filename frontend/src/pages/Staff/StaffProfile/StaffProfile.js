@@ -410,16 +410,6 @@ function StaffProfile() {
                                 placeholder="Nhập địa chỉ"
                                 rows="3"
                                 disabled={!isEditing}
-                                style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '4px',
-                                    fontSize: '14px',
-                                    fontFamily: 'inherit',
-                                    resize: 'vertical',
-                                    minHeight: '80px'
-                                }}
                             />
                         </div>
 
