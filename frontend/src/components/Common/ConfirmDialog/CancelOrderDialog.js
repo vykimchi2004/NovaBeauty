@@ -51,7 +51,7 @@ function CancelOrderDialog({
                             className={cx('textarea')}
                             placeholder="Ví dụ: Đổi ý, đặt nhầm địa chỉ, tìm được nơi khác..."
                             defaultValue={defaultReason}
-                            rows={3}
+                            rows={2}
                             disabled={loading}
                         />
                     </div>
