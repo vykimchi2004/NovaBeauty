@@ -45,5 +45,10 @@ public class DirectCheckoutRequest {
      * Phương thức thanh toán khách chọn (momo | cod).
      */
     String paymentMethod;
+
+    /**
+     * Mã màu đã chọn (nếu sản phẩm có color variants).
+     */
+    String colorCode;
 }
 

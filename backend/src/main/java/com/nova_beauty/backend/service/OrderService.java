@@ -6,6 +6,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -350,6 +352,13 @@ public class OrderService {
         // Sử dụng ArrayList thay vì List.of() để tránh UnsupportedOperationException
         savedOrder.setItems(new ArrayList<>(List.of(orderItem)));
 
+        // Cập nhật tồn kho và số lượng đã bán (giống LuminaBook)
+        // Reload product từ database với inventory được load
+        Product productToUpdate = productRepository.findByIdWithRelations(product.getId())
+                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED, "Product not found: " + product.getId()));
+        String colorCode = request.getColorCode(); // Lấy colorCode từ request nếu có
+        updateInventoryAndSales(productToUpdate, quantity, colorCode);
+
         // Nếu là COD, finalize ngay nhưng giữ status CREATED để hiển thị "Chờ xác nhận"
         // COD orders sẽ được staff xác nhận thủ công sau đó
         if (paymentMethod == PaymentMethod.COD) {
@@ -456,6 +465,22 @@ public class OrderService {
         orderItemRepository.saveAll(orderItems);
         orderItemRepository.flush(); // Ensure items are persisted immediately
         order.setItems(orderItems);
+        
+        // Cập nhật tồn kho và số lượng đã bán (giống LuminaBook)
+        // Reload product từ database với inventory được load
+        for (CartItem ci : selectedItems) {
+            if (ci.getProduct() != null && ci.getProduct().getId() != null) {
+                Product product = productRepository.findByIdWithRelations(ci.getProduct().getId())
+                        .orElse(null);
+                if (product != null) {
+                    updateInventoryAndSales(product, ci.getQuantity(), ci.getColorCode());
+                } else {
+                    log.warn("Product not found for cart item: productId={}", ci.getProduct().getId());
+                }
+            } else {
+                log.warn("CartItem has null product or productId: cartItemId={}", ci.getId());
+            }
+        }
     }
 
     private void finalizePaidOrder(Order order, List<String> cartItemIds) {
@@ -1551,6 +1576,190 @@ public class OrderService {
             order.setNote(note.trim());
         } else {
             order.setNote(current + System.lineSeparator() + note.trim());
+        }
+    }
+
+    /**
+     * Cập nhật tồn kho và số lượng đã bán khi đơn hàng được tạo thành công
+     * Mỗi mã màu có số lượng đã bán riêng trong manufacturingLocation
+     * @param product Sản phẩm cần cập nhật (đã được load với inventory)
+     * @param quantity Số lượng đã bán
+     * @param colorCode Mã màu (nếu có) - để giảm tồn kho và tăng số lượng đã bán của variant cụ thể
+     */
+    private void updateInventoryAndSales(Product product, int quantity, String colorCode) {
+        if (product == null || quantity <= 0) {
+            log.warn("updateInventoryAndSales: product is null or quantity <= 0. product={}, quantity={}", product, quantity);
+            return;
+        }
+
+        log.info("updateInventoryAndSales: Updating product {} with quantity {}, colorCode={}", product.getId(), quantity, colorCode);
+        log.info("updateInventoryAndSales: Product manufacturingLocation is null: {}", product.getManufacturingLocation() == null);
+        if (product.getManufacturingLocation() != null) {
+            log.info("updateInventoryAndSales: Product manufacturingLocation length: {}", product.getManufacturingLocation().length());
+        }
+
+        // Nếu có colorCode và có manufacturingLocation, cập nhật variant cụ thể
+        if (colorCode != null && !colorCode.isBlank() && product.getManufacturingLocation() != null && !product.getManufacturingLocation().trim().isEmpty()) {
+            log.info("updateInventoryAndSales: Updating color variant for product {} with colorCode {}", product.getId(), colorCode);
+            // Cập nhật tồn kho và số lượng đã bán của variant cụ thể
+            updateColorVariantStockAndSales(product, colorCode, quantity);
+        } else {
+            log.info("updateInventoryAndSales: Updating total inventory for product {} (no colorCode or no manufacturingLocation)", product.getId());
+            // Nếu không có colorCode, cập nhật tổng của product
+            // Tăng số lượng đã bán tổng
+            int sold = product.getQuantitySold() != null ? product.getQuantitySold() : 0;
+            product.setQuantitySold(sold + quantity);
+            log.info("updateInventoryAndSales: Updated quantitySold from {} to {}", sold, sold + quantity);
+
+            // Giảm tồn kho tổng
+            if (product.getInventory() != null) {
+                Integer stock = product.getInventory().getStockQuantity();
+                if (stock == null) {
+                    stock = 0;
+                }
+                int updatedStock = stock - quantity;
+                int normalizedStock = Math.max(0, updatedStock);
+                product.getInventory().setStockQuantity(normalizedStock);
+                product.getInventory().setLastUpdated(LocalDate.now());
+                log.info("updateInventoryAndSales: Updated stockQuantity from {} to {}", stock, normalizedStock);
+            } else {
+                // Nếu product không có inventory, tạo mới
+                log.warn("updateInventoryAndSales: Product {} has no inventory, creating new inventory", product.getId());
+                com.nova_beauty.backend.entity.Inventory inventory = com.nova_beauty.backend.entity.Inventory.builder()
+                        .stockQuantity(0) // Bắt đầu từ 0 vì đã bán
+                        .lastUpdated(LocalDate.now())
+                        .product(product)
+                        .build();
+                product.setInventory(inventory);
+                log.info("updateInventoryAndSales: Created new inventory for product {}", product.getId());
+            }
+        }
+
+        // Save và flush để đảm bảo thay đổi được commit ngay
+        productRepository.save(product);
+        productRepository.flush();
+        log.info("updateInventoryAndSales: Successfully updated product {}", product.getId());
+    }
+
+    /**
+     * Cập nhật tồn kho và số lượng đã bán của color variant cụ thể trong manufacturingLocation
+     * Mỗi mã màu có số lượng đã bán riêng
+     */
+    private void updateColorVariantStockAndSales(Product product, String colorCode, int quantity) {
+        try {
+            String manufacturingLocation = product.getManufacturingLocation();
+            if (manufacturingLocation == null || manufacturingLocation.trim().isEmpty()) {
+                log.warn("updateColorVariantStockAndSales: Product {} has no manufacturingLocation", product.getId());
+                return;
+            }
+
+            log.info("updateColorVariantStockAndSales: Parsing manufacturingLocation for product {}: {}", product.getId(), manufacturingLocation);
+
+            // Parse JSON string - có thể là object với {type, variants} hoặc array trực tiếp
+            List<Map<String, Object>> variants = null;
+            try {
+                JsonNode rootNode = objectMapper.readTree(manufacturingLocation);
+                
+                // Kiểm tra xem có phải là object với field "variants" không
+                if (rootNode.isObject() && rootNode.has("variants")) {
+                    JsonNode variantsNode = rootNode.get("variants");
+                    if (variantsNode.isArray()) {
+                        variants = objectMapper.convertValue(variantsNode, new TypeReference<List<Map<String, Object>>>() {});
+                        log.info("updateColorVariantStockAndSales: Parsed as object with variants field, found {} variants", variants != null ? variants.size() : 0);
+                    }
+                } else if (rootNode.isArray()) {
+                    // Nếu là array trực tiếp
+                    variants = objectMapper.convertValue(rootNode, new TypeReference<List<Map<String, Object>>>() {});
+                    log.info("updateColorVariantStockAndSales: Parsed as array directly, found {} variants", variants != null ? variants.size() : 0);
+                } else {
+                    log.warn("updateColorVariantStockAndSales: manufacturingLocation is neither object with variants nor array: {}", rootNode.getNodeType());
+                }
+            } catch (Exception e) {
+                log.error("updateColorVariantStockAndSales: Failed to parse manufacturingLocation: {}", e.getMessage(), e);
+                return;
+            }
+
+            if (variants == null || variants.isEmpty()) {
+                log.warn("updateColorVariantStockAndSales: No variants found in manufacturingLocation for product {}", product.getId());
+                return;
+            }
+
+            // Tìm variant có code trùng với colorCode (case-insensitive)
+            boolean updated = false;
+            for (Map<String, Object> variant : variants) {
+                Object codeObj = variant.get("code");
+                if (codeObj != null) {
+                    String variantCode = codeObj.toString().trim();
+                    if (variantCode.equalsIgnoreCase(colorCode.trim())) {
+                        // Giảm tồn kho của variant này
+                        Object stockObj = variant.get("stockQuantity");
+                        int currentStock = 0;
+                        if (stockObj != null) {
+                            if (stockObj instanceof Number) {
+                                currentStock = ((Number) stockObj).intValue();
+                            } else {
+                                try {
+                                    currentStock = Integer.parseInt(stockObj.toString());
+                                } catch (NumberFormatException e) {
+                                    log.warn("Cannot parse stockQuantity for variant: {}", stockObj);
+                                }
+                            }
+                        }
+                        int updatedStock = Math.max(0, currentStock - quantity);
+                        variant.put("stockQuantity", updatedStock);
+                        log.info("updateColorVariantStockAndSales: Updated stock for variant {}: {} -> {}", colorCode, currentStock, updatedStock);
+
+                        // Tăng số lượng đã bán của variant này
+                        Object soldObj = variant.get("quantitySold");
+                        int currentSold = 0;
+                        if (soldObj != null) {
+                            if (soldObj instanceof Number) {
+                                currentSold = ((Number) soldObj).intValue();
+                            } else {
+                                try {
+                                    currentSold = Integer.parseInt(soldObj.toString());
+                                } catch (NumberFormatException e) {
+                                    log.warn("Cannot parse quantitySold for variant: {}", soldObj);
+                                }
+                            }
+                        }
+                        int updatedSold = currentSold + quantity;
+                        variant.put("quantitySold", updatedSold);
+                        log.info("updateColorVariantStockAndSales: Updated quantitySold for variant {}: {} -> {}", colorCode, currentSold, updatedSold);
+
+                        updated = true;
+                        break;
+                    }
+                }
+            }
+
+            // Nếu đã cập nhật, serialize lại và lưu vào product
+            // Giữ nguyên cấu trúc ban đầu (object với type và variants hoặc array)
+            if (updated) {
+                // Kiểm tra cấu trúc ban đầu để serialize đúng format
+                JsonNode originalRoot = objectMapper.readTree(manufacturingLocation);
+                String updatedManufacturingLocation;
+                
+                if (originalRoot.isObject() && originalRoot.has("variants")) {
+                    // Giữ nguyên cấu trúc object với type và variants
+                    ObjectNode updatedRoot = objectMapper.createObjectNode();
+                    updatedRoot.put("type", originalRoot.has("type") ? originalRoot.get("type").asText() : "COLOR_VARIANT_VERSION");
+                    updatedRoot.set("variants", objectMapper.valueToTree(variants));
+                    updatedManufacturingLocation = objectMapper.writeValueAsString(updatedRoot);
+                } else {
+                    // Nếu ban đầu là array, serialize lại thành array
+                    updatedManufacturingLocation = objectMapper.writeValueAsString(variants);
+                }
+                
+                product.setManufacturingLocation(updatedManufacturingLocation);
+                log.info("updateColorVariantStockAndSales: Updated manufacturingLocation for product {} with variant {}", product.getId(), colorCode);
+                log.debug("updateColorVariantStockAndSales: Updated manufacturingLocation content: {}", updatedManufacturingLocation);
+            } else {
+                log.warn("updateColorVariantStockAndSales: Variant with colorCode {} not found in product {}", colorCode, product.getId());
+            }
+        } catch (Exception e) {
+            log.error("updateColorVariantStockAndSales: Could not update color variant for product {} with colorCode {}: {}", 
+                product.getId(), colorCode, e.getMessage(), e);
         }
     }
 }

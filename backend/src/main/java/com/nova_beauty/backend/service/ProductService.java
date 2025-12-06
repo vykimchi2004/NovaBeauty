@@ -13,6 +13,10 @@ import java.util.Map;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 
@@ -903,11 +907,20 @@ public class ProductService {
 
         try {
             ObjectMapper mapper = new ObjectMapper();
-            // Parse JSON string thành List<Map>
-            List<Map<String, Object>> variants = mapper.readValue(
-                manufacturingLocation,
-                new TypeReference<List<Map<String, Object>>>() {}
-            );
+            // Parse JSON string - có thể là object với {type, variants} hoặc array trực tiếp
+            List<Map<String, Object>> variants = null;
+            JsonNode rootNode = mapper.readTree(manufacturingLocation);
+            
+            // Kiểm tra xem có phải là object với field "variants" không
+            if (rootNode.isObject() && rootNode.has("variants")) {
+                JsonNode variantsNode = rootNode.get("variants");
+                if (variantsNode.isArray()) {
+                    variants = mapper.convertValue(variantsNode, new TypeReference<List<Map<String, Object>>>() {});
+                }
+            } else if (rootNode.isArray()) {
+                // Nếu là array trực tiếp
+                variants = mapper.convertValue(rootNode, new TypeReference<List<Map<String, Object>>>() {});
+            }
 
             if (variants == null || variants.isEmpty()) {
                 return; // Không có variants, không cần validate
