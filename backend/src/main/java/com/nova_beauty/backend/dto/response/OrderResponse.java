@@ -2,6 +2,7 @@ package com.nova_beauty.backend.dto.response;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -46,5 +47,10 @@ public class OrderResponse {
     String paymentStatus;
     Boolean paid;
     String paymentReference;
+    
+    /**
+     * Danh sách sản phẩm trong đơn hàng
+     */
+    List<OrderItemResponse> items;
 }
 

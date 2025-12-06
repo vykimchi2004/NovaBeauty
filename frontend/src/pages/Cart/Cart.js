@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash, faMinus, faPlus, faTimes } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
@@ -13,6 +13,7 @@ const cx = classNames.bind(styles);
 
 function Cart() {
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     cartItems,
     setCartItems,
@@ -25,12 +26,27 @@ function Cart() {
     loadCart,
     applyVoucher,
     clearVoucher,
-  } = useCart({ autoLoad: true, listenToEvents: true });
+  } = useCart({ autoLoad: true, listenToEvents: true }); // Giữ autoLoad để tự động load khi mount
 
   const [discountCode, setDiscountCode] = useState('');
   const [suggestedVouchers, setSuggestedVouchers] = useState([]);
   const [quantityErrors, setQuantityErrors] = useState({});
   const [quantityInputValues, setQuantityInputValues] = useState({}); // Lưu giá trị input tạm thời
+
+  // Force reload cart mỗi khi vào trang Cart (giống LuminaBook)
+  // Reload khi location.pathname thay đổi (khi navigate đến trang này)
+  useEffect(() => {
+    // Chỉ reload khi đang ở trang /cart
+    if (location.pathname === '/cart') {
+      console.log('[Cart] Reloading cart on navigate to cart page...');
+      // Sử dụng setTimeout nhỏ để đảm bảo component đã mount xong
+      const timer = setTimeout(() => {
+        loadCart();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]); // Chỉ depend vào location.pathname để reload khi navigate đến trang này
 
   // Tự động xóa voucher khi user rời khỏi trang giỏ hàng (component unmount)
   useEffect(() => {

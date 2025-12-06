@@ -233,6 +233,33 @@ public class OrderController {
             }
         }
 
+        // Map items
+        List<OrderItemResponse> items = order.getItems() == null
+                ? List.of()
+                : order.getItems().stream()
+                        .map(oi -> {
+                            String imageUrl = null;
+                            if (oi.getProduct() != null) {
+                                // Lấy ảnh từ defaultMedia hoặc mediaList đầu tiên
+                                if (oi.getProduct().getDefaultMedia() != null) {
+                                    imageUrl = oi.getProduct().getDefaultMedia().getMediaUrl();
+                                } else if (oi.getProduct().getMediaList() != null 
+                                        && !oi.getProduct().getMediaList().isEmpty()) {
+                                    imageUrl = oi.getProduct().getMediaList().get(0).getMediaUrl();
+                                }
+                            }
+                            return OrderItemResponse.builder()
+                                    .id(oi.getId())
+                                    .productId(oi.getProduct() != null ? oi.getProduct().getId() : null)
+                                    .name(oi.getProduct() != null ? oi.getProduct().getName() : null)
+                                    .imageUrl(imageUrl)
+                                    .quantity(oi.getQuantity())
+                                    .unitPrice(oi.getUnitPrice())
+                                    .totalPrice(oi.getFinalPrice())
+                                    .build();
+                        })
+                        .collect(Collectors.toList());
+
         return OrderResponse.builder()
                 .id(order.getId())
                 .code(order.getCode() != null ? order.getCode() : order.getId())
@@ -250,6 +277,7 @@ public class OrderController {
                 .paymentStatus(order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null)
                 .paid(order.getPaid())
                 .paymentReference(order.getPaymentReference())
+                .items(items)
                 .build();
     }
 

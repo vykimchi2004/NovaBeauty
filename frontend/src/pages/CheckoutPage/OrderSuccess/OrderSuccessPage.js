@@ -76,6 +76,7 @@ function OrderSuccessPage() {
     }).format(Math.round(Number(price) || 0)) + ' ₫';
 
   const handleContinueShopping = () => {
+    // Navigate về trang sản phẩm
     navigate('/products');
   };
 
@@ -87,6 +88,14 @@ function OrderSuccessPage() {
       } 
     });
   };
+
+  // Dispatch event để cập nhật cart count trong header sau khi đặt hàng thành công
+  // Cart page sẽ tự động reload khi user quay lại (giống LuminaBook)
+  useEffect(() => {
+    // Chỉ dispatch event để update cart count trong header, không reload toàn bộ cart
+    // Cart page sẽ tự động reload khi user navigate đến
+    window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { source: 'order-success', count: 0 } }));
+  }, []);
 
   return (
     <div className={cx('orderSuccessContainer')}>

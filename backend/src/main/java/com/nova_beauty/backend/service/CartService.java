@@ -476,11 +476,20 @@ public class CartService {
         if (cart == null) {
             return;
         }
+        
+        // Xóa items khỏi collection trước để tránh lỗi khi recalcCartTotals
+        if (cart.getCartItems() != null && !cart.getCartItems().isEmpty()) {
+            cart.getCartItems().removeIf(item -> cartItemIds.contains(item.getId()));
+        }
+        
+        // Sau đó mới xóa items khỏi DB
         cartItemIds.forEach(id -> cartItemRepository.findById(id).ifPresent(item -> {
             if (item.getCart() != null && item.getCart().getId().equals(cart.getId())) {
                 cartItemRepository.delete(item);
             }
         }));
+        
+        // Tính lại tổng tiền sau khi đã loại bỏ items
         recalcCartTotals(cart);
     }
 }

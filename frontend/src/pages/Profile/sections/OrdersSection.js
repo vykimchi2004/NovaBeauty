@@ -45,6 +45,7 @@ function OrdersSection({ getStatusClass, defaultTab }) {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [loadingDetails, setLoadingDetails] = useState({});
   const itemsPerPage = 3;
 
   useEffect(() => {
@@ -119,7 +120,7 @@ function OrdersSection({ getStatusClass, defaultTab }) {
               const mappedItems =
                 order.items?.map((item, idx) => ({
                   name: item.name || item.product?.name || 'Sản phẩm',
-                  quantity: item.quantity || 1,
+                  quantity: item.quantity ?? 0,
                   thumbnail:
                     item.imageUrl ||
                     item.product?.defaultMedia?.mediaUrl ||
@@ -151,6 +152,28 @@ function OrdersSection({ getStatusClass, defaultTab }) {
             .filter(Boolean)
         : [];
       setOrders(mappedOrders);
+      
+      // Fetch chi tiết đơn hàng cho những đơn hàng không có items
+      // để lấy số lượng sản phẩm
+      const ordersWithoutItems = mappedOrders.filter(order => 
+        !order.items || order.items.length === 0
+      );
+      
+      if (ordersWithoutItems.length > 0) {
+        // Fetch chi tiết cho các đơn hàng không có items
+        Promise.all(
+          ordersWithoutItems.map(async (order) => {
+            try {
+              const detail = await orderService.getOrderById(order.orderId || order.id);
+              if (detail && detail.items) {
+                setOrderDetails((prev) => ({ ...prev, [order.orderId || order.id]: detail }));
+              }
+            } catch (err) {
+              console.error(`Error fetching detail for order ${order.id}:`, err);
+            }
+          })
+        );
+      }
     } catch (error) {
       console.error('Error fetching orders:', error);
       setOrders([]);
@@ -373,6 +396,15 @@ function OrdersSection({ getStatusClass, defaultTab }) {
         ) : (
           paginatedOrders.map((order) => {
             const [firstItem] = order.items || [];
+            // Tính tổng số lượng tất cả sản phẩm trong đơn
+            // Nếu items rỗng, thử lấy từ orderDetails đã cache
+            let itemsToCalculate = order.items || [];
+            if (itemsToCalculate.length === 0 && orderDetails[order.orderId || order.id]?.items) {
+              itemsToCalculate = orderDetails[order.orderId || order.id].items;
+            }
+            const totalQuantity = itemsToCalculate.reduce((sum, item) => {
+              return sum + (item.quantity ?? 0);
+            }, 0);
             return (
               <div key={order.id} className={cx('orderCard')}>
                 <div className={cx('orderHeaderRow')}>
@@ -398,7 +430,7 @@ function OrdersSection({ getStatusClass, defaultTab }) {
                   <div className={cx('orderInfo')}>
                     <p className={cx('orderItemName')}>{firstItem?.name}</p>
                     <span className={cx('orderItemQuantity')}>
-                      Số lượng: {firstItem?.quantity ?? 0}
+                      Số lượng: {totalQuantity}
                     </span>
                   </div>
                   <div className={cx('orderTotal')}>

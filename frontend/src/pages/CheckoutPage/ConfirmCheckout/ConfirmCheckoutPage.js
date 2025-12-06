@@ -59,8 +59,8 @@ function ConfirmCheckoutPage() {
 
       const result = await orderService.createOrder(request);
       
-      // Dispatch event để cập nhật giỏ hàng (backend đã xóa các items đã đặt hàng)
-      window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { source: 'order-placement' } }));
+      // Backend đã xóa các items đã đặt hàng
+      // Cart page sẽ tự động reload khi user quay lại (giống LuminaBook)
       
       // Nếu là COD, chuyển sang trang thank you
       if (paymentMethod === 'cod') {
