@@ -13,6 +13,7 @@ import orderService from '~/services/order';
 import { STATUS_CLASS_MAP } from '../constants';
 import defaultProductImage from '~/assets/images/products/image1.jpg';
 import { formatCurrency } from '~/services/utils';
+import CancelOrderDialog from '~/components/Common/ConfirmDialog/CancelOrderDialog';
 
 const cx = classNames.bind(styles);
 
@@ -37,6 +38,8 @@ function OrdersSection({ getStatusClass, defaultTab }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [orderDetails, setOrderDetails] = useState({});
   const [detailLoading, setDetailLoading] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -174,6 +177,40 @@ function OrdersSection({ getStatusClass, defaultTab }) {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedOrderId(null);
+    setShowCancelDialog(false);
+  };
+
+  const handleCancelOrder = () => {
+    if (!selectedOrderId) return;
+    setShowCancelDialog(true);
+  };
+
+  const handleConfirmCancel = async (reason) => {
+    if (!selectedOrderId) return;
+    try {
+      setCancelling(true);
+      const { ok } = await orderService.cancelOrder(selectedOrderId, reason);
+      if (!ok) {
+        alert('Không thể hủy đơn hàng. Vui lòng thử lại sau.');
+        setCancelling(false);
+        return;
+      }
+      // Cập nhật order details và refresh danh sách
+      const updatedDetail = await orderService.getOrderById(selectedOrderId);
+      setOrderDetails((prev) => ({ ...prev, [selectedOrderId]: updatedDetail || null }));
+      // Refresh orders list
+      await fetchOrders();
+      // Đóng dialog và modal
+      setShowCancelDialog(false);
+      handleCloseModal();
+      // Chuyển sang tab "Đã hủy"
+      setActiveTab('cancelled');
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      alert('Không thể hủy đơn hàng. Vui lòng thử lại sau.');
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const filteredOrders = useMemo(() => {
@@ -456,6 +493,26 @@ function OrdersSection({ getStatusClass, defaultTab }) {
             </div>
 
             <div className={cx('orderModalFooter')}>
+              {orderDetails[selectedOrderId] && (() => {
+                const currentOrder = orderDetails[selectedOrderId];
+                const rawStatusUpper = String(currentOrder?.status || '').trim().toUpperCase();
+                const canCancel = currentOrder && (
+                  rawStatusUpper === 'CREATED' ||
+                  rawStatusUpper === 'PENDING' ||
+                  rawStatusUpper === 'CONFIRMED'
+                );
+                return canCancel ? (
+                  <button
+                    type="button"
+                    className={cx('btn', 'btnDanger')}
+                    onClick={handleCancelOrder}
+                    disabled={cancelling}
+                    style={{ marginRight: '10px' }}
+                  >
+                    {cancelling ? 'Đang hủy...' : 'Hủy đơn hàng'}
+                  </button>
+                ) : null;
+              })()}
               <button
                 type="button"
                 className={cx('btn', 'btnPrimary')}
@@ -464,6 +521,12 @@ function OrdersSection({ getStatusClass, defaultTab }) {
                 Đóng
               </button>
             </div>
+            <CancelOrderDialog
+              open={showCancelDialog}
+              loading={cancelling}
+              onConfirm={handleConfirmCancel}
+              onCancel={() => !cancelling && setShowCancelDialog(false)}
+            />
           </div>
         </div>
       )}

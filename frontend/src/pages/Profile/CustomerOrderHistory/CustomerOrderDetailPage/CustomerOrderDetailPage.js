@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from './CustomerOrderDetailPage.scss';
+import CancelOrderDialog from '~/components/Common/ConfirmDialog/CancelOrderDialog';
 import { formatCurrency, getApiBaseUrl, getStoredToken } from '~/services/utils';
 import orderService from '~/services/order';
 
@@ -441,15 +442,53 @@ function OrderDetailPage() {
         }
     };
 
-    const canCancel =
-        order &&
-        ['PENDING', 'CONFIRMED'].includes(
-            String(order.status || order.rawStatus).toUpperCase(),
-        );
+    // Kiểm tra xem có thể hủy đơn không
+    // Có thể hủy khi status là PENDING, CONFIRMED, hoặc CREATED
+    // Kiểm tra cả rawStatus (từ backend) và status (sau khi map)
+    const rawStatusUpper = String(order?.rawStatus || '').trim().toUpperCase();
+    const statusUpper = String(order?.status || '').trim().toUpperCase();
+    const canCancel = order && (
+        rawStatusUpper === 'CREATED' ||
+        rawStatusUpper === 'PENDING' ||
+        rawStatusUpper === 'CONFIRMED' ||
+        statusUpper === 'PENDING' ||
+        statusUpper === 'CONFIRMED'
+    );
 
-    // Hủy đơn: tạm thời vô hiệu hóa do chưa có API cancelOrder ở NovaBeauty
     const handleCancelOrder = () => {
-        alert('Tính năng hủy đơn tạm thời chưa khả dụng.');
+        if (!order?.id) return;
+        setShowCancelDialog(true);
+    };
+
+    const handleConfirmCancel = async (reason) => {
+        if (!order?.id) return;
+        try {
+            setCancelling(true);
+            const token = getStoredToken('token');
+            const { ok } = await orderService.cancelOrder(order.id, reason);
+            if (!ok) {
+                alert('Không thể hủy đơn hàng. Vui lòng thử lại sau.');
+                setCancelling(false);
+                return;
+            }
+            // Cập nhật trạng thái local và điều hướng về tab "Đã hủy"
+            setOrder((prev) =>
+                prev
+                    ? {
+                          ...prev,
+                          status: 'CANCELLED',
+                          rawStatus: 'CANCELLED',
+                      }
+                    : prev,
+            );
+            navigate('/customer-account/orders?tab=cancelled');
+        } catch (err) {
+            console.error('CustomerOrderDetail: lỗi khi hủy đơn', err);
+            alert('Có lỗi xảy ra khi hủy đơn. Vui lòng thử lại.');
+        } finally {
+            setCancelling(false);
+            setShowCancelDialog(false);
+        }
     };
 
     const normalizedStatus = String(order?.status || order?.rawStatus || '')
@@ -484,7 +523,8 @@ function OrderDetailPage() {
             ? 'CSKH'
             : 'Hệ thống';
     const cancellationReason = order?.cancellationReason || '';
-    const cancellationSourceLabel = order?.cancellationSource || '';
+    const cancellationSourceRaw = order?.cancellationSource || '';
+    const cancellationSourceLabel = getCancellationSourceLabel(cancellationSourceRaw);
 
     if (!order) {
         return (
@@ -821,6 +861,12 @@ function OrderDetailPage() {
                         </>
                     )}
                 </div>
+                <CancelOrderDialog
+                    open={showCancelDialog}
+                    loading={cancelling}
+                    onConfirm={handleConfirmCancel}
+                    onCancel={() => !cancelling && setShowCancelDialog(false)}
+                />
             </div>
         </div>
     );
