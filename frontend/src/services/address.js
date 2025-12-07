@@ -76,6 +76,7 @@ export async function getWards(districtId) {
 
 // Tính phí vận chuyển GHN dựa trên địa chỉ & trọng lượng ước tính
 export async function calculateShippingFee(payload) {
+  console.log('[calculateShippingFee] Request payload:', payload);
   const data = await fetchJson(`${API_BASE_URL}/shipments/ghn/fees`, {
     method: 'POST',
     headers: {
@@ -83,8 +84,11 @@ export async function calculateShippingFee(payload) {
     },
     body: JSON.stringify(payload),
   });
+  console.log('[calculateShippingFee] Raw response:', data);
   // Backend bọc kết quả trong ApiResponse { result: ... } hoặc { data: ... }
-  return data.result || data.data || {};
+  const result = data.result || data.data || data;
+  console.log('[calculateShippingFee] Extracted result:', result);
+  return result;
 }
 
 // Format địa chỉ đầy đủ từ các field

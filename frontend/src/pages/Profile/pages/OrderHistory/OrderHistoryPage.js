@@ -73,16 +73,18 @@ const mapOrderStatus = (statusRaw) => {
             return { mappedStatus: 'DELIVERED', ...STATUS_MAP.DELIVERED };
         case 'CANCELLED':
             return { mappedStatus: 'CANCELLED', ...STATUS_MAP.CANCELLED };
+        // Các trạng thái hoàn tiền vẫn giữ statusKey là 'delivered' để hiển thị trong tab "Đã giao"
+        // nhưng mappedStatus vẫn giữ nguyên để hiển thị đúng trạng thái
         case 'RETURN_REQUESTED':
-            return { mappedStatus: 'RETURN_REQUESTED', ...STATUS_MAP.RETURN_REQUESTED };
+            return { mappedStatus: 'RETURN_REQUESTED', ...STATUS_MAP.DELIVERED }; // Giữ key 'delivered' để hiển thị trong tab "Đã giao"
         case 'RETURN_CS_CONFIRMED':
-            return { mappedStatus: 'RETURN_CS_CONFIRMED', ...STATUS_MAP.RETURN_CS_CONFIRMED };
+            return { mappedStatus: 'RETURN_CS_CONFIRMED', ...STATUS_MAP.DELIVERED }; // Giữ key 'delivered'
         case 'RETURN_STAFF_CONFIRMED':
-            return { mappedStatus: 'RETURN_STAFF_CONFIRMED', ...STATUS_MAP.RETURN_STAFF_CONFIRMED };
+            return { mappedStatus: 'RETURN_STAFF_CONFIRMED', ...STATUS_MAP.DELIVERED }; // Giữ key 'delivered'
         case 'REFUNDED':
-            return { mappedStatus: 'REFUNDED', ...STATUS_MAP.REFUNDED };
+            return { mappedStatus: 'REFUNDED', ...STATUS_MAP.DELIVERED }; // Giữ key 'delivered'
         case 'RETURN_REJECTED':
-            return { mappedStatus: 'RETURN_REJECTED', ...STATUS_MAP.RETURN_REJECTED };
+            return { mappedStatus: 'RETURN_REJECTED', ...STATUS_MAP.DELIVERED }; // Giữ key 'delivered'
         default:
             return { mappedStatus: 'PENDING', ...STATUS_MAP.PENDING };
     }
@@ -332,16 +334,32 @@ function OrderHistoryPage() {
             });
         } else {
             list = orders.filter((order) => {
-                const matches = order.statusKey === activeTab;
-                if (!matches) {
-                    console.log('CustomerOrderHistory: Order không match tab:', {
-                        code: order.code,
-                        statusKey: order.statusKey,
-                        activeTab: activeTab,
-                        rawStatus: order.rawStatus
-                    });
+                // Kiểm tra statusKey trước (cách chính)
+                if (order.statusKey === activeTab) {
+                    return true;
                 }
-                return matches;
+                
+                // Fallback: nếu statusKey không khớp, kiểm tra rawStatus trực tiếp
+                // Điều này giúp xử lý trường hợp statusKey không được set đúng
+                const rawStatus = String(order.rawStatus || order.status || '').trim().toUpperCase();
+                const statusKeyFromRaw = mapOrderStatus(rawStatus).key;
+                
+                if (statusKeyFromRaw === activeTab) {
+                    // Nếu rawStatus khớp nhưng statusKey không khớp, có thể có lỗi trong mapping
+                    // Log để debug và vẫn hiển thị đơn hàng
+                    if (order.statusKey !== activeTab && activeTab === 'delivered') {
+                        console.warn('CustomerOrderHistory: DELIVERED/REFUND order has mismatched statusKey:', {
+                            code: order.code,
+                            rawStatus: rawStatus,
+                            expectedStatusKey: 'delivered',
+                            actualStatusKey: order.statusKey,
+                            recalculatedStatusKey: statusKeyFromRaw
+                        });
+                    }
+                    return true;
+                }
+                
+                return false;
             });
         }
         
@@ -391,15 +409,27 @@ function OrderHistoryPage() {
         return list;
     }, [orders, activeTab, searchQuery, selectedDate, sortBy]);
 
-    const handleViewDetail = (orderId, orderCode) => {
+    const handleViewDetail = (orderId, orderCode, orderStatus) => {
         // Use orderId if available, otherwise fallback to orderCode
         const targetId = orderId || orderCode;
         if (!targetId) {
             console.error('CustomerOrderHistory: Cannot navigate - missing order ID and code');
             return;
         }
-        console.log('CustomerOrderHistory: Navigating to order detail with id/code:', targetId);
-        navigate(`/customer-account/orders/${targetId}`);
+        
+        // Nếu đơn hàng có trạng thái refund, điều hướng đến trang refund-detail
+        const status = String(orderStatus || '').trim().toUpperCase();
+        if (status === 'RETURN_REQUESTED' || 
+            status === 'RETURN_CS_CONFIRMED' || 
+            status === 'RETURN_STAFF_CONFIRMED' || 
+            status === 'REFUNDED' || 
+            status === 'RETURN_REJECTED') {
+            console.log('CustomerOrderHistory: Navigating to refund detail with id/code:', targetId);
+            navigate(`/customer-account/orders/${targetId}/refund-detail`);
+        } else {
+            console.log('CustomerOrderHistory: Navigating to order detail with id/code:', targetId);
+            navigate(`/customer-account/orders/${targetId}`);
+        }
     };
 
     const formatOrderDate = (dateString) => {
@@ -587,7 +617,7 @@ function OrderHistoryPage() {
                                             <div className={cx('order-actions')}>
                                                 <button
                                                     className={cx('view-detail-btn')}
-                                                    onClick={() => handleViewDetail(order.id, order.code)}
+                                                    onClick={() => handleViewDetail(order.id, order.code, order.rawStatus || order.status)}
                                                 >
                                                     Xem chi tiết
                                                 </button>

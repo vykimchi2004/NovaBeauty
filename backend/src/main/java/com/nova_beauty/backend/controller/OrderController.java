@@ -117,7 +117,7 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('CUSTOMER','STAFF','ADMIN')")
+    @PreAuthorize("hasAnyRole('CUSTOMER','CUSTOMER_SUPPORT','STAFF','ADMIN')")
     public ApiResponse<OrderDetailResponse> getOrderById(@PathVariable String id) {
         Order order = orderService.getOrderByIdForCurrentUser(id);
         return ApiResponse.<OrderDetailResponse>builder()
@@ -341,6 +341,31 @@ public class OrderController {
                 .paid(order.getPaid())
                 .paymentReference(order.getPaymentReference())
                 .items(items)
+                // Refund/Return request information
+                .refundReasonType(order.getRefundReasonType())
+                .refundDescription(order.getRefundDescription())
+                .refundEmail(order.getRefundEmail())
+                .refundReturnAddress(order.getRefundReturnAddress())
+                .refundMethod(order.getRefundMethod())
+                .refundBank(order.getRefundBank())
+                .refundAccountNumber(order.getRefundAccountNumber())
+                .refundAccountHolder(order.getRefundAccountHolder())
+                .refundAmount(order.getRefundAmount())
+                .refundReturnFee(order.getRefundReturnFee())
+                .refundSecondShippingFee(order.getRefundSecondShippingFee())
+                .refundPenaltyAmount(order.getRefundPenaltyAmount())
+                .refundTotalPaid(order.getRefundTotalPaid())
+                .refundConfirmedAmount(order.getRefundConfirmedAmount())
+                .refundConfirmedPenalty(order.getRefundConfirmedPenalty())
+                .refundConfirmedSecondShippingFee(order.getRefundConfirmedSecondShippingFee())
+                .returnCheckedDate(order.getReturnCheckedDate())
+                .refundSelectedProductIds(order.getRefundSelectedProductIds())
+                .refundMediaUrls(order.getRefundMediaUrls())
+                .refundRejectionReason(order.getRefundRejectionReason())
+                .refundRejectionSource(order.getRefundRejectionSource())
+                .staffInspectionResult(order.getStaffInspectionResult())
+                .adminProcessingNote(order.getAdminProcessingNote())
+                .note(order.getNote())
                 .build();
     }
 

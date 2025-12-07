@@ -11,6 +11,9 @@ import {
 import {
   GHN_DEFAULT_FROM_WARD_CODE,
   GHN_DEFAULT_FROM_DISTRICT_ID,
+  GHN_SERVICE_TYPE_LIGHT,
+  GHN_SERVICE_TYPE_HEAVY,
+  GHN_HEAVY_SERVICE_WEIGHT_THRESHOLD,
 } from '~/services/config';
 import notify from '~/utils/notification';
 
@@ -136,13 +139,20 @@ export const useAddress = ({
   // Chọn địa chỉ đã lưu
   const selectSavedAddress = useCallback(
     async (addr) => {
-      setSelectedAddressId(addr.addressId);
+      console.log('[useAddress] Selecting saved address:', {
+        addressId: addr.addressId || addr.id,
+        districtID: addr.districtID,
+        wardCode: addr.wardCode,
+        districtIDType: typeof addr.districtID,
+      });
+      
+      setSelectedAddressId(addr.addressId || addr.id);
       setFullName(addr.recipientName || '');
       setPhone(addr.recipientPhoneNumber || '');
       setDetailAddress(addr.address || '');
-      setSelectedProvinceId(String(addr.provinceID) || '');
-      setSelectedDistrictId(String(addr.districtID) || '');
-      setSelectedWardCode(String(addr.wardCode) || '');
+      setSelectedProvinceId(String(addr.provinceID || addr.provinceId || '') || '');
+      setSelectedDistrictId(String(addr.districtID || addr.districtId || '') || '');
+      setSelectedWardCode(String(addr.wardCode || '') || '');
 
       const fullAddr = [addr.address, addr.wardName, addr.districtName, addr.provinceName]
         .filter(Boolean)
@@ -153,30 +163,57 @@ export const useAddress = ({
       if (ghnAvailable && addr.districtID && addr.wardCode) {
         setShippingFeeLoading(true);
         try {
+          console.log('[useAddress] Address data:', {
+            districtID: addr.districtID,
+            wardCode: addr.wardCode,
+            districtIDType: typeof addr.districtID,
+          });
+          
+          // Validate và parse districtID
+          const toDistrictId = parseInt(String(addr.districtID).trim(), 10);
+          if (isNaN(toDistrictId) || toDistrictId <= 0) {
+            console.warn('[useAddress] Invalid districtID:', addr.districtID, 'parsed as:', toDistrictId);
+            setShippingFee(0);
+            setShippingFeeLoading(false);
+            return;
+          }
+
+          const weightGrams = totalWeight > 0 ? totalWeight : 500;
+          // Xác định loại dịch vụ dựa trên trọng lượng
+          const serviceTypeId =
+            weightGrams >= GHN_HEAVY_SERVICE_WEIGHT_THRESHOLD
+              ? GHN_SERVICE_TYPE_HEAVY
+              : GHN_SERVICE_TYPE_LIGHT;
+          
           const feePayload = {
-            serviceId: null,
-            insuranceValue: Math.round(totalAfterDiscount || subtotal || 0),
+            service_type_id: serviceTypeId,
+            insurance_value: Math.round(totalAfterDiscount || subtotal || 0),
             coupon: null,
-            fromDistrictId: null,
-            fromWardCode: null,
-            toDistrictId: Number(addr.districtID),
-            toWardCode: Number(addr.wardCode) || addr.wardCode,
-            weight: totalWeight > 0 ? totalWeight : 500,
+            from_district_id: GHN_DEFAULT_FROM_DISTRICT_ID,
+            from_ward_code: GHN_DEFAULT_FROM_WARD_CODE,
+            to_district_id: toDistrictId,
+            to_ward_code: String(addr.wardCode) || addr.wardCode,
+            weight: weightGrams,
             length: 20,
             width: 15,
             height: 10,
           };
+          console.log('[useAddress] Fee payload:', JSON.stringify(feePayload, null, 2));
           const feeData = await calculateShippingFee(feePayload);
-          const raw =
-            feeData?.total_fee ??
-            feeData?.total ??
-            feeData?.service_fee ??
-            feeData?.main_service ??
-            25000;
-          setShippingFee(Number(raw) || 0);
+          console.log('[useAddress] Shipping fee response:', feeData);
+          // Backend trả về GhnFeeResponse với field 'total'
+          const totalFee = feeData?.total;
+          if (totalFee !== undefined && totalFee !== null) {
+            const fee = Number(totalFee) || 0;
+            console.log('[useAddress] Calculated shipping fee:', fee);
+            setShippingFee(fee);
+          } else {
+            console.warn('[useAddress] Shipping fee response missing total field:', feeData);
+            setShippingFee(0);
+          }
         } catch (error) {
           console.error('[useAddress] Error calculating shipping fee:', error);
-          setShippingFee(25000);
+          setShippingFee(0);
         } finally {
           setShippingFeeLoading(false);
         }
@@ -184,7 +221,7 @@ export const useAddress = ({
         setShippingFee(0);
       }
     },
-    [ghnAvailable, totalWeight, subtotal, totalAfterDiscount],
+    [ghnAvailable, totalWeight, subtotal, totalAfterDiscount, GHN_DEFAULT_FROM_DISTRICT_ID, GHN_DEFAULT_FROM_WARD_CODE, GHN_SERVICE_TYPE_LIGHT, GHN_SERVICE_TYPE_HEAVY, GHN_HEAVY_SERVICE_WEIGHT_THRESHOLD],
   );
 
   // Lưu địa chỉ mới
@@ -243,12 +280,22 @@ export const useAddress = ({
       }
 
       try {
+        // Đảm bảo districtID là số hợp lệ trước khi lưu
+        const districtIdToSave = ghnAvailable && selectedDistrictId 
+          ? String(selectedDistrictId).trim() 
+          : '';
+        const parsedDistrictId = parseInt(districtIdToSave, 10);
+        if (ghnAvailable && (isNaN(parsedDistrictId) || parsedDistrictId <= 0)) {
+          setAddressError('Địa chỉ quận/huyện không hợp lệ. Vui lòng chọn lại.');
+          return false;
+        }
+
         const addressData = {
           recipientName: fullName.trim(),
           recipientPhoneNumber: normalizedPhone,
           provinceID: ghnAvailable ? selectedProvinceId : '', // Khi GHN không available, để rỗng
           provinceName: finalProvinceName,
-          districtID: ghnAvailable ? selectedDistrictId : '', // Khi GHN không available, để rỗng
+          districtID: districtIdToSave, // Đảm bảo là string hợp lệ
           districtName: finalDistrictName,
           wardCode: ghnAvailable ? selectedWardCode : '', // Khi GHN không available, để rỗng
           wardName: finalWardName,
@@ -399,39 +446,66 @@ export const useAddress = ({
     if (ghnAvailable && selectedDistrictId && selectedWardCode && detailAddress.trim()) {
       setShippingFeeLoading(true);
       
+      console.log('[useAddress] Calculating fee for:', {
+        selectedDistrictId,
+        selectedWardCode,
+        districtIDType: typeof selectedDistrictId,
+      });
+      
+      // Validate và parse districtID
+      const toDistrictId = parseInt(String(selectedDistrictId).trim(), 10);
+      if (isNaN(toDistrictId) || toDistrictId <= 0) {
+        console.warn('[useAddress] Invalid districtID:', selectedDistrictId, 'parsed as:', toDistrictId);
+        setShippingFee(0);
+        setShippingFeeLoading(false);
+        return;
+      }
+      
+      const weightGrams = totalWeight > 0 ? totalWeight : 500;
+      // Xác định loại dịch vụ dựa trên trọng lượng
+      const serviceTypeId =
+        weightGrams >= GHN_HEAVY_SERVICE_WEIGHT_THRESHOLD
+          ? GHN_SERVICE_TYPE_HEAVY
+          : GHN_SERVICE_TYPE_LIGHT;
+      
       const feePayload = {
-        serviceTypeId: null, // Sẽ được backend xác định dựa trên weight
-        insuranceValue: Math.round(totalAfterDiscount || subtotal || 0),
+        service_type_id: serviceTypeId,
+        insurance_value: Math.round(totalAfterDiscount || subtotal || 0),
         coupon: null,
-        fromDistrictId: GHN_DEFAULT_FROM_DISTRICT_ID,
-        fromWardCode: GHN_DEFAULT_FROM_WARD_CODE,
-        toDistrictId: Number(selectedDistrictId),
-        toWardCode: String(selectedWardCode), // WardCode phải là string
-        weight: totalWeight > 0 ? totalWeight : 500,
+        from_district_id: GHN_DEFAULT_FROM_DISTRICT_ID,
+        from_ward_code: GHN_DEFAULT_FROM_WARD_CODE,
+        to_district_id: toDistrictId,
+        to_ward_code: String(selectedWardCode), // WardCode phải là string
+        weight: weightGrams,
         length: 20,
         width: 15,
         height: 10,
       };
+      console.log('[useAddress] Fee payload:', JSON.stringify(feePayload, null, 2));
 
       calculateShippingFee(feePayload)
         .then((feeData) => {
-          const raw =
-            feeData?.total_fee ??
-            feeData?.total ??
-            feeData?.service_fee ??
-            feeData?.main_service ??
-            25000;
-          setShippingFee(Number(raw) || 0);
+          console.log('[useAddress] Shipping fee response:', feeData);
+          // Backend trả về GhnFeeResponse với field 'total'
+          const totalFee = feeData?.total;
+          if (totalFee !== undefined && totalFee !== null) {
+            const fee = Number(totalFee) || 0;
+            console.log('[useAddress] Calculated shipping fee:', fee);
+            setShippingFee(fee);
+          } else {
+            console.warn('[useAddress] Shipping fee response missing total field:', feeData);
+            setShippingFee(0);
+          }
         })
         .catch((error) => {
           console.error('[useAddress] Error calculating shipping fee:', error);
-          setShippingFee(25000);
+          setShippingFee(0);
         })
         .finally(() => {
           setShippingFeeLoading(false);
         });
     }
-  }, [selectedDistrictId, selectedWardCode, detailAddress, ghnAvailable, totalWeight, subtotal, totalAfterDiscount]);
+  }, [selectedDistrictId, selectedWardCode, detailAddress, ghnAvailable, totalWeight, subtotal, totalAfterDiscount, GHN_DEFAULT_FROM_DISTRICT_ID, GHN_DEFAULT_FROM_WARD_CODE, GHN_SERVICE_TYPE_LIGHT, GHN_SERVICE_TYPE_HEAVY, GHN_HEAVY_SERVICE_WEIGHT_THRESHOLD]);
 
   return {
     // Saved addresses

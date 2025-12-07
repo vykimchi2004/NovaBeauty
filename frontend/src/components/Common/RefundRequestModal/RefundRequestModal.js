@@ -291,15 +291,16 @@ export default function RefundRequestModal({ open, orderId, onClose, onSuccess }
             }
 
             const payload = {
-                refundReasonType: selectedReasonType,
-                refundDescription: formData.description || reasonText,
-                refundEmail: formData.email,
-                refundReturnAddress: formData.returnAddress,
+                reasonType: selectedReasonType,
+                description: formData.description || reasonText,
+                email: formData.email,
+                returnAddress: formData.returnAddress,
                 refundMethod: 'Hoàn tiền bằng tài khoản ngân hàng',
-                refundBank: formData.bank,
-                refundAccountNumber: formData.accountNumber,
-                refundAccountHolder: formData.accountHolder,
-                refundMediaUrls: mediaUrls.length > 0 ? JSON.stringify(mediaUrls) : null,
+                bank: formData.bank,
+                accountNumber: formData.accountNumber,
+                accountHolder: formData.accountHolder,
+                mediaUrls: mediaUrls.length > 0 ? mediaUrls : null,
+                selectedProductIds: order && order.items ? order.items.map(item => item.id || item.productId) : null,
                 note: `Yêu cầu hoàn tiền/trả hàng - ${reasonText}\nĐịa chỉ gửi hàng: ${formData.returnAddress}\nPhương thức hoàn tiền: Hoàn tiền bằng tài khoản ngân hàng`,
             };
 

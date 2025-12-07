@@ -12,13 +12,25 @@ const cx = classNames.bind(styles);
 
 // Parse refund information from order (prefer dedicated fields, fallback to note)
 const parseRefundInfo = (order) => {
+    // Debug log
+    console.log('🔍 parseRefundInfo - Order data:', {
+        refundReasonType: order.refundReasonType,
+        refundDescription: order.refundDescription,
+        refundReturnAddress: order.refundReturnAddress,
+        refundMediaUrls: order.refundMediaUrls,
+        refundBank: order.refundBank,
+        refundAccountNumber: order.refundAccountNumber,
+        refundAccountHolder: order.refundAccountHolder,
+    });
+
     // First, try to get from dedicated refund fields (new way)
     if (order.refundReasonType || order.refundDescription || order.refundReturnAddress) {
         let selectedProducts = [];
         if (order.refundSelectedProductIds) {
             try {
                 selectedProducts = JSON.parse(order.refundSelectedProductIds);
-            } catch {
+            } catch (e) {
+                console.warn('Failed to parse refundSelectedProductIds', e);
                 // If parsing fails, default to all products
                 selectedProducts = order.items?.map(item => item.id) || [];
             }
@@ -30,16 +42,27 @@ const parseRefundInfo = (order) => {
         let mediaUrls = [];
         if (order.refundMediaUrls) {
             try {
-                const parsed = JSON.parse(order.refundMediaUrls);
+                // Handle both string and already parsed array
+                let parsed = order.refundMediaUrls;
+                if (typeof parsed === 'string') {
+                    parsed = JSON.parse(parsed);
+                }
                 if (Array.isArray(parsed)) {
                     mediaUrls = parsed;
+                } else if (typeof parsed === 'string' && parsed.trim().startsWith('[')) {
+                    // Try parsing again if it's still a string
+                    parsed = JSON.parse(parsed);
+                    if (Array.isArray(parsed)) {
+                        mediaUrls = parsed;
+                    }
                 }
+                console.log('🔍 Parsed mediaUrls:', mediaUrls);
             } catch (e) {
-                console.warn('Failed to parse refund media URLs', e);
+                console.error('Failed to parse refund media URLs', e, 'Raw value:', order.refundMediaUrls);
             }
         }
 
-        return {
+        const refundInfo = {
             reason: order.refundReasonType === 'store'
                 ? 'Sản phẩm gặp sự cố từ cửa hàng'
                 : order.refundReasonType === 'customer'
@@ -57,6 +80,9 @@ const parseRefundInfo = (order) => {
             refundAmount: order.refundAmount || null,
             mediaUrls: mediaUrls,
         };
+
+        console.log('🔍 Parsed refundInfo:', refundInfo);
+        return refundInfo;
     }
 
     // Fallback: parse from note (old way, for backward compatibility)
@@ -292,6 +318,20 @@ export default function RefundDetailPage() {
                 if (!orderData || !orderData.id) {
                     throw new Error('Dữ liệu đơn hàng không hợp lệ');
                 }
+
+                // Log refund fields để debug
+                console.log('🔍 Order refund fields:', {
+                    refundReasonType: orderData.refundReasonType,
+                    refundDescription: orderData.refundDescription,
+                    refundMediaUrls: orderData.refundMediaUrls,
+                    refundBank: orderData.refundBank,
+                    refundAccountNumber: orderData.refundAccountNumber,
+                    refundAccountHolder: orderData.refundAccountHolder,
+                    refundEmail: orderData.refundEmail,
+                    refundReturnAddress: orderData.refundReturnAddress,
+                    refundMethod: orderData.refundMethod,
+                    refundSelectedProductIds: orderData.refundSelectedProductIds,
+                });
 
                 setOrder(orderData);
             } catch (err) {
