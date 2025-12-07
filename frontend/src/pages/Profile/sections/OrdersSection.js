@@ -874,9 +874,30 @@ function OrdersSection({ getStatusClass, defaultTab }) {
                 </div>
 
                 <div className={cx('orderFooter')}>
-                  <button type="button" className={cx('orderActionBtn')}>
-                    {order.status}
-                  </button>
+                  {(() => {
+                    const rawStatus = order.rawStatus || order.status || '';
+                    const statusUpper = String(rawStatus).toUpperCase();
+                    const isRejected = statusUpper === 'RETURN_REJECTED';
+                    
+                    if (isRejected) {
+                      return (
+                        <button 
+                          type="button" 
+                          className={cx('orderActionBtn')}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedOrderId(order.orderId || order.id);
+                            setShowCancelDialog(true);
+                          }}
+                        >
+                          Hủy
+                        </button>
+                      );
+                    }
+                    
+                    return null;
+                  })()}
                   {order.statusKey === 'delivered' && (
                     <button
                       type="button"
@@ -1046,6 +1067,9 @@ function OrdersSection({ getStatusClass, defaultTab }) {
           order={orderDetails[selectedOrderId]}
           loading={detailLoading}
           onClose={handleCloseModal}
+          onSuccess={() => {
+            fetchOrders(); // Refresh orders list after successful cancellation
+          }}
         />
       )}
 

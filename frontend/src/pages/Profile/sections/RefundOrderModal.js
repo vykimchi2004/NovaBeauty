@@ -7,6 +7,9 @@ import { formatCurrency, getApiBaseUrl } from '~/services/utils';
 import { normalizeMediaUrl } from '~/services/productUtils';
 import defaultProductImage from '~/assets/images/products/image1.jpg';
 import { parseRefundInfo, calculateRefund } from '../pages/RefundDetail/RefundDetailPage.js';
+import CancelOrderDialog from '~/components/Common/ConfirmDialog/CancelOrderDialog';
+import orderService from '~/services/order';
+import { useNotification } from '~/components/Common/Notification';
 
 const refundCx = classNames.bind(refundStyles);
 
@@ -33,15 +36,18 @@ const getStatusLabel = (status) => {
         RETURN_CS_CONFIRMED: 'CSKH đang xử lý',
         RETURN_STAFF_CONFIRMED: 'Nhân viên xác nhận hàng',
         REFUNDED: 'Hoàn tiền thành công',
-        RETURN_REJECTED: 'Từ chối hoàn tiền/ trả hàng',
+        RETURN_REJECTED: 'Hủy',
     };
     return statusMap[status] || status || '';
 };
 
-function RefundOrderModal({ order, loading, onClose, error }) {
+function RefundOrderModal({ order, loading, onClose, error, onSuccess }) {
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [lightboxIndex, setLightboxIndex] = useState(0);
     const [lightboxUrls, setLightboxUrls] = useState([]);
+    const [showCancelDialog, setShowCancelDialog] = useState(false);
+    const [cancelling, setCancelling] = useState(false);
+    const { success: notifySuccess, error: notifyError } = useNotification();
 
     // Hooks must be called at top level, not conditionally
     const refundInfo = useMemo(() => {
@@ -140,6 +146,29 @@ function RefundOrderModal({ order, loading, onClose, error }) {
         }
     }
 
+    const handleCancelOrder = async (reason) => {
+        if (!order?.id) return;
+        try {
+            setCancelling(true);
+            const { ok } = await orderService.cancelOrder(order.id, reason);
+            if (ok) {
+                notifySuccess('Đã hủy đơn hàng thành công.');
+                if (onSuccess) {
+                    onSuccess();
+                }
+                onClose();
+            } else {
+                notifyError('Không thể hủy đơn hàng. Vui lòng thử lại.');
+            }
+        } catch (err) {
+            console.error('Error cancelling order:', err);
+            notifyError(err.message || 'Có lỗi xảy ra khi hủy đơn hàng.');
+        } finally {
+            setCancelling(false);
+            setShowCancelDialog(false);
+        }
+    };
+
     return (
         <>
             <div className={refundCx('modal-overlay')} onClick={onClose}>
@@ -194,8 +223,8 @@ function RefundOrderModal({ order, loading, onClose, error }) {
                                     </div>
                                     <div className={refundCx('summary-item')}>
                                         <span className={refundCx('summary-label')}>Trạng thái:</span>
-                                        <span className={refundCx('status-badge', order.status?.toLowerCase())}>
-                                            {getStatusLabel(order.status)}
+                                        <span className={refundCx('status-badge', (order.rawStatus || order.status)?.toLowerCase())}>
+                                            {getStatusLabel(order.rawStatus || order.status)}
                                         </span>
                                     </div>
                                 </div>
@@ -449,6 +478,14 @@ function RefundOrderModal({ order, loading, onClose, error }) {
                     </div>
                 </div>
             </div>
+
+            {/* Cancel Order Dialog */}
+            <CancelOrderDialog
+                open={showCancelDialog}
+                loading={cancelling}
+                onConfirm={handleCancelOrder}
+                onCancel={() => !cancelling && setShowCancelDialog(false)}
+            />
 
             {/* Lightbox Modal for Images */}
             {lightboxOpen && lightboxUrls.length > 0 && (

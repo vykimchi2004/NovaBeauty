@@ -868,6 +868,43 @@
     line-height: 1.5;
 }
 
+// Action Buttons
+.action-buttons {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 2px solid #e5e7eb;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+}
+
+.cancel-order-btn {
+    padding: 12px 32px;
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) {
+        background: #b91c1c;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+    }
+
+    &:active:not(:disabled) {
+        transform: translateY(0);
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+}
+
 // Responsive
 @media (max-width: 768px) {
     .product-item {

@@ -495,10 +495,10 @@ function OrderDetailPage() {
         .trim()
         .toUpperCase();
     const statusKey = order
-        ? order.statusKey || mapOrderStatus(order.status || order.rawStatus).key
+        ? order.statusKey || mapOrderStatus(order.rawStatus || order.status).key
         : 'pending';
     const statusInfo = order
-        ? STATUS_MAP[order.status] || STATUS_MAP.PENDING
+        ? mapOrderStatus(order.rawStatus || order.status)
         : STATUS_MAP.PENDING;
     const progressSteps = useMemo(() => {
         if (!order) return [];
@@ -580,7 +580,7 @@ function OrderDetailPage() {
                     </button>
                     <h1 className={cx('title')}>Chi tiết đơn hàng #{order.code}</h1>
                     <button className={cx('status-badge-header', statusInfo.key)}>
-                        {statusInfo.label}
+                        {isRejected ? 'Hủy' : statusInfo.label}
                     </button>
                 </div>
 
@@ -773,13 +773,6 @@ function OrderDetailPage() {
                     </div>
                 )}
 
-                {/* Refund Status Message */}
-                {isReturnFlow && order.refundMessage && (
-                    <div className={cx('refund-status-section')}>
-                        <div className={cx('refund-message')}>{order.refundMessage}</div>
-                    </div>
-                )}
-
                 {/* Action Buttons */}
                 <div className={cx('actions-section')}>
                     {canCancel && (
@@ -828,37 +821,25 @@ function OrderDetailPage() {
                     )}
                     {(order.status === 'RETURN_REJECTED' ||
                         order.rawStatus === 'RETURN_REJECTED') && (
-                        <>
-
-                            <button
-                                className={cx('contact-btn', 'cancel-btn')}
-                                disabled={cancelling}
-                                onClick={handleCancelOrder}
-                            >
-                                {cancelling ? 'Đang hủy...' : 'Hủy đơn hàng'}
-                            </button>
-                            
-                            <button
-                                className={cx('contact-btn', 'resubmit-btn')}
-                                onClick={() =>
-                                    navigate(
-                                        `/customer-account/orders/${
-                                            order.id || order.code
-                                        }/refund`,
-                                        {
-                                            state: {
-                                                orderCode: order.code,
-                                                orderId: order.id,
-                                                isResubmit: true,
-                                            },
+                        <button
+                            className={cx('contact-btn', 'resubmit-btn')}
+                            onClick={() =>
+                                navigate(
+                                    `/customer-account/orders/${
+                                        order.id || order.code
+                                    }/refund`,
+                                    {
+                                        state: {
+                                            orderCode: order.code,
+                                            orderId: order.id,
+                                            isResubmit: true,
                                         },
-                                    )
-                                }
-                            >
-                                Sửa lại và gửi lại yêu cầu
-                            </button>
-                            
-                        </>
+                                    },
+                                )
+                            }
+                        >
+                            Sửa lại và gửi lại yêu cầu
+                        </button>
                     )}
                 </div>
                 <CancelOrderDialog
