@@ -6,7 +6,7 @@ import { getMyInfo } from '~/services/user';
 import { storage } from '~/services/utils';
 import { STORAGE_KEYS } from '~/services/config';
 import notify from '~/utils/notification';
-import { useCart, useAddress } from '~/hooks';
+import { useAddress } from '~/hooks';
 import orderService from '~/services/order';
 import { setDefaultAddress, formatFullAddress } from '~/services/address';
 import { getProductById } from '~/services/product';
@@ -38,19 +38,20 @@ function CheckoutDetailPage() {
   const [shippingMethod, setShippingMethod] = useState('ghn_standard'); // hiện tại chỉ 1 lựa chọn
   const [orderNote, setOrderNote] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showShippingModal, setShowShippingModal] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState(null);
-  const [addressRefreshKey, setAddressRefreshKey] = useState(0);
   const [shouldRefreshShippingFee, setShouldRefreshShippingFee] = useState(false);
 
-  // Use cart hook
-  const {
-    cartItems,
-    loading: cartLoading,
-    subtotal: cartSubtotal,
-    total: cartTotal,
-    appliedDiscount: voucherDiscount,
-  } = useCart({ autoLoad: true, listenToEvents: false });
+  // State cho cart và voucher (giống LuminaBook)
+  const [cart, setCart] = useState(null);
+  const [cartLoading, setCartLoading] = useState(false);
+  
+  // State cho voucher
+  const [voucherCodeInput, setVoucherCodeInput] = useState('');
+  const [applyingVoucher, setApplyingVoucher] = useState(false);
+  const [selectedVoucherCode, setSelectedVoucherCode] = useState('');
+  
+  // Lấy voucher discount từ cart (giống LuminaBook)
+  const voucherDiscount = cart?.voucherDiscount || 0;
 
   // Load thông tin sản phẩm nếu là checkout trực tiếp
   useEffect(() => {
@@ -107,19 +108,20 @@ function CheckoutDetailPage() {
     };
   }, [directCheckout, directProduct, directQuantity, directColorCode]);
 
-  // Lọc ra các item được chọn thanh toán (phải khai báo trước khi dùng trong useAddress)
+  // Lọc ra các item được chọn thanh toán (giống LuminaBook)
   const checkoutItems = useMemo(() => {
     // Nếu là checkout trực tiếp, sử dụng item ảo
     if (directCheckout && directCheckoutItem) {
       return [directCheckoutItem];
     }
     
-    // Nếu không, sử dụng logic cũ từ giỏ hàng
-    if (!selectedItemIds.length) return cartItems;
-    const idSet = new Set(selectedItemIds);
-    const filtered = cartItems.filter((item) => idSet.has(item.id));
-    return filtered.length > 0 ? filtered : cartItems;
-  }, [directCheckout, directCheckoutItem, cartItems, selectedItemIds]);
+    // Checkout từ giỏ hàng: lấy từ cart.items (giống LuminaBook)
+    const items = cart?.items || [];
+    if (!selectedItemIds || selectedItemIds.length === 0) return items;
+    const selectedSet = new Set(selectedItemIds);
+    const filtered = items.filter((item) => selectedSet.has(item.id));
+    return filtered.length > 0 ? filtered : items;
+  }, [directCheckout, directCheckoutItem, cart, selectedItemIds]);
 
   // Calculate totalWeight and subtotal for address hook
   const totalWeight = useMemo(
@@ -139,7 +141,7 @@ function CheckoutDetailPage() {
         const lineTotal =
           typeof item.finalPrice === 'number'
             ? item.finalPrice
-            : (item.currentPrice || 0) * quantity;
+            : (item.unitPrice || 0) * quantity;
         return sum + lineTotal;
       }, 0),
     [checkoutItems],
@@ -218,13 +220,20 @@ function CheckoutDetailPage() {
     }
   }, [navigate]);
 
-  // Load thông tin user và địa chỉ
+  // Load thông tin user, cart và địa chỉ (giống LuminaBook)
   useEffect(() => {
     let isMounted = true;
 
     const loadData = async () => {
       setLoading(true);
       try {
+        const token = storage.get(STORAGE_KEYS.TOKEN, null);
+        if (!token) {
+          notify.warning('Vui lòng đăng nhập để thanh toán.');
+          navigate('/profile', { replace: true });
+          return;
+        }
+
         // Lấy user từ cache nếu có
         const cachedUser = storage.get(STORAGE_KEYS.USER, null);
         let userInfo = cachedUser;
@@ -232,10 +241,46 @@ function CheckoutDetailPage() {
           userInfo = await getMyInfo();
         }
 
-        // Load addresses
-        const addressesData = await loadAddresses();
+        // Load cart và addresses song song (giống LuminaBook)
+        const [cartData, addressesData] = await Promise.all([
+          // Load cart trực tiếp từ API để lấy voucher
+          (async () => {
+            try {
+              setCartLoading(true);
+              const cartService = (await import('~/services/cart')).default;
+              const cartResp = await cartService.getCart();
+              console.log('[CheckoutDetailPage] Cart loaded:', {
+                hasVoucher: !!cartResp?.appliedVoucherCode,
+                voucherCode: cartResp?.appliedVoucherCode,
+                voucherDiscount: cartResp?.voucherDiscount,
+                itemsCount: cartResp?.items?.length || 0,
+              });
+              return cartResp;
+            } catch (error) {
+              console.error('[CheckoutDetailPage] Error loading cart:', error);
+              // Không throw error, chỉ log để không block flow
+              return null;
+            } finally {
+              setCartLoading(false);
+            }
+          })(),
+          loadAddresses(),
+        ]);
 
         if (!isMounted) return;
+
+        // Set cart và voucher code (giống LuminaBook)
+        if (cartData) {
+          setCart(cartData);
+          // Set voucher code nếu có (giống LuminaBook line 179-181)
+          if (cartData.appliedVoucherCode) {
+            setSelectedVoucherCode(cartData.appliedVoucherCode);
+            console.log('[CheckoutDetailPage] Loaded voucher from cart:', cartData.appliedVoucherCode, 'discount:', cartData.voucherDiscount);
+          } else {
+            // Clear voucher code nếu không có
+            setSelectedVoucherCode('');
+          }
+        }
 
         const name = userInfo?.fullName || userInfo?.name || '';
         const phoneNumber = userInfo?.phone ?? userInfo?.phoneNumber ?? '';
@@ -279,12 +324,63 @@ function CheckoutDetailPage() {
       }
     };
 
+    // Chỉ load nếu không phải direct checkout
+    if (!directCheckout) {
     loadData();
+    } else {
+      // Direct checkout: chỉ load user và addresses
+      const loadDirectData = async () => {
+        setLoading(true);
+        try {
+          const token = storage.get(STORAGE_KEYS.TOKEN, null);
+          if (!token) {
+            notify.warning('Vui lòng đăng nhập để thanh toán.');
+            navigate('/profile', { replace: true });
+            return;
+          }
+
+          const cachedUser = storage.get(STORAGE_KEYS.USER, null);
+          let userInfo = cachedUser;
+          if (!userInfo) {
+            userInfo = await getMyInfo();
+          }
+
+          const addressesData = await loadAddresses();
+
+          if (!isMounted) return;
+
+          const name = userInfo?.fullName || userInfo?.name || '';
+          const phoneNumber = userInfo?.phone ?? userInfo?.phoneNumber ?? '';
+
+          setFullName(name);
+          setPhone(phoneNumber);
+
+          if (Array.isArray(addressesData) && addressesData.length > 0) {
+            const defaultAddr = addressesData.find((addr) => addr.defaultAddress);
+            const selectedAddr = defaultAddr || addressesData[0];
+            
+            if (selectedAddr) {
+              setSelectedAddress(selectedAddr);
+              await selectSavedAddress(selectedAddr);
+              setShouldRefreshShippingFee(true);
+            }
+          }
+        } catch (error) {
+          console.error('[CheckoutDetailPage] Error loading direct checkout data:', error);
+          notify.error('Không thể tải thông tin thanh toán. Vui lòng thử lại.');
+        } finally {
+          if (isMounted) {
+            setLoading(false);
+          }
+        }
+      };
+      loadDirectData();
+    }
 
     return () => {
       isMounted = false;
     };
-  }, [navigate, loadAddresses, selectSavedAddress]);
+  }, [navigate, loadAddresses, selectSavedAddress, directCheckout]);
 
   // Load danh sách tỉnh từ GHN khi mở modal lần đầu
   useEffect(() => {
@@ -302,6 +398,7 @@ function CheckoutDetailPage() {
     }
   }, [shouldRefreshShippingFee, selectedAddress]);
 
+  // Tính subtotal từ checkoutItems (giống LuminaBook)
   const subtotal = useMemo(
     () =>
       checkoutItems.reduce((sum, item) => {
@@ -309,7 +406,7 @@ function CheckoutDetailPage() {
         const lineTotal =
           typeof item.finalPrice === 'number'
             ? item.finalPrice
-            : (item.currentPrice || 0) * quantity;
+            : (item.unitPrice || 0) * quantity;
         return sum + lineTotal;
       }, 0),
     [checkoutItems],
@@ -358,6 +455,56 @@ function CheckoutDetailPage() {
 
   const handleBackToCart = () => {
     navigate('/cart');
+  };
+
+  // Xử lý áp dụng voucher (giống LuminaBook)
+  const handleApplyVoucher = async () => {
+    const code = (voucherCodeInput || '').trim().toUpperCase();
+    if (!code) {
+      notify.warning('Vui lòng nhập mã giảm giá');
+      return;
+    }
+
+    if (!checkoutItems.length) {
+      notify.warning('Vui lòng chọn sản phẩm ở trang giỏ hàng trước khi áp dụng mã');
+      navigate('/cart');
+      return;
+    }
+
+    try {
+      setApplyingVoucher(true);
+      const cartService = (await import('~/services/cart')).default;
+      const cartData = await cartService.applyVoucher(code);
+      
+      setCart(cartData);
+      setSelectedVoucherCode(code);
+      setVoucherCodeInput('');
+      notify.success('Đã áp dụng mã giảm giá thành công');
+    } catch (error) {
+      console.error('Error applying voucher in checkout:', error);
+      const errorMessage = error.message || 'Có lỗi xảy ra khi áp dụng mã giảm giá';
+      notify.error(errorMessage);
+    } finally {
+      setApplyingVoucher(false);
+    }
+  };
+
+  // Xử lý xóa voucher (giống LuminaBook) - không hiện popup/thông báo
+  const handleClearVoucher = async () => {
+    try {
+      const cartService = (await import('~/services/cart')).default;
+      await cartService.clearVoucher();
+      
+      // Reload cart để lấy dữ liệu mới nhất
+      const cartData = await cartService.getCart();
+      setCart(cartData);
+      setSelectedVoucherCode('');
+      // Không hiện thông báo khi hủy mã (giống LuminaBook)
+    } catch (error) {
+      console.error('Error clearing voucher in checkout:', error);
+      const errorMessage = error.message || 'Có lỗi xảy ra khi hủy mã giảm giá';
+      notify.error(errorMessage);
+    }
   };
 
   const handlePlaceOrder = async () => {
@@ -505,7 +652,6 @@ function CheckoutDetailPage() {
     await selectSavedAddress(addr);
     setShowAddressModal(false);
     setShouldRefreshShippingFee(true);
-    setAddressRefreshKey((prev) => prev + 1);
   };
 
   const handleSetDefaultAddress = async (addr, e) => {
@@ -551,7 +697,6 @@ function CheckoutDetailPage() {
         await selectSavedAddress(newAddr);
         setShouldRefreshShippingFee(true);
       }
-      setAddressRefreshKey((prev) => prev + 1);
       setShowAddressModal(false);
       setShowAddAddressForm(false);
       setIsDefaultAddress(false);
@@ -643,13 +788,6 @@ function CheckoutDetailPage() {
                 Phí dự kiến: {formatPrice(shippingFee)} — Dự kiến giao: 3-5 ngày
               </div>
             </div>
-            <button
-              type="button"
-              className={cx('btn', 'btnOutline', 'paymentSummaryButton')}
-              onClick={() => setShowShippingModal(true)}
-            >
-              Thay đổi
-            </button>
           </div>
         </div>
 
@@ -720,60 +858,6 @@ function CheckoutDetailPage() {
           </div>
         </div>
       </div>
-
-      {/* Popup chọn phương thức giao hàng */}
-      {showShippingModal && (
-        <div className={cx('paymentModalOverlay')}>
-          <div className={cx('paymentModal')}>
-            <h3 className={cx('paymentModalTitle')}>Chọn phương thức giao hàng</h3>
-            <p className={cx('paymentHint')}>
-              Vui lòng chọn đơn vị vận chuyển phù hợp cho đơn hàng của bạn.
-            </p>
-
-            <div className={cx('shippingMethods')}>
-              <label
-                className={cx(
-                  'shippingMethodOption',
-                  shippingMethod === 'ghn_standard' && 'active',
-                )}
-              >
-                <input
-                  type="radio"
-                  name="shippingMethod"
-                  value="ghn_standard"
-                  checked={shippingMethod === 'ghn_standard'}
-                  onChange={() => setShippingMethod('ghn_standard')}
-                />
-                <div className={cx('shippingMethodContent')}>
-                  <span className={cx('shippingMethodName')}>
-                    Giao hàng GHN (Tiêu chuẩn)
-                  </span>
-                  <span className={cx('shippingMethodSub')}>
-                    Phí dự kiến: {formatPrice(shippingFee)} — Dự kiến giao: 3-5 ngày
-                  </span>
-                </div>
-              </label>
-            </div>
-
-            <div className={cx('addressFormActions')}>
-              <button
-                type="button"
-                className={cx('btn', 'btnCancelAddress')}
-                onClick={() => setShowShippingModal(false)}
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                className={cx('btn', 'btnPrimary')}
-                onClick={() => setShowShippingModal(false)}
-              >
-                Xác nhận
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Popup chọn phương thức thanh toán */}
       {showPaymentModal && (
@@ -858,10 +942,65 @@ function CheckoutDetailPage() {
               </span>
             </div>
           )}
+          {/* Hiển thị dòng giảm giá ngay cả khi discount = 0 nếu có voucher code (để user biết) */}
+          {selectedVoucherCode && voucherDiscount === 0 && (
+            <div className={cx('summaryRow')}>
+              <span>Giảm giá</span>
+              <span className={cx('discountAmount')}>
+                {formatPrice(0)}
+              </span>
+            </div>
+          )}
+
+          {/* Mã giảm giá (giống LuminaBook) */}
+          <div className={cx('voucherSection')}>
+            <h3 className={cx('voucherTitle')}>Mã giảm giá</h3>
+            <div className={cx('voucherCard')}>
+              <div className={cx('voucherInputRow')}>
+                <input
+                  type="text"
+                  className={cx('voucherInput')}
+                  placeholder="Nhập mã giảm giá (ví dụ: MGG20)"
+                  value={voucherCodeInput}
+                  onChange={(e) => setVoucherCodeInput(e.target.value.toUpperCase())}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleApplyVoucher();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className={cx('voucherApplyBtn')}
+                  onClick={handleApplyVoucher}
+                  disabled={applyingVoucher || !voucherCodeInput.trim()}
+                >
+                  {applyingVoucher ? 'Đang xử lý...' : 'Áp dụng'}
+                </button>
+              </div>
+              {/* Hiển thị voucher đã áp dụng trong input section (giống LuminaBook) */}
+              {selectedVoucherCode && (
+                <p className={cx('voucherApplied')}>
+                  Đã áp dụng mã:{' '}
+                  <strong>{selectedVoucherCode}</strong>
+                  <button
+                    type="button"
+                    className={cx('removeVoucherInline')}
+                    onClick={handleClearVoucher}
+                  >
+                    Hủy mã
+                  </button>
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Tổng cộng phải ở dưới voucher section */}
           <div className={cx('summaryRow', 'totalRow')}>
-            <span>Tổng cộng (đã gồm VAT)</span>
+            <span>Tổng cộng (đã gồm VAT):</span>
             <span className={cx('totalAmount')}>{formatPrice(total)}</span>
           </div>
+
           <button
             type="button"
             className={cx('btn', 'btnBuy')}
@@ -985,7 +1124,7 @@ function CheckoutDetailPage() {
                   <p className={cx('addressHint')} style={{ margin: 0 }}>
                     {ghnAvailable
                       ? 'Địa chỉ được xác định theo dữ liệu khu vực của GHN. Vui lòng chọn Tỉnh/Thành phố, Quận/Huyện, Phường/Xã và nhập số nhà, tên đường thật chính xác.'
-                      : '⚠️ Hệ thống yêu cầu GHN để chọn địa chỉ. Vui lòng kiểm tra cấu hình GHN hoặc liên hệ quản trị viên.'}
+                      : 'Hệ thống yêu cầu GHN để chọn địa chỉ. Vui lòng kiểm tra cấu hình GHN hoặc liên hệ quản trị viên.'}
                   </p>
                   {savedAddresses.length > 0 && (
                     <button

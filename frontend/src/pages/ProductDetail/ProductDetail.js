@@ -188,7 +188,7 @@ function ProductDetail() {
     // Kiểm tra nếu sản phẩm có mã màu thì phải chọn màu trước
     const hasColorVariants = colorOptions.length > 0;
     if (hasColorVariants && !selectedColorCode) {
-      notify.warning('Vui lòng chọn mã màu trước khi thêm vào giỏ hàng');
+      notify.error(' Vui lòng chọn mã màu trước khi thêm vào giỏ hàng');
       return;
     }
 
@@ -289,7 +289,7 @@ function ProductDetail() {
     // Kiểm tra nếu sản phẩm có mã màu thì phải chọn màu trước
     const hasColorVariants = colorOptions.length > 0;
     if (hasColorVariants && !selectedColorCode) {
-      notify.warning('Vui lòng chọn mã màu trước khi mua');
+      notify.error(' Vui lòng chọn mã màu trước khi mua');
       return;
     }
 
@@ -847,8 +847,9 @@ function ProductDetail() {
                 ))}
               </div>
               {!selectedColorCode && (
-                <div style={{ fontSize: '12px', color: '#e74c3c', marginTop: '4px' }}>
-                  Vui lòng chọn mã màu
+                <div className={cx('color-error-message')}>
+                
+                  <span className={cx('color-error-text')}>Vui lòng chọn mã màu</span>
                 </div>
               )}
             </div>
