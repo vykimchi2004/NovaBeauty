@@ -32,6 +32,11 @@ const STATUS_CLASS_MAP = {
   'Đang giao hàng': 'shipping',
   'Đã giao': 'delivered',
   'Trả hàng': 'returned',
+  'Trả hàng/hoàn tiền': 'returned',
+  'CSKH đang xử lý': 'returned',
+  'Nhân viên xác nhận hàng': 'returned',
+  'Hoàn tiền thành công': 'refunded',
+  'Từ chối Trả hàng/hoàn tiền': 'rejected',
   'Đã hủy': 'cancelled',
 };
 
@@ -102,7 +107,20 @@ function ProfilePage() {
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [showAddressList, setShowAddressList] = useState(false);
 
-  const getStatusClass = (status) => STATUS_CLASS_MAP[status] || '';
+  const getStatusClass = (status) => {
+    // Nếu status là Vietnamese text, map trực tiếp
+    if (STATUS_CLASS_MAP[status]) {
+      return STATUS_CLASS_MAP[status];
+    }
+    // Nếu status là enum từ backend, map sang Vietnamese rồi lấy class
+    const statusUpper = String(status || '').toUpperCase();
+    if (statusUpper === 'RETURN_REQUESTED') return 'returned';
+    if (statusUpper === 'RETURN_CS_CONFIRMED') return 'returned';
+    if (statusUpper === 'RETURN_STAFF_CONFIRMED') return 'returned';
+    if (statusUpper === 'REFUNDED') return 'refunded';
+    if (statusUpper === 'RETURN_REJECTED') return 'rejected';
+    return STATUS_CLASS_MAP[status] || '';
+  };
 
   // Persist default address when selected
   const persistDefaultAddress = async (address) => {

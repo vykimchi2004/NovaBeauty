@@ -3,6 +3,7 @@ import classNames from 'classnames/bind';
 import styles from './RefundManagementPage.module.scss';
 import { useNavigate } from 'react-router-dom';
 import { getApiBaseUrl, getStoredToken, formatCurrency } from '~/services/utils';
+import RefundDetailModal from './RefundDetail/RefundDetailModal';
 
 const cx = classNames.bind(styles);
 
@@ -24,10 +25,11 @@ export default function RefundManagementPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedDate, setSelectedDate] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [selectedRefundId, setSelectedRefundId] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Fetch refund requests from API
-    useEffect(() => {
-        const fetchRefunds = async () => {
+    const fetchRefunds = async () => {
             setLoading(true);
             setError('');
             try {
@@ -128,8 +130,9 @@ export default function RefundManagementPage() {
             } finally {
                 setLoading(false);
             }
-        };
+    };
 
+    useEffect(() => {
         fetchRefunds();
     }, [API_BASE_URL]);
 
@@ -169,8 +172,23 @@ export default function RefundManagementPage() {
     }, [refunds, searchQuery, selectedDate, statusFilter]);
 
     const handleViewDetail = (refund) => {
-        // Navigate to view refund detail page (read-only, for viewing customer submitted refund orders)
-        navigate(`/customer-support/refund-management/view/${refund.id}`);
+        if (!refund?.id) {
+            console.error('RefundDetailModal: No refund ID provided');
+            return;
+        }
+        console.log('RefundDetailModal: Opening modal for refund ID:', refund.id);
+        setSelectedRefundId(refund.id);
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setSelectedRefundId(null);
+    };
+
+    const handleModalSuccess = () => {
+        // Refresh the refund list after successful action
+        fetchRefunds();
     };
 
     const formatDate = (dateString) => {
@@ -306,6 +324,14 @@ export default function RefundManagementPage() {
                     </div>
                 )}
             </div>
+
+            {/* Refund Detail Modal */}
+            <RefundDetailModal
+                orderId={selectedRefundId}
+                open={isModalOpen}
+                onClose={handleCloseModal}
+                onSuccess={handleModalSuccess}
+            />
         </div>
     );
 }

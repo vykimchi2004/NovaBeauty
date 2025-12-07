@@ -18,6 +18,8 @@ import { formatCurrency, getApiBaseUrl } from '~/services/utils';
 import { normalizeMediaUrl } from '~/services/productUtils';
 import CancelOrderDialog from '~/components/Common/ConfirmDialog/CancelOrderDialog';
 import RefundRequestModal from '~/components/Common/RefundRequestModal/RefundRequestModal';
+import RegularOrderModal from './RegularOrderModal';
+import RefundOrderModal from './RefundOrderModal';
 
 const cx = classNames.bind(styles);
 
@@ -37,22 +39,96 @@ const parseRefundInfo = (order) => {
         };
     }
 
-    // First, try to get from dedicated refund fields (new way)
-    if (order.refundReasonType || order.refundDescription || order.refundReturnAddress) {
-        let mediaUrls = [];
-        if (order.refundMediaUrls) {
-            try {
-                let parsed = order.refundMediaUrls;
-                if (typeof parsed === 'string') {
-                    parsed = JSON.parse(parsed);
-                }
+    // Collect all possible media URLs from various fields
+    let mediaUrls = [];
+    
+    // Check refundMediaUrls (primary field)
+    if (order.refundMediaUrls) {
+        try {
+            let parsed = order.refundMediaUrls;
+            if (typeof parsed === 'string') {
+                parsed = JSON.parse(parsed);
+            }
+            if (Array.isArray(parsed)) {
+                mediaUrls = parsed;
+                console.log('🔍 OrdersSection - Parsed mediaUrls from refundMediaUrls:', mediaUrls);
+            } else if (typeof parsed === 'string' && parsed.trim().startsWith('[')) {
+                parsed = JSON.parse(parsed);
                 if (Array.isArray(parsed)) {
                     mediaUrls = parsed;
                 }
-            } catch (e) {
-                console.warn('Failed to parse refund media URLs', e);
             }
+        } catch (e) {
+            console.error('Failed to parse refund media URLs', e, 'Raw value:', order.refundMediaUrls);
         }
+    }
+    
+    // Check nested refund object
+    if (mediaUrls.length === 0 && order.refund?.mediaUrls) {
+        try {
+            let parsed = order.refund.mediaUrls;
+            if (typeof parsed === 'string') {
+                parsed = JSON.parse(parsed);
+            }
+            if (Array.isArray(parsed)) {
+                mediaUrls = parsed;
+                console.log('🔍 OrdersSection - Found mediaUrls in order.refund.mediaUrls:', mediaUrls);
+            }
+        } catch (e) {
+            console.warn('Failed to parse order.refund.mediaUrls', e);
+        }
+    }
+    
+    // Check other possible fields
+    if (mediaUrls.length === 0 && order.mediaUrls) {
+        try {
+            let parsed = order.mediaUrls;
+            if (typeof parsed === 'string') {
+                parsed = JSON.parse(parsed);
+            }
+            if (Array.isArray(parsed)) {
+                mediaUrls = parsed;
+                console.log('🔍 OrdersSection - Found mediaUrls in order.mediaUrls:', mediaUrls);
+            }
+        } catch (e) {
+            console.warn('Failed to parse order.mediaUrls', e);
+        }
+    }
+    
+    // Check attachments field
+    if (mediaUrls.length === 0 && order.attachments) {
+        try {
+            let parsed = order.attachments;
+            if (typeof parsed === 'string') {
+                parsed = JSON.parse(parsed);
+            }
+            if (Array.isArray(parsed)) {
+                mediaUrls = parsed.map(att => att.url || att.path || att);
+                console.log('🔍 OrdersSection - Found mediaUrls in order.attachments:', mediaUrls);
+            }
+        } catch (e) {
+            console.warn('Failed to parse order.attachments', e);
+        }
+    }
+    
+    // Check files field
+    if (mediaUrls.length === 0 && order.files) {
+        try {
+            let parsed = order.files;
+            if (typeof parsed === 'string') {
+                parsed = JSON.parse(parsed);
+            }
+            if (Array.isArray(parsed)) {
+                mediaUrls = parsed.map(file => file.url || file.path || file);
+                console.log('🔍 OrdersSection - Found mediaUrls in order.files:', mediaUrls);
+            }
+        } catch (e) {
+            console.warn('Failed to parse order.files', e);
+        }
+    }
+
+    // First, try to get from dedicated refund fields (new way)
+    if (order.refundReasonType || order.refundDescription || order.refundReturnAddress || mediaUrls.length > 0) {
 
         return {
             reason: order.refundReasonType === 'store' 
@@ -167,6 +243,64 @@ const parseRefundInfo = (order) => {
     return info;
 };
 
+// Calculate refund summary
+const calculateRefund = (order, refundInfo) => {
+    if (!order || !order.items) {
+        return {
+            productValue: 0,
+            shippingFee: 0,
+            secondShippingFee: 0,
+            returnPenalty: 0,
+            total: refundInfo.refundAmount ?? order?.refundAmount ?? 0,
+            totalPaid: order?.refundTotalPaid ?? 0,
+        };
+    }
+
+    const selectedItems = order.items.filter((item) =>
+        refundInfo.selectedProducts.includes(item.id),
+    );
+    const productValue = selectedItems.reduce(
+        (sum, item) => sum + (item.totalPrice || item.finalPrice || 0),
+        0,
+    );
+    const shippingFee = order.shippingFee || 0;
+    const totalPaid = order.refundTotalPaid ?? order.totalAmount ?? productValue + shippingFee;
+
+    const estimatedReturnShippingFee = [
+        order.refundSecondShippingFee,
+        refundInfo.returnFee,
+        order.refundReturnFee,
+        order.estimatedReturnShippingFee,
+        order.shippingFee,
+    ].find((val) => typeof val === 'number') ?? 0;
+    const secondShippingFee = Math.max(0, Math.round(estimatedReturnShippingFee));
+
+    const storedPenalty = order.refundPenaltyAmount;
+    const returnPenalty =
+        typeof storedPenalty === 'number'
+            ? storedPenalty
+            : refundInfo.reasonType === 'customer'
+                ? Math.max(0, Math.round(productValue * 0.1))
+                : 0;
+
+    const storedTotal = refundInfo.refundAmount ?? order.refundAmount;
+    const total =
+        typeof storedTotal === 'number'
+            ? storedTotal
+            : refundInfo.reasonType === 'store'
+                ? totalPaid + secondShippingFee
+                : Math.max(0, totalPaid - secondShippingFee - returnPenalty);
+
+    return {
+        productValue,
+        shippingFee,
+        secondShippingFee,
+        returnPenalty,
+        total,
+        totalPaid,
+    };
+};
+
 const ORDER_TABS = [
   { id: 'pending', label: 'Chờ xác nhận' },
   { id: 'ready', label: 'Chờ lấy hàng' },
@@ -195,6 +329,7 @@ function OrdersSection({ getStatusClass, defaultTab }) {
   const [sortOption, setSortOption] = useState('newest');
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isRefundModalOpen, setIsRefundModalOpen] = useState(false);
   const [orderDetails, setOrderDetails] = useState({});
   const [detailLoading, setDetailLoading] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -202,13 +337,29 @@ function OrdersSection({ getStatusClass, defaultTab }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [refundOrderId, setRefundOrderId] = useState(null);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState(0);
-  const [lightboxUrls, setLightboxUrls] = useState([]);
   const itemsPerPage = 3;
 
   useEffect(() => {
     fetchOrders();
+    
+    // Auto-refresh orders every 30 seconds to get latest status updates
+    const interval = setInterval(() => {
+      fetchOrders();
+    }, 30000); // 30 seconds
+    
+    // Also refresh when tab becomes visible (user switches back to tab)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchOrders();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Cleanup
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   // Map status enum từ backend sang Vietnamese text
@@ -220,7 +371,14 @@ function OrdersSection({ getStatusClass, defaultTab }) {
     if (statusUpper === 'CONFIRMED' || statusUpper === 'PAID') return 'Chờ lấy hàng';
     if (statusUpper === 'SHIPPED') return 'Đang giao hàng';
     if (statusUpper === 'DELIVERED') return 'Đã giao';
-    if (statusUpper.startsWith('RETURN_') || statusUpper === 'RETURNED' || statusUpper === 'REFUNDED') return 'Trả hàng/hoàn tiền';
+    // Phân biệt các trạng thái refund/return
+    if (statusUpper === 'RETURN_REQUESTED') return 'Trả hàng/hoàn tiền';
+    if (statusUpper === 'RETURN_CS_CONFIRMED') return 'CSKH đang xử lý';
+    if (statusUpper === 'RETURN_STAFF_CONFIRMED') return 'Nhân viên xác nhận hàng';
+    if (statusUpper === 'REFUNDED') return 'Hoàn tiền thành công';
+    if (statusUpper === 'RETURN_REJECTED') return 'Từ chối Trả hàng/hoàn tiền';
+    // Fallback cho các trạng thái return khác
+    if (statusUpper.startsWith('RETURN_') || statusUpper === 'RETURNED') return 'Trả hàng/hoàn tiền';
     if (statusUpper === 'CANCELLED') return 'Đã hủy';
     // Fallback: check Vietnamese text
     const statusLower = status.toLowerCase();
@@ -242,7 +400,14 @@ function OrdersSection({ getStatusClass, defaultTab }) {
     if (statusUpper === 'CONFIRMED' || statusUpper === 'PAID') return 'ready';
     if (statusUpper === 'SHIPPED') return 'shipping';
     if (statusUpper === 'DELIVERED') return 'delivered';
-    if (statusUpper.startsWith('RETURN_') || statusUpper === 'RETURNED' || statusUpper === 'REFUNDED') return 'returned';
+    // Phân biệt các trạng thái refund/return
+    if (statusUpper === 'RETURN_REQUESTED') return 'returned';
+    if (statusUpper === 'RETURN_CS_CONFIRMED') return 'returned';
+    if (statusUpper === 'RETURN_STAFF_CONFIRMED') return 'returned';
+    if (statusUpper === 'REFUNDED') return 'returned';
+    if (statusUpper === 'RETURN_REJECTED') return 'returned';
+    // Fallback cho các trạng thái return khác
+    if (statusUpper.startsWith('RETURN_') || statusUpper === 'RETURNED') return 'returned';
     if (statusUpper === 'CANCELLED') return 'cancelled';
     // Fallback: check Vietnamese text or English keywords
     const statusLower = status.toLowerCase();
@@ -341,29 +506,112 @@ function OrdersSection({ getStatusClass, defaultTab }) {
     }
   };
 
-  const handleViewDetail = async (orderId) => {
+  const handleViewDetail = async (orderId, orderStatus) => {
     if (!orderId) return;
+    
+    // Đóng tất cả modal trước
+    setIsModalOpen(false);
+    setIsRefundModalOpen(false);
+    
     setSelectedOrderId(orderId);
-    setIsModalOpen(true);
+    
+    // Kiểm tra ngay dựa trên tab hiện tại - nếu ở tab "returned", luôn mở RefundOrderModal
+    if (activeTab === 'returned') {
+      setIsRefundModalOpen(true);
+    } else {
+      // Kiểm tra dựa trên status
+      const statusUpper = String(orderStatus || '').trim().toUpperCase();
+      const isReturnOrder = statusUpper.startsWith('RETURN_') || 
+                           statusUpper === 'REFUNDED' || 
+                           statusUpper === 'RETURNED';
+      if (isReturnOrder) {
+        setIsRefundModalOpen(true);
+      } else {
+        setIsModalOpen(true);
+      }
+    }
     
     // Nếu đã có cache, không cần load lại
     if (orderDetails[orderId]) {
       return;
     }
     
+    // Load order detail
     try {
       setDetailLoading(true);
       const detail = await orderService.getOrderById(orderId);
       setOrderDetails((prev) => ({ ...prev, [orderId]: detail || null }));
+      
+      // Sau khi load xong, kiểm tra lại để đảm bảo mở đúng modal
+      if (activeTab === 'returned') {
+        setIsRefundModalOpen(true);
+        setIsModalOpen(false);
+      } else {
+        const isReturnOrder = checkIfRefundOrder(detail, orderStatus);
+        if (isReturnOrder) {
+          setIsRefundModalOpen(true);
+          setIsModalOpen(false);
+        } else {
+          setIsModalOpen(true);
+          setIsRefundModalOpen(false);
+        }
+      }
     } catch (err) {
       console.error('OrdersSection: Lỗi khi tải chi tiết đơn hàng', err);
+      // Nếu có lỗi và đang ở tab returned, vẫn mở RefundOrderModal
+      if (activeTab === 'returned') {
+        setIsRefundModalOpen(true);
+        setIsModalOpen(false);
+      } else {
+        setIsModalOpen(true);
+        setIsRefundModalOpen(false);
+      }
     } finally {
       setDetailLoading(false);
     }
   };
+  
+  // Helper function to check if order is a refund order
+  const checkIfRefundOrder = (order, orderStatus) => {
+    // Nếu đang ở tab "returned", luôn coi là refund order
+    if (activeTab === 'returned') {
+      console.log('OrdersSection: Tab is "returned", opening RefundOrderModal');
+      return true;
+    }
+    
+    // Kiểm tra status
+    const statusUpper = String(orderStatus || order?.status || '').trim().toUpperCase();
+    if (statusUpper.startsWith('RETURN_') || 
+        statusUpper === 'REFUNDED' || 
+        statusUpper === 'RETURNED') {
+      console.log('OrdersSection: Status indicates refund order:', statusUpper);
+      return true;
+    }
+    
+    // Kiểm tra các field refund trong order
+    if (order) {
+      if (order.refundReasonType || 
+          order.refundDescription || 
+          order.refundReturnAddress ||
+          order.refundMethod ||
+          order.refundMediaUrls ||
+          (order.note && (
+            order.note.includes('Yêu cầu hoàn tiền') ||
+            order.note.includes('trả hàng') ||
+            order.note.includes('hoàn tiền')
+          ))) {
+        console.log('OrdersSection: Order has refund fields, opening RefundOrderModal');
+        return true;
+      }
+    }
+    
+    console.log('OrdersSection: Opening RegularOrderModal');
+    return false;
+  };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
+    setIsRefundModalOpen(false);
     setSelectedOrderId(null);
     setShowCancelDialog(false);
   };
@@ -600,8 +848,8 @@ function OrdersSection({ getStatusClass, defaultTab }) {
                       Ngày đặt: {order.dateDisplay || order.date}
                     </span>
                   </div>
-                  <span className={cx('orderStatus', getStatusClass(order.status))}>
-                    {order.status}
+                  <span className={cx('orderStatus', getStatusClass(order.rawStatus || order.status))}>
+                    {mapStatusToVietnamese(order.rawStatus || order.status)}
                   </span>
                 </div>
 
@@ -626,9 +874,30 @@ function OrdersSection({ getStatusClass, defaultTab }) {
                 </div>
 
                 <div className={cx('orderFooter')}>
-                  <button type="button" className={cx('orderActionBtn')}>
-                    {order.status}
-                  </button>
+                  {(() => {
+                    const rawStatus = order.rawStatus || order.status || '';
+                    const statusUpper = String(rawStatus).toUpperCase();
+                    const isRejected = statusUpper === 'RETURN_REJECTED';
+                    
+                    if (isRejected) {
+                      return (
+                        <button 
+                          type="button" 
+                          className={cx('orderActionBtn')}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedOrderId(order.orderId || order.id);
+                            setShowCancelDialog(true);
+                          }}
+                        >
+                          Hủy
+                        </button>
+                      );
+                    }
+                    
+                    return null;
+                  })()}
                   {order.statusKey === 'delivered' && (
                     <button
                       type="button"
@@ -645,7 +914,12 @@ function OrdersSection({ getStatusClass, defaultTab }) {
                   <button
                     type="button"
                     className={cx('orderDetailBtn')}
-                    onClick={() => handleViewDetail(order.orderId || order.id)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('OrdersSection: Button clicked, activeTab:', activeTab);
+                      handleViewDetail(order.orderId || order.id, order.status || order.statusKey);
+                    }}
                   >
                     Xem chi tiết
                     <FontAwesomeIcon icon={faArrowRight} />
@@ -776,257 +1050,36 @@ function OrdersSection({ getStatusClass, defaultTab }) {
         </div>
       )}
 
-      {/* Order Detail Modal */}
+      {/* Regular Order Detail Modal */}
       {isModalOpen && (
-        <div className={cx('orderModalOverlay')} onClick={handleCloseModal}>
-          <div className={cx('orderModalContent')} onClick={(e) => e.stopPropagation()}>
-            <div className={cx('orderModalHeader')}>
-              <h3>Chi tiết đơn hàng</h3>
-              <button
-                type="button"
-                className={cx('orderModalClose')}
-                onClick={handleCloseModal}
-              >
-                <FontAwesomeIcon icon={faXmark} />
-              </button>
-            </div>
-
-            <div className={cx('orderModalBody')}>
-              {detailLoading ? (
-                <p className={cx('emptyMessage')}>Đang tải chi tiết...</p>
-              ) : (
-                <>
-                  {orderDetails[selectedOrderId] ? (() => {
-                    const order = orderDetails[selectedOrderId];
-                    const refundInfo = parseRefundInfo(order);
-                    const apiBaseUrl = getApiBaseUrl();
-                    const baseUrlForStatic = apiBaseUrl.replace('/api', '');
-                    const normalizedMediaUrls = (refundInfo.mediaUrls || []).map(url =>
-                      normalizeMediaUrl(url, baseUrlForStatic)
-                    );
-                    const isReturnFlow = order?.status && (
-                      String(order.status).toUpperCase().startsWith('RETURN_') ||
-                      String(order.status).toUpperCase() === 'REFUNDED' ||
-                      String(order.status).toUpperCase() === 'RETURNED'
-                    );
-
-                    return (
-                      <div className={cx('orderDetailGrid')}>
-                        <div>
-                          <p className={cx('detailLabel')}>Mã đơn hàng</p>
-                          <p className={cx('detailValue')}>
-                            #{order?.code || order?.id || '—'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className={cx('detailLabel')}>Người nhận</p>
-                          <p className={cx('detailValue')}>
-                            {order?.receiverName || order?.customerName || '—'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className={cx('detailLabel')}>Số điện thoại</p>
-                          <p className={cx('detailValue')}>
-                            {order?.receiverPhone || '—'}
-                          </p>
-                        </div>
-                        <div className={cx('detailFull')}>
-                          <p className={cx('detailLabel')}>Địa chỉ</p>
-                          <p className={cx('detailValue')}>
-                            {order?.shippingAddress || '—'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className={cx('detailLabel')}>Phương thức thanh toán</p>
-                          <p className={cx('detailValue')}>
-                            {order?.paymentMethod === 'COD'
-                              ? 'Thanh toán khi nhận hàng (COD)'
-                              : order?.paymentMethod === 'MOMO'
-                              ? 'Thanh toán qua ví MoMo'
-                              : order?.paymentMethod || '—'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className={cx('detailLabel')}>Tổng tiền</p>
-                          <p className={cx('detailValue', 'detailTotal')}>
-                            {formatCurrency(order?.totalAmount || 0, 'VND')}
-                          </p>
-                        </div>
-
-                        {/* Refund Information Section - Only show if it's a return/refund order */}
-                        {isReturnFlow && (refundInfo.reason || refundInfo.returnAddress || refundInfo.refundMethod) && (
-                          <>
-                            {refundInfo.reason && (
-                              <div>
-                                <p className={cx('detailLabel')}>Lý do trả hàng/hoàn tiền</p>
-                                <p className={cx('detailValue')}>{refundInfo.reason}</p>
-                              </div>
-                            )}
-                            {refundInfo.description && (
-                              <div className={cx('detailFull')}>
-                                <p className={cx('detailLabel')}>Mô tả</p>
-                                <p className={cx('detailValue')}>{refundInfo.description}</p>
-                              </div>
-                            )}
-                            {refundInfo.returnAddress && (
-                              <div className={cx('detailFull')}>
-                                <p className={cx('detailLabel')}>Địa chỉ gửi hàng</p>
-                                <p className={cx('detailValue')}>{refundInfo.returnAddress}</p>
-                              </div>
-                            )}
-                            {refundInfo.refundMethod && (
-                              <div>
-                                <p className={cx('detailLabel')}>Phương thức hoàn tiền</p>
-                                <p className={cx('detailValue')}>{refundInfo.refundMethod}</p>
-                              </div>
-                            )}
-                            {refundInfo.bank && (
-                              <div>
-                                <p className={cx('detailLabel')}>Ngân hàng</p>
-                                <p className={cx('detailValue')}>{refundInfo.bank}</p>
-                              </div>
-                            )}
-                            {refundInfo.accountNumber && (
-                              <div>
-                                <p className={cx('detailLabel')}>Số tài khoản</p>
-                                <p className={cx('detailValue')}>{refundInfo.accountNumber}</p>
-                              </div>
-                            )}
-                            {refundInfo.accountHolder && (
-                              <div>
-                                <p className={cx('detailLabel')}>Chủ tài khoản</p>
-                                <p className={cx('detailValue')}>{refundInfo.accountHolder}</p>
-                              </div>
-                            )}
-                            {normalizedMediaUrls.length > 0 && (
-                              <div className={cx('detailFull')}>
-                                <p className={cx('detailLabel')}>Ảnh/video khách gửi</p>
-                                <div className={cx('detailMediaGrid')}>
-                                  {normalizedMediaUrls.map((url, index) => {
-                                    const isVideo = /\.(mp4|webm|ogg|mov|avi|mkv|flv|wmv)$/i.test(url);
-                                    return (
-                                      <div 
-                                        key={index} 
-                                        className={cx('detailMediaItem')}
-                                        onClick={() => {
-                                          setLightboxUrls(normalizedMediaUrls);
-                                          setLightboxIndex(index);
-                                          setLightboxOpen(true);
-                                        }}
-                                        style={{ cursor: 'pointer' }}
-                                      >
-                                        {isVideo ? (
-                                          <video
-                                            src={url}
-                                            controls
-                                            className={cx('detailMediaContent')}
-                                            preload="metadata"
-                                            onClick={(e) => e.stopPropagation()}
-                                          />
-                                        ) : (
-                                          <img
-                                            src={url}
-                                            alt={`Ảnh ${index + 1}`}
-                                            className={cx('detailMediaContent')}
-                                            loading="lazy"
-                                          />
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            )}
-                          </>
-                        )}
-
-                        {/* Show note only if it's not a refund order or if refund info is not available */}
-                        {order?.note && !isReturnFlow && (
-                          <div className={cx('detailFull')}>
-                            <p className={cx('detailLabel')}>Ghi chú</p>
-                            <p className={cx('detailValue', 'detailNoteValue')}>
-                              {order.note}
-                            </p>
-                          </div>
-                        )}
-
-                        <div className={cx('detailFull')}>
-                          <p className={cx('detailLabel')}>Sản phẩm</p>
-                          <div className={cx('detailItems')}>
-                            {(order?.items || []).map((item, idx) => (
-                              <div key={idx} className={cx('detailItem')}>
-                                <img
-                                  src={
-                                    item.imageUrl ||
-                                    item.product?.defaultMedia?.mediaUrl ||
-                                    item.product?.mediaUrls?.[0] ||
-                                    defaultProductImage
-                                  }
-                                  alt={item.name}
-                                  className={cx('detailItemImage')}
-                                />
-                                <div className={cx('detailItemInfo')}>
-                                  <p className={cx('detailItemName')}>
-                                    {item.name || item.product?.name || 'Sản phẩm'}
-                                  </p>
-                                  <p className={cx('detailItemMeta')}>
-                                    Số lượng: {item.quantity || 0} • Giá:{' '}
-                                    {item.unitPrice != null
-                                      ? formatCurrency(item.unitPrice, 'VND')
-                                      : '—'}
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })() : (
-                    <p className={cx('emptyMessage')}>Không tải được chi tiết đơn hàng</p>
-                  )}
-                </>
-              )}
-            </div>
-
-            <div className={cx('orderModalFooter')}>
-              {orderDetails[selectedOrderId] && (() => {
-                const currentOrder = orderDetails[selectedOrderId];
-                const rawStatusUpper = String(currentOrder?.status || '').trim().toUpperCase();
-                const canCancel = currentOrder && (
-                  rawStatusUpper === 'CREATED' ||
-                  rawStatusUpper === 'PENDING' ||
-                  rawStatusUpper === 'CONFIRMED'
-                );
-                return canCancel ? (
-                  <button
-                    type="button"
-                    className={cx('btn', 'btnDanger')}
-                    onClick={handleCancelOrder}
-                    disabled={cancelling}
-                    style={{ marginRight: '10px' }}
-                  >
-                    {cancelling ? 'Đang hủy...' : 'Hủy đơn hàng'}
-                  </button>
-                ) : null;
-              })()}
-              <button
-                type="button"
-                className={cx('btn', 'btnPrimary')}
-                onClick={handleCloseModal}
-              >
-                Đóng
-              </button>
-            </div>
-            <CancelOrderDialog
-              open={showCancelDialog}
-              loading={cancelling}
-              onConfirm={handleConfirmCancel}
-              onCancel={() => !cancelling && setShowCancelDialog(false)}
-            />
-          </div>
-        </div>
+        <RegularOrderModal
+          order={orderDetails[selectedOrderId]}
+          loading={detailLoading}
+          onClose={handleCloseModal}
+          onCancel={() => setShowCancelDialog(true)}
+          cancelling={cancelling}
+        />
       )}
+
+      {/* Refund Order Detail Modal */}
+      {isRefundModalOpen && (
+        <RefundOrderModal
+          order={orderDetails[selectedOrderId]}
+          loading={detailLoading}
+          onClose={handleCloseModal}
+          onSuccess={() => {
+            fetchOrders(); // Refresh orders list after successful cancellation
+          }}
+        />
+      )}
+
+      {/* Cancel Order Dialog */}
+      <CancelOrderDialog
+        open={showCancelDialog}
+        loading={cancelling}
+        onConfirm={handleConfirmCancel}
+        onCancel={() => !cancelling && setShowCancelDialog(false)}
+      />
 
       {/* Refund Request Modal */}
       <RefundRequestModal
@@ -1040,64 +1093,6 @@ function OrdersSection({ getStatusClass, defaultTab }) {
           fetchOrders(); // Refresh orders list after successful refund request
         }}
       />
-
-      {/* Lightbox Modal for Images */}
-      {lightboxOpen && lightboxUrls.length > 0 && (
-        <div className={cx('lightbox')} onClick={() => setLightboxOpen(false)}>
-          <button className={cx('lightboxClose')} onClick={() => setLightboxOpen(false)}>
-            <FontAwesomeIcon icon={faXmark} />
-          </button>
-          {lightboxUrls.length > 1 && (
-            <>
-              <button 
-                className={cx('lightboxNav', 'lightboxPrev')} 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setLightboxIndex((prev) => (prev - 1 + lightboxUrls.length) % lightboxUrls.length);
-                }}
-              >
-                <FontAwesomeIcon icon={faAngleLeft} />
-              </button>
-              <button 
-                className={cx('lightboxNav', 'lightboxNext')} 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setLightboxIndex((prev) => (prev + 1) % lightboxUrls.length);
-                }}
-              >
-                <FontAwesomeIcon icon={faAngleRight} />
-              </button>
-            </>
-          )}
-          <div className={cx('lightboxContent')} onClick={(e) => e.stopPropagation()}>
-            {(() => {
-              const currentUrl = lightboxUrls[lightboxIndex];
-              const isVideo = /\.(mp4|webm|ogg|mov|avi|mkv|flv|wmv)$/i.test(currentUrl);
-              return isVideo ? (
-                <video
-                  src={currentUrl}
-                  controls
-                  autoPlay
-                  className={cx('lightboxMedia')}
-                >
-                  Trình duyệt của bạn không hỗ trợ video.
-                </video>
-              ) : (
-                <img
-                  src={currentUrl}
-                  alt={`Ảnh ${lightboxIndex + 1}`}
-                  className={cx('lightboxMedia')}
-                />
-              );
-            })()}
-            {lightboxUrls.length > 1 && (
-              <div className={cx('lightboxCounter')}>
-                {lightboxIndex + 1} / {lightboxUrls.length}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

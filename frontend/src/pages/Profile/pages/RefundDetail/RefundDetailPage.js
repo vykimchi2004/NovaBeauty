@@ -8,7 +8,7 @@ import { normalizeMediaUrl } from '~/services/productUtils';
 const cx = classNames.bind(styles);
 
 // Parse refund information from order (prefer dedicated fields, fallback to note)
-const parseRefundInfo = (order) => {
+export const parseRefundInfo = (order) => {
     // First, try to get from dedicated refund fields (new way)
     if (order.refundReasonType || order.refundDescription || order.refundReturnAddress) {
         let selectedProducts = [];
@@ -134,7 +134,7 @@ const parseRefundInfo = (order) => {
     return info;
 };
 
-const calculateRefund = (order, refundInfo) => {
+export const calculateRefund = (order, refundInfo) => {
     if (!order || !order.items) {
         return {
             productValue: 0,

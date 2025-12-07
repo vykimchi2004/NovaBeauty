@@ -17,6 +17,7 @@ import ManageOrders from './ManageOrders/ManageOrders';
 import ManageProduct from './ManageProduct/ManageProduct';
 import ManageVouchersPromotions from './ManageVouchersPromotions/ManageVouchersPromotions';
 import ReportsAnalytics from './ReportsAnalytics/ReportsAnalytics';
+import OrderDetailPage from './ManageOrders/OrderDetail';
 
 const adminEmail = 'admin@novabeauty.com';
 const cx = classNames.bind(styles);
@@ -120,6 +121,7 @@ function AdminPage() {
             <Route path="content" element={<ManageContent />} />
             <Route path="customers" element={<ManageCustomerAccounts />} />
             <Route path="orders" element={<ManageOrders />} />
+            <Route path="orders/:id" element={<OrderDetailPage />} />
             <Route path="products" element={<ManageProduct />} />
             <Route path="vouchers" element={<ManageVouchersPromotions />} />
             <Route path="reports" element={<ReportsAnalytics />} />

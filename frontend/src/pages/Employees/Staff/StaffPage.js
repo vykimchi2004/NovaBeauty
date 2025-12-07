@@ -23,6 +23,7 @@ import StaffVouchers from './StaffVouchers';
 import StaffBanners from './StaffBanners';
 import StaffOrder from './StaffOrder';
 import StaffProfile from './StaffProfile/StaffProfile';
+import RefundOrderDetailPage from './StaffOrder/RefundOrderDetail';
 
 const cx = classNames.bind(styles);
 
@@ -323,6 +324,7 @@ function StaffPage() {
             <Route path="content" element={<StaffBanners />} />
             <Route path="vouchers" element={<StaffVouchers />} />
             <Route path="orders" element={<StaffOrder />} />
+            <Route path="refund-orders/:id" element={<RefundOrderDetailPage />} />
             <Route path="profile" element={<StaffProfile />} />
           </Routes>
         </section>
