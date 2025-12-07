@@ -625,62 +625,62 @@ export default function RefundDetailPage() {
                 {/* Customer Submitted Request - Chi tiết đơn hoàn hàng khách hàng gửi */}
                 <div className={cx('section')}>
                     <h2 className={cx('section-title')}>Chi tiết đơn hoàn hàng (khách hàng gửi)</h2>
-                    
+
                     <div className={cx('request-box')}>
-                        {/* Product Details */}
+                    {/* Product Details */}
                         <div className={cx('request-row')}>
                             <span>Sản phẩm:</span>
                             <span>
                                 {selectedItems.length > 0
                                     ? selectedItems.map(item => item.name || 'N/A').join(', ')
                                     : 'Không xác định'}
-                            </span>
-                        </div>
+                                </span>
+                            </div>
                         <div className={cx('request-row')}>
                             <span>Số lượng:</span>
                             <span>
-                                {selectedItems.reduce((sum, item) => sum + (item.quantity || 0), 0)}
-                            </span>
-                        </div>
+                                    {selectedItems.reduce((sum, item) => sum + (item.quantity || 0), 0)}
+                                </span>
+                            </div>
                         <div className={cx('request-row')}>
                             <span>Lý do:</span>
                             <span>{refundInfo.description || refundInfo.reason || 'Không có mô tả'}</span>
                         </div>
 
                         {/* Refund Summary */}
-                        <div className={cx('summary-block')}>
+                            <div className={cx('summary-block')}>
                             <div className={cx('summary-title')}>Tóm tắt số tiền hoàn</div>
-                            <div className={cx('summary-row')}>
-                                <span>Tổng đơn (đã thanh toán)</span>
-                                <span>{formatCurrency(summary.totalPaid)}</span>
-                            </div>
-                            <div className={cx('summary-row')}>
-                                <span>Giá trị sản phẩm</span>
-                                <span>{formatCurrency(summary.productValue)}</span>
-                            </div>
-                            <div className={cx('summary-row')}>
-                                <span>Phí vận chuyển (lần đầu)</span>
-                                <span>{formatCurrency(summary.shippingFee)}</span>
-                            </div>
-                            <div className={cx('summary-row')}>
-                                <span>Phí ship (lần 2 - khách tạm ứng)</span>
-                                <span>{formatCurrency(summary.secondShippingFee)}</span>
-                            </div>
-                            <div className={cx('summary-row')}>
-                                <span>Phí hoàn trả (10% khi lỗi khách hàng)</span>
-                                <span>{formatCurrency(summary.returnPenalty)}</span>
-                            </div>
-                            <div className={cx('summary-row', 'total')}>
-                                <span>Tổng hoàn (theo khách đề xuất)</span>
-                                <span>{formatCurrency(summary.total)}</span>
-                            </div>
-                            {hasStaffConfirmed && (
-                                <div className={cx('summary-row', 'confirmed')}>
-                                    <span>Tổng hoàn (nhân viên xác nhận)</span>
-                                    <span>{formatCurrency(summary.confirmedTotal)}</span>
+                                <div className={cx('summary-row')}>
+                                    <span>Tổng đơn (đã thanh toán)</span>
+                                    <span>{formatCurrency(summary.totalPaid)}</span>
                                 </div>
-                            )}
-                        </div>
+                                <div className={cx('summary-row')}>
+                                    <span>Giá trị sản phẩm</span>
+                                    <span>{formatCurrency(summary.productValue)}</span>
+                                </div>
+                                <div className={cx('summary-row')}>
+                                    <span>Phí vận chuyển (lần đầu)</span>
+                                    <span>{formatCurrency(summary.shippingFee)}</span>
+                                </div>
+                                <div className={cx('summary-row')}>
+                                    <span>Phí ship (lần 2 - khách tạm ứng)</span>
+                                    <span>{formatCurrency(summary.secondShippingFee)}</span>
+                                </div>
+                                <div className={cx('summary-row')}>
+                                    <span>Phí hoàn trả (10% khi lỗi khách hàng)</span>
+                                    <span>{formatCurrency(summary.returnPenalty)}</span>
+                                </div>
+                                <div className={cx('summary-row', 'total')}>
+                                    <span>Tổng hoàn (theo khách đề xuất)</span>
+                                    <span>{formatCurrency(summary.total)}</span>
+                                </div>
+                                {hasStaffConfirmed && (
+                                    <div className={cx('summary-row', 'confirmed')}>
+                                        <span>Tổng hoàn (nhân viên xác nhận)</span>
+                                        <span>{formatCurrency(summary.confirmedTotal)}</span>
+                                    </div>
+                                )}
+                            </div>
 
                         {/* Refund Method Info */}
                         {refundInfo.refundMethod && (
@@ -688,7 +688,7 @@ export default function RefundDetailPage() {
                                 <div className={cx('request-row')}>
                                     <span>Phương thức hoàn tiền:</span>
                                     <span>{refundInfo.refundMethod}</span>
-                                </div>
+                            </div>
                                 {refundInfo.bank && (
                                     <div className={cx('request-row')}>
                                         <span>Ngân hàng:</span>
@@ -715,62 +715,62 @@ export default function RefundDetailPage() {
                             <div className={cx('request-row')}>
                                 <span>Địa chỉ gửi hàng:</span>
                                 <span>{refundInfo.returnAddress}</span>
-                            </div>
-                        )}
+                        </div>
+                    )}
 
-                        {/* Attached Media */}
+                    {/* Attached Media */}
                         <div>
                             <div className={cx('media-label')}>Ảnh khách gửi</div>
-                            <div className={cx('media-boxes')}>
-                                {normalizedMediaUrls.length > 0 ? (
-                                    normalizedMediaUrls.map((url, index) => {
-                                        const isVideo = /\.(mp4|webm|ogg|mov|avi|mkv|flv|wmv)$/i.test(url);
-                                        return (
-                                            <div key={index} className={cx('media-box')}>
-                                                {isVideo ? (
-                                                    <video
-                                                        src={url}
-                                                        controls
-                                                        className={cx('media-content')}
-                                                        preload="metadata"
-                                                        onClick={() => handleImageClick(index)}
-                                                        style={{ cursor: 'pointer' }}
-                                                        onError={(e) => {
-                                                            e.target.style.display = 'none';
-                                                            const errorDiv = document.createElement('div');
-                                                            errorDiv.className = cx('media-placeholder');
-                                                            errorDiv.textContent = `Ảnh ${index + 1}`;
-                                                            e.target.parentElement.appendChild(errorDiv);
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <img
-                                                        src={url}
-                                                        alt={`Ảnh ${index + 1}`}
-                                                        className={cx('media-content')}
-                                                        loading="lazy"
-                                                        onClick={() => handleImageClick(index)}
-                                                        style={{ cursor: 'pointer' }}
-                                                        onError={(e) => {
-                                                            e.target.style.display = 'none';
-                                                            const errorDiv = document.createElement('div');
-                                                            errorDiv.className = cx('media-placeholder');
-                                                            errorDiv.textContent = `Ảnh ${index + 1}`;
-                                                            e.target.parentElement.appendChild(errorDiv);
-                                                        }}
-                                                    />
-                                                )}
-                                            </div>
-                                        );
-                                    })
-                                ) : (
-                                    // Show placeholder boxes if no media
-                                    [1, 2, 3].map((num) => (
-                                        <div key={num} className={cx('media-box', 'placeholder')}>
-                                            <span className={cx('media-placeholder')}>Ảnh {num}</span>
+                        <div className={cx('media-boxes')}>
+                            {normalizedMediaUrls.length > 0 ? (
+                                normalizedMediaUrls.map((url, index) => {
+                                    const isVideo = /\.(mp4|webm|ogg|mov|avi|mkv|flv|wmv)$/i.test(url);
+                                    return (
+                                        <div key={index} className={cx('media-box')}>
+                                            {isVideo ? (
+                                                <video
+                                                    src={url}
+                                                    controls
+                                                    className={cx('media-content')}
+                                                    preload="metadata"
+                                                    onClick={() => handleImageClick(index)}
+                                                    style={{ cursor: 'pointer' }}
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                        const errorDiv = document.createElement('div');
+                                                        errorDiv.className = cx('media-placeholder');
+                                                        errorDiv.textContent = `Ảnh ${index + 1}`;
+                                                        e.target.parentElement.appendChild(errorDiv);
+                                                    }}
+                                                />
+                                            ) : (
+                                                <img
+                                                    src={url}
+                                                    alt={`Ảnh ${index + 1}`}
+                                                    className={cx('media-content')}
+                                                    loading="lazy"
+                                                    onClick={() => handleImageClick(index)}
+                                                    style={{ cursor: 'pointer' }}
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                        const errorDiv = document.createElement('div');
+                                                        errorDiv.className = cx('media-placeholder');
+                                                        errorDiv.textContent = `Ảnh ${index + 1}`;
+                                                        e.target.parentElement.appendChild(errorDiv);
+                                                    }}
+                                                />
+                                            )}
                                         </div>
-                                    ))
-                                )}
+                                    );
+                                })
+                            ) : (
+                                // Show placeholder boxes if no media
+                                [1, 2, 3].map((num) => (
+                                    <div key={num} className={cx('media-box', 'placeholder')}>
+                                        <span className={cx('media-placeholder')}>Ảnh {num}</span>
+                                    </div>
+                                ))
+                            )}
                             </div>
                         </div>
                     </div>
