@@ -69,11 +69,16 @@
 }
 
 .totalRow {
-  margin-top: 8px;
+  margin-top: 20px;
   padding-top: 16px;
   border-top: 2px solid #ffd1e4;
   font-size: 16px;
   font-weight: 600;
+  
+  // Đảm bảo totalRow luôn ở dưới voucher section
+  &:not(:last-of-type) {
+    border-bottom: none;
+  }
 }
 
 .totalAmount {
@@ -1106,6 +1111,160 @@
   &:hover {
     border-color: #e5677d;
     background: #f9fafb;
+  }
+}
+
+// Voucher section
+.appliedVoucher {
+  background: linear-gradient(135deg, rgba(229, 103, 125, 0.1) 0%, rgba(255, 128, 181, 0.08) 100%);
+  border: 1px solid rgba(229, 103, 125, 0.2);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #212529;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  transition: all 0.2s ease;
+  margin-bottom: 16px;
+
+  &:hover {
+    background: linear-gradient(135deg, rgba(229, 103, 125, 0.15) 0%, rgba(255, 128, 181, 0.12) 100%);
+    border-color: rgba(229, 103, 125, 0.3);
+    box-shadow: 0 2px 8px rgba(229, 103, 125, 0.1);
+  }
+
+  strong {
+    color: #e5677d;
+    font-weight: 700;
+  }
+}
+
+.appliedVoucherText {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.removeVoucherBtn {
+  background: transparent;
+  border: 1px solid rgba(229, 103, 125, 0.3);
+  color: #e5677d;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(229, 103, 125, 0.1);
+    border-color: #e5677d;
+  }
+}
+
+.voucherSection {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+  margin-bottom: 0; // Không có margin-bottom để totalRow sát ngay dưới
+}
+
+.voucherTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #212529;
+  margin: 0 0 12px 0;
+}
+
+.voucherCard {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.voucherInputRow {
+  display: flex;
+  gap: 8px;
+}
+
+.voucherInput {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+
+  &:focus {
+    border-color: #e5677d;
+    box-shadow: 0 0 0 3px rgba(229, 103, 125, 0.1);
+  }
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+}
+
+.voucherApplyBtn {
+  padding: 10px 20px;
+  background: #e5677d;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    background: #d4556b;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(229, 103, 125, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.voucherApplied {
+  margin: 12px 0 0 0;
+  padding: 0;
+  font-size: 14px;
+  color: #212529;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  strong {
+    color: #e5677d;
+    font-weight: 600;
+  }
+}
+
+.removeVoucherInline {
+  background: transparent;
+  border: 1px solid rgba(229, 103, 125, 0.3);
+  color: #e5677d;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: auto;
+
+  &:hover {
+    background: rgba(229, 103, 125, 0.1);
+    border-color: #e5677d;
   }
 }
 

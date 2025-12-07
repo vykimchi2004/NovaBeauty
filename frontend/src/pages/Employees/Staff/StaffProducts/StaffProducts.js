@@ -148,6 +148,22 @@ function StaffProducts() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, selectedDate, statusFilter, products]);
 
+  // Helper function để tính tổng tồn kho của một sản phẩm
+  const calculateTotalStock = (product) => {
+    if (product.manufacturingLocation) {
+      const variants = normalizeVariantRecords(product.manufacturingLocation);
+      if (variants.length > 0) {
+        return variants.reduce((sum, variant) => {
+          const stock = variant.stockQuantity;
+          return sum + (stock !== null && stock !== undefined ? Number(stock) : 0);
+        }, 0);
+      }
+    }
+    return product.stockQuantity !== null && product.stockQuantity !== undefined 
+      ? Number(product.stockQuantity) 
+      : 0;
+  };
+
   const fetchProducts = async () => {
     try {
       setLoading(true);
@@ -157,6 +173,24 @@ function StaffProducts() {
       setFilteredProducts(list);
       handleProductStatusNotifications(list);
       handleDeletedProductNotifications(list);
+      
+      // Kiểm tra và thông báo sản phẩm sắp hết (tồn kho < 50)
+      const lowStockProducts = list.filter((product) => {
+        const totalStock = calculateTotalStock(product);
+        return totalStock > 0 && totalStock < 50;
+      });
+      
+      if (lowStockProducts.length > 0) {
+        const productNames = lowStockProducts
+          .slice(0, 3)
+          .map((p) => p.name || p.id)
+          .join(', ');
+        const moreCount = lowStockProducts.length > 3 ? ` và ${lowStockProducts.length - 3} sản phẩm khác` : '';
+        notify.warning(
+          `⚠️ Cảnh báo: Có ${lowStockProducts.length} sản phẩm sắp hết (tồn kho < 50): ${productNames}${moreCount}. Vui lòng kiểm tra và nhập thêm hàng.`,
+          { duration: 6000 }
+        );
+      }
     } catch (err) {
       console.error('Error fetching products:', err);
       notify.error('Không thể tải danh sách sản phẩm. Vui lòng thử lại.');
@@ -954,22 +988,37 @@ function StaffProducts() {
                   </td>
                   <td className={cx('stockCell')}>
                     {(() => {
+                      let totalStock = 0;
                       // Nếu có color variants, tính tổng tồn kho từ các variants
                       if (product.manufacturingLocation) {
                         const variants = normalizeVariantRecords(product.manufacturingLocation);
                         if (variants.length > 0) {
-                          const totalStock = variants.reduce((sum, variant) => {
+                          totalStock = variants.reduce((sum, variant) => {
                             const stock = variant.stockQuantity;
                             return sum + (stock !== null && stock !== undefined ? Number(stock) : 0);
                           }, 0);
-                          return totalStock > 0 ? totalStock.toLocaleString('vi-VN') : '-';
                         }
+                      } else {
+                        // Nếu không có variants, lấy stockQuantity của product
+                        totalStock = product.stockQuantity !== null && product.stockQuantity !== undefined 
+                          ? Number(product.stockQuantity) 
+                          : 0;
                       }
-                      // Nếu không có variants, hiển thị stockQuantity của product
-                      if (product.stockQuantity !== null && product.stockQuantity !== undefined) {
-                        return product.stockQuantity.toLocaleString('vi-VN');
-                      }
-                      return '-';
+                      
+                      // Hiển thị số lượng với cảnh báo nếu < 50
+                      const displayStock = totalStock > 0 ? totalStock.toLocaleString('vi-VN') : '-';
+                      const isLowStock = totalStock > 0 && totalStock < 50;
+                      
+                      return (
+                        <div className={cx('stockDisplay', { lowStock: isLowStock })}>
+                          <span>{displayStock}</span>
+                          {isLowStock && (
+                            <span className={cx('lowStockBadge')} title="Sản phẩm sắp hết">
+                              ⚠️ Sắp hết
+                            </span>
+                          )}
+                        </div>
+                      );
                     })()}
                   </td>
                   <td>
