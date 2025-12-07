@@ -1,191 +1,86 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import classNames from 'classnames/bind';
-import styles from './RefundDetailPage.module.scss';
+import styles from './ViewRefundDetailPage.module.scss';
 import { getApiBaseUrl, getStoredToken, formatCurrency } from '~/services/utils';
 import { normalizeMediaUrl } from '~/services/productUtils';
-import { useNotification } from '~/components/Common/Notification';
-import ConfirmDialog from '~/components/Common/ConfirmDialog/DeleteAccountDialog';
-import RejectOrderRefundDialog from '~/components/Common/ConfirmDialog/RejectOrderRefundDialog';
 
 const cx = classNames.bind(styles);
 
-// Parse refund information from order (prefer dedicated fields, fallback to note)
+// Parse refund information from order
 const parseRefundInfo = (order) => {
-    // Debug log
-    console.log('🔍 parseRefundInfo - Order data:', {
-        refundReasonType: order.refundReasonType,
-        refundDescription: order.refundDescription,
-        refundReturnAddress: order.refundReturnAddress,
-        refundMediaUrls: order.refundMediaUrls,
-        refundBank: order.refundBank,
-        refundAccountNumber: order.refundAccountNumber,
-        refundAccountHolder: order.refundAccountHolder,
-    });
-
-    // First, try to get from dedicated refund fields (new way)
-    if (order.refundReasonType || order.refundDescription || order.refundReturnAddress) {
-        let selectedProducts = [];
-        if (order.refundSelectedProductIds) {
-            try {
-                selectedProducts = JSON.parse(order.refundSelectedProductIds);
-            } catch (e) {
-                console.warn('Failed to parse refundSelectedProductIds', e);
-                // If parsing fails, default to all products
-                selectedProducts = order.items?.map(item => item.id) || [];
-            }
-        } else {
-            // Default to all products if not specified
-            selectedProducts = order.items?.map(item => item.id) || [];
-        }
-
-        let mediaUrls = [];
-        if (order.refundMediaUrls) {
-            try {
-                // Handle both string and already parsed array
-                let parsed = order.refundMediaUrls;
-                if (typeof parsed === 'string') {
-                    parsed = JSON.parse(parsed);
-                }
-                if (Array.isArray(parsed)) {
-                    mediaUrls = parsed;
-                } else if (typeof parsed === 'string' && parsed.trim().startsWith('[')) {
-                    // Try parsing again if it's still a string
-                    parsed = JSON.parse(parsed);
-                    if (Array.isArray(parsed)) {
-                        mediaUrls = parsed;
-                    }
-                }
-                console.log('🔍 Parsed mediaUrls:', mediaUrls);
-            } catch (e) {
-                console.error('Failed to parse refund media URLs', e, 'Raw value:', order.refundMediaUrls);
-            }
-        }
-
-        const refundInfo = {
-            reason: order.refundReasonType === 'store'
-                ? 'Sản phẩm gặp sự cố từ cửa hàng'
-                : order.refundReasonType === 'customer'
-                    ? 'Thay đổi nhu cầu / Mua nhầm'
-                    : '',
-            reasonType: order.refundReasonType || null,
-            description: order.refundDescription || '',
-            email: order.refundEmail || order.customerEmail || '',
-            returnAddress: order.refundReturnAddress || '',
-            refundMethod: order.refundMethod || '',
-            bank: order.refundBank || '',
-            accountNumber: order.refundAccountNumber || '',
-            accountHolder: order.refundAccountHolder || '',
-            selectedProducts: selectedProducts,
-            refundAmount: order.refundAmount || null,
-            mediaUrls: mediaUrls,
-        };
-
-        console.log('🔍 Parsed refundInfo:', refundInfo);
-        return refundInfo;
-    }
-
-    // Fallback: parse from note (old way, for backward compatibility)
-    const note = order.note || '';
-    if (!note || typeof note !== 'string') {
+    if (!order) {
         return {
-            reason: '',
-            reasonType: null,
+            reasonType: '',
             description: '',
-            email: order.customerEmail || '',
+            refundAmount: 0,
+            selectedProductIds: [],
+            mediaUrls: [],
+            email: '',
             returnAddress: '',
             refundMethod: '',
             bank: '',
             accountNumber: '',
             accountHolder: '',
-            selectedProducts: order?.items?.map(item => item.id) || [],
-            refundAmount: null,
-            mediaUrls: [],
         };
     }
 
-    const info = {
-        reason: '',
-        reasonType: null,
-        description: '',
-        email: order.customerEmail || '',
-        returnAddress: '',
-        refundMethod: '',
-        bank: '',
-        accountNumber: '',
-        accountHolder: '',
-        selectedProducts: order?.items?.map(item => item.id) || [],
-        refundAmount: null,
-        mediaUrls: [],
+    let mediaUrls = [];
+    if (order.refundMediaUrls) {
+        try {
+            let parsed = order.refundMediaUrls;
+            if (typeof parsed === 'string') {
+                parsed = JSON.parse(parsed);
+            }
+            if (Array.isArray(parsed)) {
+                mediaUrls = parsed;
+            }
+        } catch (e) {
+            console.warn('Failed to parse refund media URLs', e);
+            mediaUrls = [];
+        }
+    }
+
+    let selectedProductIds = [];
+    if (order.refundSelectedProductIds) {
+        try {
+            const parsed = JSON.parse(order.refundSelectedProductIds);
+            if (Array.isArray(parsed)) {
+                selectedProductIds = parsed;
+            }
+        } catch (e) {
+            console.warn('Failed to parse refund selected product IDs', e);
+            selectedProductIds = [];
+        }
+    }
+
+    return {
+        reasonType: order.refundReasonType || '',
+        description: order.refundDescription || '',
+        refundAmount: order.refundAmount || 0,
+        mediaUrls,
+        selectedProductIds,
+        email: order.refundEmail || order.customerEmail || '',
+        returnAddress: order.refundReturnAddress || '',
+        refundMethod: order.refundMethod || '',
+        bank: order.refundBank || '',
+        accountNumber: order.refundAccountNumber || '',
+        accountHolder: order.refundAccountHolder || '',
     };
-
-    // Parse reason
-    if (note.includes('Sản phẩm gặp sự cố từ cửa hàng')) {
-        info.reason = 'Sản phẩm gặp sự cố từ cửa hàng';
-        info.reasonType = 'store';
-    } else if (note.includes('Thay đổi nhu cầu / Mua nhầm')) {
-        info.reason = 'Thay đổi nhu cầu / Mua nhầm';
-        info.reasonType = 'customer';
-    }
-
-    // Parse description
-    const descMatch = note.match(/Mô tả:\s*(.+?)(?:\n|$)/);
-    if (descMatch) {
-        info.description = descMatch[1].trim();
-    }
-
-    // Parse email
-    const emailMatch = note.match(/Email:\s*(.+?)(?:\n|$)/);
-    if (emailMatch) {
-        info.email = emailMatch[1].trim();
-    }
-
-    // Parse return address
-    const addressMatch = note.match(/Địa chỉ gửi hàng:\s*(.+?)(?:\n|$)/);
-    if (addressMatch) {
-        info.returnAddress = addressMatch[1].trim();
-    }
-
-    // Parse refund method
-    const methodMatch = note.match(/Phương thức hoàn tiền:\s*(.+?)(?:\n|$)/);
-    if (methodMatch) {
-        info.refundMethod = methodMatch[1].trim();
-    }
-
-    // Parse bank info
-    const bankMatch = note.match(/Ngân hàng:\s*(.+?)(?:\n|$)/);
-    if (bankMatch) {
-        info.bank = bankMatch[1].trim();
-    }
-
-    const accountMatch = note.match(/Số tài khoản:\s*(.+?)(?:\n|$)/);
-    if (accountMatch) {
-        info.accountNumber = accountMatch[1].trim();
-    }
-
-    const holderMatch = note.match(/Chủ tài khoản:\s*(.+?)(?:\n|$)/);
-    if (holderMatch) {
-        info.accountHolder = holderMatch[1].trim();
-    }
-
-    return info;
 };
 
 const parseShippingInfo = (raw) => {
-    if (!raw || typeof raw !== 'string') return null;
+    if (!raw || typeof raw !== 'string') return {};
     try {
         const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') {
-            return {
-                name: parsed.name || parsed.receiverName || '',
-                phone: parsed.phone || parsed.receiverPhone || '',
-                address: parsed.address || parsed.fullAddress || '',
-            };
-        }
+        return {
+            name: parsed.name || parsed.receiverName || parsed.recipientName || '',
+            phone: parsed.phone || parsed.receiverPhone || parsed.recipientPhone || '',
+            address: parsed.address || parsed.fullAddress || parsed.addressText || '',
+        };
     } catch {
         return { address: raw };
     }
-    return { address: raw };
 };
 
 const buildRefundSummary = (order, refundInfo, selectedItems = []) => {
@@ -198,13 +93,11 @@ const buildRefundSummary = (order, refundInfo, selectedItems = []) => {
             total: 0,
             totalPaid: 0,
             confirmedTotal: 0,
-            confirmedSecondShippingFee: 0,
-            confirmedPenalty: 0,
         };
     }
 
     const productValue = selectedItems.reduce(
-        (sum, item) => sum + (item.totalPrice || item.finalPrice || 0),
+        (sum, item) => sum + Number(item.totalPrice || item.finalPrice || 0),
         0,
     );
     const shippingFee = order.shippingFee || 0;
@@ -233,43 +126,30 @@ const buildRefundSummary = (order, refundInfo, selectedItems = []) => {
             ? totalPaid + secondShippingFee
             : Math.max(0, totalPaid - secondShippingFee - returnPenalty);
 
-    const customerTotal = order.refundAmount ?? fallbackTotal;
-    const confirmedTotal = order.refundConfirmedAmount ?? customerTotal;
-    const confirmedSecondShippingFee =
-        order.refundConfirmedSecondShippingFee ?? secondShippingFee;
-    const confirmedPenalty = order.refundConfirmedPenalty ?? returnPenalty;
+    const total = order.refundAmount ?? fallbackTotal;
+    const confirmedTotal = order.refundConfirmedAmount ?? total;
 
     return {
         productValue,
         shippingFee,
         secondShippingFee,
         returnPenalty,
-        total: customerTotal,
+        total,
         totalPaid,
         confirmedTotal,
-        confirmedSecondShippingFee,
-        confirmedPenalty,
     };
 };
 
-export default function RefundDetailPage() {
+export default function ViewRefundDetailPage() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { success: notifySuccess, error: notifyError } = useNotification();
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [rejectionNote, setRejectionNote] = useState('');
-    const [processing, setProcessing] = useState(false);
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [lightboxIndex, setLightboxIndex] = useState(0);
-    const [confirmDialog, setConfirmDialog] = useState({
-        open: false,
-        title: '',
-        message: '',
-        onConfirm: null,
-    });
-    const [rejectDialog, setRejectDialog] = useState(false);
+
+    const apiBaseUrl = getApiBaseUrl();
 
     useEffect(() => {
         const fetchOrderDetail = async () => {
@@ -278,13 +158,10 @@ export default function RefundDetailPage() {
                 setError('');
                 const token = getStoredToken('token');
                 if (!token) {
-                    setError('Vui lòng đăng nhập để xem chi tiết đơn hàng');
+                    setError('Vui lòng đăng nhập để xem chi tiết đơn hoàn hàng');
                     setLoading(false);
                     return;
                 }
-
-                const apiBaseUrl = getApiBaseUrl();
-                console.log('🔍 Fetching order detail for id:', id);
 
                 const response = await fetch(`${apiBaseUrl}/orders/${encodeURIComponent(id)}`, {
                     headers: {
@@ -293,12 +170,8 @@ export default function RefundDetailPage() {
                     },
                 });
 
-                console.log('🔍 Order detail response status:', response.status, response.statusText);
-
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
-                    console.error('🔍 Order detail error:', errorData);
-
                     let errorMessage = 'Không thể tải thông tin đơn hàng';
                     if (response.status === 403 || response.status === 401) {
                         errorMessage = 'Bạn không có quyền truy cập đơn hàng này';
@@ -307,31 +180,15 @@ export default function RefundDetailPage() {
                     } else if (errorData?.message) {
                         errorMessage = errorData.message;
                     }
-
                     throw new Error(errorMessage);
                 }
 
                 const data = await response.json();
-                console.log('🔍 Order detail data:', data);
                 const orderData = data?.result || data;
 
                 if (!orderData || !orderData.id) {
                     throw new Error('Dữ liệu đơn hàng không hợp lệ');
                 }
-
-                // Log refund fields để debug
-                console.log('🔍 Order refund fields:', {
-                    refundReasonType: orderData.refundReasonType,
-                    refundDescription: orderData.refundDescription,
-                    refundMediaUrls: orderData.refundMediaUrls,
-                    refundBank: orderData.refundBank,
-                    refundAccountNumber: orderData.refundAccountNumber,
-                    refundAccountHolder: orderData.refundAccountHolder,
-                    refundEmail: orderData.refundEmail,
-                    refundReturnAddress: orderData.refundReturnAddress,
-                    refundMethod: orderData.refundMethod,
-                    refundSelectedProductIds: orderData.refundSelectedProductIds,
-                });
 
                 setOrder(orderData);
             } catch (err) {
@@ -348,9 +205,29 @@ export default function RefundDetailPage() {
             setError('Không có ID đơn hàng');
             setLoading(false);
         }
-    }, [id]);
+    }, [id, apiBaseUrl]);
 
-    const handleCancel = () => {
+    const refundInfo = useMemo(() => parseRefundInfo(order), [order]);
+    const shippingInfo = useMemo(() => parseShippingInfo(order?.shippingAddress), [order]);
+
+    const selectedItems = useMemo(() => {
+        if (!order?.items) return [];
+        if (!refundInfo.selectedProductIds.length) return order.items;
+        return order.items.filter((item) => refundInfo.selectedProductIds.includes(item.id));
+    }, [order?.items, refundInfo.selectedProductIds]);
+
+    const summary = useMemo(
+        () => buildRefundSummary(order, refundInfo, selectedItems),
+        [order, refundInfo, selectedItems],
+    );
+
+    const normalizedMediaUrls = useMemo(() => {
+        if (!refundInfo.mediaUrls || !refundInfo.mediaUrls.length) return [];
+        const baseUrlForStatic = apiBaseUrl.replace('/api', '');
+        return refundInfo.mediaUrls.map((url) => normalizeMediaUrl(url, baseUrlForStatic));
+    }, [apiBaseUrl, refundInfo.mediaUrls]);
+
+    const handleBack = () => {
         navigate(-1);
     };
 
@@ -377,143 +254,23 @@ export default function RefundDetailPage() {
         }
     };
 
+    const getReasonLabel = (reasonType) => {
+        switch (reasonType) {
+            case 'store':
+                return 'Sản phẩm gặp sự cố từ cửa hàng';
+            case 'customer':
+                return 'Thay đổi nhu cầu / Mua nhầm';
+            default:
+                return 'Chưa xác định';
+        }
+    };
+
     const orderStatus = order?.status || '';
     const normalizedStatus = (orderStatus || '').toUpperCase();
-    const canProcess = normalizedStatus === 'RETURN_REQUESTED';
     const hasStaffConfirmed =
         (normalizedStatus === 'RETURN_STAFF_CONFIRMED' || normalizedStatus === 'REFUNDED') &&
-        typeof order.refundConfirmedAmount === 'number' &&
+        typeof order?.refundConfirmedAmount === 'number' &&
         order.refundConfirmedAmount > 0;
-
-    const handleReject = () => {
-        if (!canProcess) {
-            notifyError('Đơn này đã được chuyển sang bộ phận tiếp theo, không thể từ chối.');
-            return;
-        }
-        if (!rejectionNote.trim()) {
-            notifyError('Vui lòng nhập lý do từ chối.');
-            return;
-        }
-
-        setRejectDialog(true);
-    };
-
-    const handleConfirmReject = async () => {
-        setRejectDialog(false);
-
-        try {
-            setProcessing(true);
-            const token = getStoredToken('token');
-            const apiBaseUrl = getApiBaseUrl();
-
-            const response = await fetch(`${apiBaseUrl}/orders/${encodeURIComponent(id)}/reject-refund`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    reason: rejectionNote,
-                    source: 'CSKH',
-                }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData?.message || 'Không thể từ chối yêu cầu hoàn tiền');
-            }
-
-            notifySuccess('Đã từ chối yêu cầu hoàn tiền.');
-            navigate('/customer-support/refund-management');
-        } catch (err) {
-            console.error('Error rejecting refund:', err);
-            notifyError(err.message || 'Có lỗi xảy ra khi từ chối yêu cầu. Vui lòng thử lại.');
-        } finally {
-            setProcessing(false);
-        }
-    };
-
-    const handleConfirmRefund = async () => {
-        try {
-            setProcessing(true);
-            const token = getStoredToken('token');
-            const apiBaseUrl = getApiBaseUrl();
-
-            const response = await fetch(`${apiBaseUrl}/orders/${encodeURIComponent(id)}/cs-confirm-refund`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    note: rejectionNote || undefined,
-                }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData?.message || 'Không thể xác nhận yêu cầu hoàn tiền');
-            }
-
-            notifySuccess('Đã xác nhận và chuyển yêu cầu cho nhân viên xử lý.');
-            navigate('/customer-support/refund-management');
-        } catch (err) {
-            console.error('Error confirming refund:', err);
-            notifyError(err.message || 'Có lỗi xảy ra khi xác nhận yêu cầu. Vui lòng thử lại.');
-        } finally {
-            setProcessing(false);
-        }
-    };
-
-    const handleConfirm = () => {
-        if (!canProcess) {
-            notifyError('Đơn này đã được chuyển sang cho nhân viên xử lý.');
-            return;
-        }
-
-        setConfirmDialog({
-            open: true,
-            title: 'Xác nhận hoàn tiền',
-            message: 'Bạn có chắc chắn muốn xác nhận hồ sơ hoàn hàng và chuyển cho nhân viên xử lý không?',
-            onConfirm: async () => {
-                setConfirmDialog({ open: false, title: '', message: '', onConfirm: null });
-                await handleConfirmRefund();
-            },
-        });
-    };
-
-    if (loading) {
-        return (
-            <div className={cx('page')}>
-                <div className={cx('loading')}>Đang tải thông tin...</div>
-            </div>
-        );
-    }
-
-    if (error || !order) {
-        return (
-            <div className={cx('page')}>
-                <div className={cx('error')}>
-                    <p>{error || 'Không tìm thấy thông tin đơn hàng'}</p>
-                    <button onClick={() => navigate(-1)}>Quay lại</button>
-                </div>
-            </div>
-        );
-    }
-
-    const refundInfo = parseRefundInfo(order);
-    const shippingInfo = parseShippingInfo(order.shippingAddress);
-
-    // Get selected products for refund
-    const selectedItems = order.items?.filter(item => refundInfo.selectedProducts.includes(item.id)) || [];
-    const summary = buildRefundSummary(order, refundInfo, selectedItems);
-
-    // Normalize media URLs
-    const apiBaseUrl = getApiBaseUrl();
-    const baseUrlForStatic = apiBaseUrl.replace('/api', '');
-    const normalizedMediaUrls = (refundInfo.mediaUrls || []).map(url =>
-        normalizeMediaUrl(url, baseUrlForStatic)
-    );
 
     // Parse rejection reason nếu đơn đã bị từ chối
     const isRejected = orderStatus && (
@@ -539,14 +296,33 @@ export default function RefundDetailPage() {
         }
     }
 
+    if (loading) {
+        return (
+            <div className={cx('page')}>
+                <div className={cx('loading')}>Đang tải thông tin...</div>
+            </div>
+        );
+    }
+
+    if (error || !order) {
+        return (
+            <div className={cx('page')}>
+                <div className={cx('error')}>
+                    <p>{error || 'Không tìm thấy thông tin đơn hàng'}</p>
+                    <button onClick={handleBack}>Quay lại</button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className={cx('page')}>
             <div className={cx('container')}>
                 {/* Header */}
                 <div className={cx('header')}>
-                    <h1 className={cx('page-title')}>Chi tiết yêu cầu trả hàng/ hoàn tiền</h1>
-                    <button className={cx('dashboard-btn')} onClick={() => navigate('/customer-support/refund-management')}>
-                        ← Dashboard
+                    <h1 className={cx('page-title')}>Chi tiết đơn hoàn hàng (khách hàng gửi)</h1>
+                    <button className={cx('dashboard-btn')} onClick={handleBack}>
+                        ← Quay lại
                     </button>
                 </div>
 
@@ -555,7 +331,7 @@ export default function RefundDetailPage() {
                     Đơn hàng #{order.code || order.id}
                 </div>
 
-                {/* Rejection Reason Alert (only show if order was rejected) - Hiển thị ở trên cùng */}
+                {/* Rejection Reason Alert (only show if order was rejected) */}
                 {isRejected && rejectionReason && (
                     <div className={cx('rejection-alert')}>
                         <div className={cx('alert-header')}>
@@ -644,7 +420,7 @@ export default function RefundDetailPage() {
                         </div>
                         <div className={cx('request-row')}>
                             <span>Lý do:</span>
-                            <span>{refundInfo.description || refundInfo.reason || 'Không có mô tả'}</span>
+                            <span>{refundInfo.description || getReasonLabel(refundInfo.reasonType) || 'Không có mô tả'}</span>
                         </div>
 
                         {/* Refund Summary */}
@@ -775,43 +551,6 @@ export default function RefundDetailPage() {
                         </div>
                     </div>
                 </div>
-
-                {/* Rejection Note */}
-                <div className={cx('section')}>
-                    <h2 className={cx('section-title')}>Ghi chú / lý do nếu không hợp lệ</h2>
-                    <textarea
-                        className={cx('rejection-textarea')}
-                        value={rejectionNote}
-                        onChange={(e) => setRejectionNote(e.target.value)}
-                        placeholder="Nhập ghi chú hoặc lý do từ chối yêu cầu hoàn tiền (nếu có)..."
-                        rows={6}
-                    />
-                </div>
-
-                {/* Action Buttons */}
-                <div className={cx('action-buttons')}>
-                    <button
-                        className={cx('btn', 'btn-cancel')}
-                        onClick={handleCancel}
-                        disabled={processing}
-                    >
-                        Hủy
-                    </button>
-                    <button
-                        className={cx('btn', 'btn-reject')}
-                        onClick={handleReject}
-                        disabled={processing || !canProcess}
-                    >
-                        {processing ? 'Đang xử lý...' : 'Từ chối'}
-                    </button>
-                    <button
-                        className={cx('btn', 'btn-confirm')}
-                        onClick={handleConfirm}
-                        disabled={processing || !canProcess}
-                    >
-                        {processing ? 'Đang xử lý...' : 'Xác nhận đơn'}
-                    </button>
-                </div>
             </div>
 
             {/* Lightbox Modal */}
@@ -859,23 +598,7 @@ export default function RefundDetailPage() {
                     </div>
                 </div>
             )}
-            <ConfirmDialog
-                open={confirmDialog.open}
-                title={confirmDialog.title}
-                message={confirmDialog.message}
-                onConfirm={confirmDialog.onConfirm}
-                onCancel={() =>
-                    setConfirmDialog({ open: false, title: '', message: '', onConfirm: null })
-                }
-                confirmText="Xác nhận"
-                cancelText="Hủy"
-            />
-            <RejectOrderRefundDialog
-                open={rejectDialog}
-                onConfirm={handleConfirmReject}
-                onCancel={() => setRejectDialog(false)}
-                loading={processing}
-            />
         </div>
     );
 }
+

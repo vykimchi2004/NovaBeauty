@@ -1,5 +1,5 @@
 .order-detail-wrapper {
-    background: #fff;
+    background: #f5f5f5;
     color: #111;
     min-height: 70vh;
     display: flex;
@@ -9,8 +9,11 @@
 .order-detail-content {
     display: flex;
     flex-direction: column;
-    padding: 18px 20px;
+    padding: 24px;
     gap: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
 }
 
 // Rejection Alert - Hiển thị ở trên cùng, màu đỏ
@@ -265,15 +268,55 @@
 .products-section,
 .payment-section {
     background: #fff;
-    border-radius: 8px;
-    padding: 20px;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb;
 }
 
 .section-title {
-    margin: 0 0 16px 0;
-    font-size: 18px;
+    margin: 0 0 20px 0;
+    font-size: 20px;
     font-weight: 700;
-    color: #111;
+    color: #1a3c5a;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+// Shipping Card
+.shipping-card {
+    background: #f9fafb;
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid #e5e7eb;
+}
+
+.info-line {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    font-size: 15px;
+    align-items: flex-start;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.info-label {
+    min-width: 140px;
+    font-size: 15px;
+    color: #6b7280;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.info-value {
+    flex: 1;
+    font-size: 15px;
+    color: #111827;
+    font-weight: 500;
+    word-break: break-word;
 }
 
 .info-grid {
@@ -292,24 +335,16 @@
     }
 }
 
-.info-label {
-    font-size: 14px;
-    color: #6b7280;
-    font-weight: 500;
-}
-
-.info-value {
-    font-size: 16px;
-    color: #111;
-    font-weight: 600;
-}
-
 // Products
 .products-list {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
+    padding: 16px;
+    background: #f9fafb;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
 }
 
 .cancel-reason-box {
@@ -345,60 +380,78 @@
 
 .product-item {
     display: flex;
-    gap: 12px;
+    gap: 16px;
     align-items: center;
-    padding-bottom: 16px;
-    border-bottom: 1px solid #f3f4f6;
+    padding: 16px;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s ease;
+
+    &:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-color: #d1d5db;
+    }
 
     &:last-child {
-        border-bottom: none;
+        margin-bottom: 0;
     }
 }
 
 .product-image {
-    width: 80px;
-    height: 100px;
+    width: 90px;
+    height: 110px;
     object-fit: cover;
-    border-radius: 6px;
+    border-radius: 8px;
     border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    flex-shrink: 0;
 }
 
 .product-info {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .product-name {
     margin: 0;
     font-size: 16px;
     font-weight: 600;
-    color: #111;
+    color: #111827;
+    line-height: 1.4;
 }
 
 .product-price {
     font-size: 16px;
     font-weight: 600;
-    color: #111;
+    color: #1a3c5a;
     white-space: nowrap;
+    text-align: right;
+    min-width: 120px;
 }
 
 .total-row {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     align-items: center;
     gap: 16px;
-    padding-top: 16px;
-    margin-top: 16px;
-    border-top: 1px solid #f3f4f6;
+    padding: 20px;
+    margin-top: 20px;
+    background: #f9fafb;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
 }
 
 .total-label {
-    font-size: 16px;
-    font-weight: 600;
-    color: #111;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a3c5a;
 }
 
 .total-value {
-    font-size: 18px;
+    font-size: 22px;
     font-weight: 700;
     color: #dc2626;
 }
@@ -425,35 +478,47 @@
 }
 
 .refund-summary {
-    margin-top: 12px;
-    padding: 12px;
+    margin-top: 20px;
+    padding: 20px;
     border-radius: 10px;
-    background: #f9fafb;
+    background: #fff9ec;
+    border: 1px dashed #f2b550;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 12px;
 
     .summary-row {
         display: flex;
         justify-content: space-between;
-        font-size: 14px;
-        color: #111;
+        font-size: 15px;
+        color: #4c3820;
+        padding: 6px 0;
+
+        span:last-child {
+            font-weight: 600;
+        }
 
         &.total {
+            border-top: 2px solid #f3d08f;
+            padding-top: 12px;
+            margin-top: 8px;
+            font-size: 18px;
             font-weight: 700;
-            color: #e5677d;
+            color: #b91c1c;
+
+            span:last-child {
+                font-size: 20px;
+            }
         }
     }
 }
 
-// Payment
-.payment-info-box {
+// Payment Card
+.payment-card {
     background: #f9fafb;
-    border-radius: 8px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid #e5e7eb;
 }
 
 .payment-item {

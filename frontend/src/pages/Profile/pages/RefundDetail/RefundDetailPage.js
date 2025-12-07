@@ -443,44 +443,107 @@ export default function RefundDetailPage() {
                         </div>
                     </div>
 
-                    {/* Products in Order */}
-                    {order.items && order.items.length > 0 && (
-                        <div className={cx('form-section')}>
-                            <label className={cx('section-label')}>Sản phẩm trong đơn</label>
-                            <div className={cx('products-list')}>
-                                {order.items.map((item) => {
-                                    const isSelected = refundInfo.selectedProducts.includes(item.id);
-                                    return (
-                                        <div key={item.id} className={cx('product-item', { selected: isSelected })}>
-                                            <div className={cx('product-checkbox', { checked: isSelected })}>
-                                                {isSelected ? '✓' : ''}
-                                            </div>
-                                            <img 
-                                                src={item.imageUrl || 'https://via.placeholder.com/80x100'} 
-                                                alt={item.name} 
-                                                className={cx('product-image')} 
-                                            />
-                                            <div className={cx('product-info')}>
-                                                <h4 className={cx('product-name')}>{item.name || 'N/A'}</h4>
-                                                <p className={cx('product-details')}>
-                                                    Số lượng: {item.quantity || 0} | Mã SP: {item.productCode || item.productId || 'N/A'}
-                                                </p>
-                                                <p className={cx('product-price')}>
-                                                    {formatCurrency(item.unitPrice || 0)} × {item.quantity || 0} = {formatCurrency(item.totalPrice || item.finalPrice || 0)}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Description */}
+                    {/* Chi tiết đơn hoàn hàng (khách hàng gửi) */}
                     <div className={cx('form-section')}>
-                        <label className={cx('section-label')}>Mô tả chi tiết</label>
-                        <div className={cx('textarea', 'readonly')}>
-                            {refundInfo.description || 'N/A'}
+                        <label className={cx('section-label')}>Chi tiết đơn hoàn hàng (khách hàng gửi)</label>
+                        <div className={cx('request-box')}>
+                            {/* Product Details */}
+                            <div className={cx('request-row')}>
+                                <span>Sản phẩm:</span>
+                                <span>
+                                    {order.items && order.items.length > 0
+                                        ? order.items
+                                              .filter((item) => refundInfo.selectedProducts.includes(item.id))
+                                              .map((item) => item.name || 'N/A')
+                                              .join(', ') || 'Không xác định'
+                                        : 'Không xác định'}
+                                </span>
+                            </div>
+                            <div className={cx('request-row')}>
+                                <span>Số lượng:</span>
+                                <span>
+                                    {order.items && order.items.length > 0
+                                        ? order.items
+                                              .filter((item) => refundInfo.selectedProducts.includes(item.id))
+                                              .reduce((sum, item) => sum + (item.quantity || 0), 0)
+                                        : 0}
+                                </span>
+                            </div>
+                            <div className={cx('request-row')}>
+                                <span>Lý do:</span>
+                                <span>{refundInfo.description || refundInfo.reason || 'Không có mô tả'}</span>
+                            </div>
+
+                            {/* Refund Summary */}
+                            <div className={cx('summary-block')}>
+                                <div className={cx('summary-title')}>Tóm tắt số tiền hoàn</div>
+                                <div className={cx('summary-row')}>
+                                    <span>Tổng đơn (đã thanh toán)</span>
+                                    <span>{formatCurrency(refund.totalPaid)}</span>
+                                </div>
+                                <div className={cx('summary-row')}>
+                                    <span>Giá trị sản phẩm</span>
+                                    <span>{formatCurrency(refund.productValue)}</span>
+                                </div>
+                                <div className={cx('summary-row')}>
+                                    <span>Phí vận chuyển (lần đầu)</span>
+                                    <span>{formatCurrency(refund.shippingFee)}</span>
+                                </div>
+                                <div className={cx('summary-row')}>
+                                    <span>Phí ship (lần 2 - khách tạm ứng)</span>
+                                    <span>{formatCurrency(refund.secondShippingFee)}</span>
+                                </div>
+                                <div className={cx('summary-row')}>
+                                    <span>Phí hoàn trả (10% khi lỗi khách hàng)</span>
+                                    <span>{formatCurrency(refund.returnPenalty)}</span>
+                                </div>
+                                <div className={cx('summary-row', 'total')}>
+                                    <span>Tổng hoàn (theo khách đề xuất)</span>
+                                    <span>{formatCurrency(refund.total)}</span>
+                                </div>
+                                {order.refundConfirmedAmount && (
+                                    <div className={cx('summary-row', 'confirmed')}>
+                                        <span>Tổng hoàn (nhân viên xác nhận)</span>
+                                        <span>{formatCurrency(order.refundConfirmedAmount)}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Refund Method Info */}
+                            {refundInfo.refundMethod && (
+                                <>
+                                    <div className={cx('request-row')}>
+                                        <span>Phương thức hoàn tiền:</span>
+                                        <span>{refundInfo.refundMethod}</span>
+                                    </div>
+                                    {refundInfo.bank && (
+                                        <div className={cx('request-row')}>
+                                            <span>Ngân hàng:</span>
+                                            <span>{refundInfo.bank}</span>
+                                        </div>
+                                    )}
+                                    {refundInfo.accountNumber && (
+                                        <div className={cx('request-row')}>
+                                            <span>Số tài khoản:</span>
+                                            <span>{refundInfo.accountNumber}</span>
+                                        </div>
+                                    )}
+                                    {refundInfo.accountHolder && (
+                                        <div className={cx('request-row')}>
+                                            <span>Chủ tài khoản:</span>
+                                            <span>{refundInfo.accountHolder}</span>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            {/* Return Address */}
+                            {refundInfo.returnAddress && (
+                                <div className={cx('request-row')}>
+                                    <span>Địa chỉ gửi hàng:</span>
+                                    <span>{refundInfo.returnAddress}</span>
+                                </div>
+                            )}
                         </div>
                     </div>
 

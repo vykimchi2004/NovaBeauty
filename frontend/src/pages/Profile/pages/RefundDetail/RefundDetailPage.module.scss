@@ -384,6 +384,61 @@
         font-weight: 700;
         color: #e5677d;
     }
+
+    &.confirmed {
+        color: #2563eb;
+        font-weight: 600;
+    }
+}
+
+// Request Box - Chi tiết đơn hoàn hàng khách hàng gửi
+.request-box {
+    border: 1px dashed #f2b550;
+    background: #fff9ec;
+    border-radius: 14px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.request-row {
+    display: flex;
+    gap: 8px;
+    font-size: 14px;
+    color: #443c2f;
+    align-items: flex-start;
+
+    span:first-of-type {
+        font-weight: 600;
+        min-width: 150px;
+        color: #1A3C5A;
+    }
+
+    span:last-of-type {
+        flex: 1;
+        color: #333;
+    }
+}
+
+.summary-block {
+    margin-top: 8px;
+    padding: 12px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid #f3d08f;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.summary-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #a36117;
+    margin: 0 0 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 // Media Previews

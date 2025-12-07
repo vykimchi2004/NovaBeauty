@@ -14,11 +14,158 @@ import styles from '../Profile.module.scss';
 import orderService from '~/services/order';
 
 import defaultProductImage from '~/assets/images/products/image1.jpg';
-import { formatCurrency } from '~/services/utils';
+import { formatCurrency, getApiBaseUrl } from '~/services/utils';
+import { normalizeMediaUrl } from '~/services/productUtils';
 import CancelOrderDialog from '~/components/Common/ConfirmDialog/CancelOrderDialog';
 import RefundRequestModal from '~/components/Common/RefundRequestModal/RefundRequestModal';
 
 const cx = classNames.bind(styles);
+
+// Parse refund information from order (prefer dedicated fields, fallback to note)
+const parseRefundInfo = (order) => {
+    if (!order) {
+        return {
+            reason: '',
+            reasonType: null,
+            description: '',
+            returnAddress: '',
+            refundMethod: '',
+            bank: '',
+            accountNumber: '',
+            accountHolder: '',
+            mediaUrls: [],
+        };
+    }
+
+    // First, try to get from dedicated refund fields (new way)
+    if (order.refundReasonType || order.refundDescription || order.refundReturnAddress) {
+        let mediaUrls = [];
+        if (order.refundMediaUrls) {
+            try {
+                let parsed = order.refundMediaUrls;
+                if (typeof parsed === 'string') {
+                    parsed = JSON.parse(parsed);
+                }
+                if (Array.isArray(parsed)) {
+                    mediaUrls = parsed;
+                }
+            } catch (e) {
+                console.warn('Failed to parse refund media URLs', e);
+            }
+        }
+
+        return {
+            reason: order.refundReasonType === 'store' 
+                ? 'Sản phẩm gặp sự cố từ cửa hàng'
+                : order.refundReasonType === 'customer'
+                ? 'Thay đổi nhu cầu / Mua nhầm'
+                : '',
+            reasonType: order.refundReasonType || null,
+            description: order.refundDescription || '',
+            returnAddress: order.refundReturnAddress || '',
+            refundMethod: order.refundMethod || '',
+            bank: order.refundBank || '',
+            accountNumber: order.refundAccountNumber || '',
+            accountHolder: order.refundAccountHolder || '',
+            mediaUrls: mediaUrls,
+        };
+    }
+
+    // Fallback: parse from note
+    const note = order.note || '';
+    if (!note || typeof note !== 'string') {
+        return {
+            reason: '',
+            reasonType: null,
+            description: '',
+            returnAddress: '',
+            refundMethod: '',
+            bank: '',
+            accountNumber: '',
+            accountHolder: '',
+            mediaUrls: [],
+        };
+    }
+
+    const info = {
+        reason: '',
+        reasonType: null,
+        description: '',
+        returnAddress: '',
+        refundMethod: '',
+        bank: '',
+        accountNumber: '',
+        accountHolder: '',
+        mediaUrls: [],
+    };
+
+    // Parse reason - check for both patterns
+    if (note.includes('Sản phẩm gặp sự cố từ cửa hàng')) {
+        info.reason = 'Sản phẩm gặp sự cố từ cửa hàng';
+        info.reasonType = 'store';
+    } else if (note.includes('Thay đổi nhu cầu / Mua nhầm') || note.includes('Thay đổi nhu cầu')) {
+        info.reason = 'Thay đổi nhu cầu / Mua nhầm';
+        info.reasonType = 'customer';
+    }
+
+    // Parse description - look for "Mô tả:" or text after reason
+    const descMatch = note.match(/Mô tả:\s*(.+?)(?:\n|Địa chỉ|Phương thức|$)/i);
+    if (descMatch) {
+        info.description = descMatch[1].trim();
+    }
+
+    // Parse return address - more flexible pattern (handle both with and without newlines)
+    const addressMatch = note.match(/Địa chỉ gửi hàng:\s*(.+?)(?:\n|Phương thức|$)/i);
+    if (addressMatch) {
+        info.returnAddress = addressMatch[1].trim();
+    } else {
+        // Try without newline - look for "Địa chỉ gửi hàng:" followed by text until "Phương thức"
+        const addressMatchNoNewline = note.match(/Địa chỉ gửi hàng:\s*([^Phương]+?)(?=Phương thức|$)/i);
+        if (addressMatchNoNewline) {
+            info.returnAddress = addressMatchNoNewline[1].trim();
+        }
+    }
+
+    // Parse refund method - more flexible pattern
+    const methodMatch = note.match(/Phương thức hoàn tiền:\s*(.+?)(?:\n|Ngân hàng|Số tài khoản|Chủ tài khoản|$)/i);
+    if (methodMatch) {
+        info.refundMethod = methodMatch[1].trim();
+    } else {
+        // Try without newline
+        const methodMatchNoNewline = note.match(/Phương thức hoàn tiền:\s*([^Ngân|Số|Chủ]+?)(?=Ngân hàng|Số tài khoản|Chủ tài khoản|$)/i);
+        if (methodMatchNoNewline) {
+            info.refundMethod = methodMatchNoNewline[1].trim();
+        }
+    }
+
+    // Parse bank info
+    const bankMatch = note.match(/Ngân hàng:\s*(.+?)(?:\n|Số tài khoản|Chủ tài khoản|$)/i);
+    if (bankMatch) {
+        info.bank = bankMatch[1].trim();
+    } else {
+        const bankMatchNoNewline = note.match(/Ngân hàng:\s*([^Số|Chủ]+?)(?=Số tài khoản|Chủ tài khoản|$)/i);
+        if (bankMatchNoNewline) {
+            info.bank = bankMatchNoNewline[1].trim();
+        }
+    }
+
+    const accountMatch = note.match(/Số tài khoản:\s*(.+?)(?:\n|Chủ tài khoản|$)/i);
+    if (accountMatch) {
+        info.accountNumber = accountMatch[1].trim();
+    } else {
+        const accountMatchNoNewline = note.match(/Số tài khoản:\s*([^Chủ]+?)(?=Chủ tài khoản|$)/i);
+        if (accountMatchNoNewline) {
+            info.accountNumber = accountMatchNoNewline[1].trim();
+        }
+    }
+
+    const holderMatch = note.match(/Chủ tài khoản:\s*(.+?)(?:\n|$)/i);
+    if (holderMatch) {
+        info.accountHolder = holderMatch[1].trim();
+    }
+
+    return info;
+};
 
 const ORDER_TABS = [
   { id: 'pending', label: 'Chờ xác nhận' },
@@ -55,6 +202,9 @@ function OrdersSection({ getStatusClass, defaultTab }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [refundOrderId, setRefundOrderId] = useState(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxUrls, setLightboxUrls] = useState([]);
   const itemsPerPage = 3;
 
   useEffect(() => {
@@ -646,95 +796,193 @@ function OrdersSection({ getStatusClass, defaultTab }) {
                 <p className={cx('emptyMessage')}>Đang tải chi tiết...</p>
               ) : (
                 <>
-                  {orderDetails[selectedOrderId] ? (
-                    <div className={cx('orderDetailGrid')}>
-                      <div>
-                        <p className={cx('detailLabel')}>Mã đơn hàng</p>
-                        <p className={cx('detailValue')}>
-                          #{orderDetails[selectedOrderId]?.code ||
-                            orderDetails[selectedOrderId]?.id ||
-                            '—'}
-                        </p>
-                      </div>
-                      <div>
-                        <p className={cx('detailLabel')}>Người nhận</p>
-                        <p className={cx('detailValue')}>
-                          {orderDetails[selectedOrderId]?.receiverName ||
-                            orderDetails[selectedOrderId]?.customerName ||
-                            '—'}
-                        </p>
-                      </div>
-                      <div>
-                        <p className={cx('detailLabel')}>Số điện thoại</p>
-                        <p className={cx('detailValue')}>
-                          {orderDetails[selectedOrderId]?.receiverPhone || '—'}
-                        </p>
-                      </div>
-                      <div className={cx('detailFull')}>
-                        <p className={cx('detailLabel')}>Địa chỉ</p>
-                        <p className={cx('detailValue')}>
-                          {orderDetails[selectedOrderId]?.shippingAddress || '—'}
-                        </p>
-                      </div>
-                      <div>
-                        <p className={cx('detailLabel')}>Phương thức thanh toán</p>
-                        <p className={cx('detailValue')}>
-                          {orderDetails[selectedOrderId]?.paymentMethod === 'COD'
-                            ? 'Thanh toán khi nhận hàng (COD)'
-                            : orderDetails[selectedOrderId]?.paymentMethod === 'MOMO'
-                            ? 'Thanh toán qua ví MoMo'
-                            : orderDetails[selectedOrderId]?.paymentMethod || '—'}
-                        </p>
-                      </div>
-                      <div>
-                        <p className={cx('detailLabel')}>Tổng tiền</p>
-                        <p className={cx('detailValue', 'detailTotal')}>
-                          {formatCurrency(
-                            orderDetails[selectedOrderId]?.totalAmount || 0,
-                            'VND',
-                          )}
-                        </p>
-                      </div>
-                      {orderDetails[selectedOrderId]?.note && (
-                        <div className={cx('detailFull')}>
-                          <p className={cx('detailLabel')}>Ghi chú</p>
+                  {orderDetails[selectedOrderId] ? (() => {
+                    const order = orderDetails[selectedOrderId];
+                    const refundInfo = parseRefundInfo(order);
+                    const apiBaseUrl = getApiBaseUrl();
+                    const baseUrlForStatic = apiBaseUrl.replace('/api', '');
+                    const normalizedMediaUrls = (refundInfo.mediaUrls || []).map(url =>
+                      normalizeMediaUrl(url, baseUrlForStatic)
+                    );
+                    const isReturnFlow = order?.status && (
+                      String(order.status).toUpperCase().startsWith('RETURN_') ||
+                      String(order.status).toUpperCase() === 'REFUNDED' ||
+                      String(order.status).toUpperCase() === 'RETURNED'
+                    );
+
+                    return (
+                      <div className={cx('orderDetailGrid')}>
+                        <div>
+                          <p className={cx('detailLabel')}>Mã đơn hàng</p>
                           <p className={cx('detailValue')}>
-                            {orderDetails[selectedOrderId]?.note}
+                            #{order?.code || order?.id || '—'}
                           </p>
                         </div>
-                      )}
-                      <div className={cx('detailFull')}>
-                        <p className={cx('detailLabel')}>Sản phẩm</p>
-                        <div className={cx('detailItems')}>
-                          {(orderDetails[selectedOrderId]?.items || []).map((item, idx) => (
-                            <div key={idx} className={cx('detailItem')}>
-                              <img
-                                src={
-                                  item.imageUrl ||
-                                  item.product?.defaultMedia?.mediaUrl ||
-                                  item.product?.mediaUrls?.[0] ||
-                                  defaultProductImage
-                                }
-                                alt={item.name}
-                                className={cx('detailItemImage')}
-                              />
-                              <div className={cx('detailItemInfo')}>
-                                <p className={cx('detailItemName')}>
-                                  {item.name || item.product?.name || 'Sản phẩm'}
-                                </p>
-                                <p className={cx('detailItemMeta')}>
-                                  Số lượng: {item.quantity || 0} • Giá:{' '}
-                                  {item.unitPrice != null
-                                    ? formatCurrency(item.unitPrice, 'VND')
-                                    : '—'}
-                                </p>
+                        <div>
+                          <p className={cx('detailLabel')}>Người nhận</p>
+                          <p className={cx('detailValue')}>
+                            {order?.receiverName || order?.customerName || '—'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className={cx('detailLabel')}>Số điện thoại</p>
+                          <p className={cx('detailValue')}>
+                            {order?.receiverPhone || '—'}
+                          </p>
+                        </div>
+                        <div className={cx('detailFull')}>
+                          <p className={cx('detailLabel')}>Địa chỉ</p>
+                          <p className={cx('detailValue')}>
+                            {order?.shippingAddress || '—'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className={cx('detailLabel')}>Phương thức thanh toán</p>
+                          <p className={cx('detailValue')}>
+                            {order?.paymentMethod === 'COD'
+                              ? 'Thanh toán khi nhận hàng (COD)'
+                              : order?.paymentMethod === 'MOMO'
+                              ? 'Thanh toán qua ví MoMo'
+                              : order?.paymentMethod || '—'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className={cx('detailLabel')}>Tổng tiền</p>
+                          <p className={cx('detailValue', 'detailTotal')}>
+                            {formatCurrency(order?.totalAmount || 0, 'VND')}
+                          </p>
+                        </div>
+
+                        {/* Refund Information Section - Only show if it's a return/refund order */}
+                        {isReturnFlow && (refundInfo.reason || refundInfo.returnAddress || refundInfo.refundMethod) && (
+                          <>
+                            {refundInfo.reason && (
+                              <div>
+                                <p className={cx('detailLabel')}>Lý do trả hàng/hoàn tiền</p>
+                                <p className={cx('detailValue')}>{refundInfo.reason}</p>
                               </div>
-                            </div>
-                          ))}
+                            )}
+                            {refundInfo.description && (
+                              <div className={cx('detailFull')}>
+                                <p className={cx('detailLabel')}>Mô tả</p>
+                                <p className={cx('detailValue')}>{refundInfo.description}</p>
+                              </div>
+                            )}
+                            {refundInfo.returnAddress && (
+                              <div className={cx('detailFull')}>
+                                <p className={cx('detailLabel')}>Địa chỉ gửi hàng</p>
+                                <p className={cx('detailValue')}>{refundInfo.returnAddress}</p>
+                              </div>
+                            )}
+                            {refundInfo.refundMethod && (
+                              <div>
+                                <p className={cx('detailLabel')}>Phương thức hoàn tiền</p>
+                                <p className={cx('detailValue')}>{refundInfo.refundMethod}</p>
+                              </div>
+                            )}
+                            {refundInfo.bank && (
+                              <div>
+                                <p className={cx('detailLabel')}>Ngân hàng</p>
+                                <p className={cx('detailValue')}>{refundInfo.bank}</p>
+                              </div>
+                            )}
+                            {refundInfo.accountNumber && (
+                              <div>
+                                <p className={cx('detailLabel')}>Số tài khoản</p>
+                                <p className={cx('detailValue')}>{refundInfo.accountNumber}</p>
+                              </div>
+                            )}
+                            {refundInfo.accountHolder && (
+                              <div>
+                                <p className={cx('detailLabel')}>Chủ tài khoản</p>
+                                <p className={cx('detailValue')}>{refundInfo.accountHolder}</p>
+                              </div>
+                            )}
+                            {normalizedMediaUrls.length > 0 && (
+                              <div className={cx('detailFull')}>
+                                <p className={cx('detailLabel')}>Ảnh/video khách gửi</p>
+                                <div className={cx('detailMediaGrid')}>
+                                  {normalizedMediaUrls.map((url, index) => {
+                                    const isVideo = /\.(mp4|webm|ogg|mov|avi|mkv|flv|wmv)$/i.test(url);
+                                    return (
+                                      <div 
+                                        key={index} 
+                                        className={cx('detailMediaItem')}
+                                        onClick={() => {
+                                          setLightboxUrls(normalizedMediaUrls);
+                                          setLightboxIndex(index);
+                                          setLightboxOpen(true);
+                                        }}
+                                        style={{ cursor: 'pointer' }}
+                                      >
+                                        {isVideo ? (
+                                          <video
+                                            src={url}
+                                            controls
+                                            className={cx('detailMediaContent')}
+                                            preload="metadata"
+                                            onClick={(e) => e.stopPropagation()}
+                                          />
+                                        ) : (
+                                          <img
+                                            src={url}
+                                            alt={`Ảnh ${index + 1}`}
+                                            className={cx('detailMediaContent')}
+                                            loading="lazy"
+                                          />
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )}
+
+                        {/* Show note only if it's not a refund order or if refund info is not available */}
+                        {order?.note && !isReturnFlow && (
+                          <div className={cx('detailFull')}>
+                            <p className={cx('detailLabel')}>Ghi chú</p>
+                            <p className={cx('detailValue', 'detailNoteValue')}>
+                              {order.note}
+                            </p>
+                          </div>
+                        )}
+
+                        <div className={cx('detailFull')}>
+                          <p className={cx('detailLabel')}>Sản phẩm</p>
+                          <div className={cx('detailItems')}>
+                            {(order?.items || []).map((item, idx) => (
+                              <div key={idx} className={cx('detailItem')}>
+                                <img
+                                  src={
+                                    item.imageUrl ||
+                                    item.product?.defaultMedia?.mediaUrl ||
+                                    item.product?.mediaUrls?.[0] ||
+                                    defaultProductImage
+                                  }
+                                  alt={item.name}
+                                  className={cx('detailItemImage')}
+                                />
+                                <div className={cx('detailItemInfo')}>
+                                  <p className={cx('detailItemName')}>
+                                    {item.name || item.product?.name || 'Sản phẩm'}
+                                  </p>
+                                  <p className={cx('detailItemMeta')}>
+                                    Số lượng: {item.quantity || 0} • Giá:{' '}
+                                    {item.unitPrice != null
+                                      ? formatCurrency(item.unitPrice, 'VND')
+                                      : '—'}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ) : (
+                    );
+                  })() : (
                     <p className={cx('emptyMessage')}>Không tải được chi tiết đơn hàng</p>
                   )}
                 </>
@@ -792,6 +1040,64 @@ function OrdersSection({ getStatusClass, defaultTab }) {
           fetchOrders(); // Refresh orders list after successful refund request
         }}
       />
+
+      {/* Lightbox Modal for Images */}
+      {lightboxOpen && lightboxUrls.length > 0 && (
+        <div className={cx('lightbox')} onClick={() => setLightboxOpen(false)}>
+          <button className={cx('lightboxClose')} onClick={() => setLightboxOpen(false)}>
+            <FontAwesomeIcon icon={faXmark} />
+          </button>
+          {lightboxUrls.length > 1 && (
+            <>
+              <button 
+                className={cx('lightboxNav', 'lightboxPrev')} 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxIndex((prev) => (prev - 1 + lightboxUrls.length) % lightboxUrls.length);
+                }}
+              >
+                <FontAwesomeIcon icon={faAngleLeft} />
+              </button>
+              <button 
+                className={cx('lightboxNav', 'lightboxNext')} 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxIndex((prev) => (prev + 1) % lightboxUrls.length);
+                }}
+              >
+                <FontAwesomeIcon icon={faAngleRight} />
+              </button>
+            </>
+          )}
+          <div className={cx('lightboxContent')} onClick={(e) => e.stopPropagation()}>
+            {(() => {
+              const currentUrl = lightboxUrls[lightboxIndex];
+              const isVideo = /\.(mp4|webm|ogg|mov|avi|mkv|flv|wmv)$/i.test(currentUrl);
+              return isVideo ? (
+                <video
+                  src={currentUrl}
+                  controls
+                  autoPlay
+                  className={cx('lightboxMedia')}
+                >
+                  Trình duyệt của bạn không hỗ trợ video.
+                </video>
+              ) : (
+                <img
+                  src={currentUrl}
+                  alt={`Ảnh ${lightboxIndex + 1}`}
+                  className={cx('lightboxMedia')}
+                />
+              );
+            })()}
+            {lightboxUrls.length > 1 && (
+              <div className={cx('lightboxCounter')}>
+                {lightboxIndex + 1} / {lightboxUrls.length}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

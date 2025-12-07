@@ -169,8 +169,8 @@ export default function RefundManagementPage() {
     }, [refunds, searchQuery, selectedDate, statusFilter]);
 
     const handleViewDetail = (refund) => {
-        // Navigate to refund detail page
-        navigate(`/customer-support/refund-management/${refund.id}`);
+        // Navigate to view refund detail page (read-only, for viewing customer submitted refund orders)
+        navigate(`/customer-support/refund-management/view/${refund.id}`);
     };
 
     const formatDate = (dateString) => {

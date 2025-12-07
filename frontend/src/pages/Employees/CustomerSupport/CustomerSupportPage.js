@@ -12,6 +12,7 @@ import ComplaintManagementPage from './ComplaintManagement/ComplaintManagementPa
 import ReviewCommentManagementPage from './ReviewCommentManagement/ReviewCommentManagementPage';
 import RefundManagementPage from './RefundManagement/RefundManagementPage';
 import RefundDetailPage from './RefundManagement/RefundDetail/RefundDetailPage';
+import ViewRefundDetailPage from './RefundManagement/ViewRefundDetail/ViewRefundDetailPage';
 import ProfileCustomerSupportPage from './ProfileCustomerSupport/ProfileCustomerSupportPage';
 
 const cx = classNames.bind(styles);
@@ -254,6 +255,7 @@ export default function CustomerSupportPage() {
                         <Route path="reviews" element={<ReviewCommentManagementPage />} />
                         <Route path="refund-management" element={<RefundManagementPage />} />
                         <Route path="refund-management/:id" element={<RefundDetailPage />} />
+                        <Route path="refund-management/view/:id" element={<ViewRefundDetailPage />} />
                         <Route path="profile" element={<ProfileCustomerSupportPage />} />
                         <Route path="*" element={<Navigate to="/customer-support" replace />} />
                     </Routes>

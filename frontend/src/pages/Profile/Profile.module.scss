@@ -581,13 +581,14 @@ $white: #fff;
 .orderModalContent {
   background: $white;
   border-radius: 16px;
-  max-width: 800px;
+  max-width: 900px;
   width: 100%;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.3s ease;
+  overflow: hidden;
 }
 
 @keyframes slideUp {
@@ -746,6 +747,7 @@ $white: #fff;
   padding: 24px;
   overflow-y: auto;
   flex: 1;
+  background: #f5f5f5;
 }
 
 .orderModalFooter {
@@ -765,69 +767,308 @@ $white: #fff;
   grid-column: 1 / -1;
 }
 
+// Detail Item Card Style - Only apply to direct children that are not detailFull
+.orderDetailGrid > div:not(.detailFull) {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+  }
+}
+
+// Detail Full (full width items like note, products)
+.orderDetailGrid > .detailFull {
+  padding: 20px;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+}
+
 .detailLabel {
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #6c757d;
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1a3c5a;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .detailValue {
   margin: 0;
-  font-size: 16px;
-  color: $text-dark;
-  line-height: 1.5;
+  font-size: 15px;
+  color: #111827;
+  line-height: 1.6;
+  font-weight: 500;
+  word-break: break-word;
 }
 
 .detailTotal {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
-  color: $primary-700;
+  color: #dc2626;
 }
 
 .detailItems {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 12px;
+  gap: 16px;
+  margin-top: 16px;
 }
 
 .detailItem {
   display: flex;
-  gap: 12px;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 8px;
+  gap: 16px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+  align-items: center;
+
+  &:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-color: #d1d5db;
+  }
 }
 
 .detailItemImage {
-  width: 60px;
-  height: 80px;
+  width: 80px;
+  height: 100px;
   object-fit: cover;
-  border-radius: 6px;
-  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  flex-shrink: 0;
 }
 
 .detailItemInfo {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .detailItemName {
   margin: 0;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
-  color: $text-dark;
+  color: #111827;
+  line-height: 1.4;
 }
 
 .detailItemMeta {
   margin: 0;
-  font-size: 13px;
-  color: #6c757d;
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+// Special styling for note field - when detailLabel is "Ghi chú"
+.orderDetailGrid > .detailFull {
+  &:has(p.detailLabel:first-child) {
+    p.detailLabel:first-child {
+      // Check if next sibling is detailValue with note content
+      + p.detailValue {
+        padding: 16px;
+        background: #fff9ec;
+        border: 1px dashed #f2b550;
+        border-radius: 10px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-size: 14px;
+        line-height: 1.6;
+        margin-top: 8px;
+      }
+    }
+  }
+  
+  // Alternative: style all detailValue in detailFull that contains note-like content
+  p.detailValue {
+    // If it's a long text (likely a note), style it
+    &[style*="white-space"] {
+      padding: 16px;
+      background: #fff9ec;
+      border: 1px dashed #f2b550;
+      border-radius: 10px;
+    }
+  }
+}
+
+// Better approach: Add specific class for note value
+.detailNoteValue {
+  padding: 16px;
+  background: #fff9ec;
+  border: 1px dashed #f2b550;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-top: 8px;
+}
+
+// Media Grid for refund images/videos
+.detailMediaGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.detailMediaItem {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4/3;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.detailMediaContent {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+// Lightbox Modal
+.lightbox {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+}
+
+.lightboxClose {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  z-index: 10001;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+  }
+}
+
+.lightboxNav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 50px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  z-index: 10001;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-50%) scale(1.1);
+  }
+}
+
+.lightboxPrev {
+  left: 20px;
+}
+
+.lightboxNext {
+  right: 20px;
+}
+
+.lightboxContent {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.lightboxMedia {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.lightboxCounter {
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: center;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+  .lightboxNav {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+
+  .lightboxPrev {
+    left: 10px;
+  }
+
+  .lightboxNext {
+    right: 10px;
+  }
+
+  .lightboxClose {
+    top: 10px;
+    right: 10px;
+    width: 35px;
+    height: 35px;
+    font-size: 20px;
+  }
 }
 
 @media (max-width: 768px) {
