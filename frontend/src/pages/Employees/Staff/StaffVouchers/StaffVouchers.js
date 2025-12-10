@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import classNames from 'classnames/bind';
 import styles from './StaffVouchers.module.scss';
 import { useNavigate } from 'react-router-dom';
@@ -232,7 +232,7 @@ function StaffVouchers() {
     });
   };
 
-  const matchesFilters = (item) => {
+  const matchesFilters = useCallback((item) => {
     const term = searchTerm.trim().toLowerCase();
     if (term) {
       const name = item.name?.toLowerCase() || '';
@@ -245,16 +245,16 @@ function StaffVouchers() {
     }
     if (statusFilter !== 'all' && item.status !== statusFilter) return false;
     return true;
-  };
+  }, [searchTerm, selectedDate, statusFilter]);
 
   const filteredVouchers = useMemo(
     () => voucherList.filter(matchesFilters),
-    [voucherList, searchTerm, selectedDate, statusFilter],
+    [voucherList, matchesFilters],
   );
 
   const filteredPromotions = useMemo(
     () => promotionList.filter(matchesFilters),
-    [promotionList, searchTerm, selectedDate, statusFilter],
+    [promotionList, matchesFilters],
   );
 
   const combinedEntries = useMemo(() => {
@@ -514,8 +514,22 @@ function StaffVouchers() {
         errors.maxDiscountValue = 'Vui lòng nhập mức giảm tối đa khi dùng %';
       }
     }
-    if (!voucherForm.startDate) errors.startDate = 'Chọn ngày bắt đầu';
-    if (!voucherForm.expiryDate) errors.expiryDate = 'Chọn ngày kết thúc';
+    if (!voucherForm.startDate) {
+      errors.startDate = 'Chọn ngày bắt đầu';
+    } else {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const startDateObj = new Date(voucherForm.startDate);
+      startDateObj.setHours(0, 0, 0, 0);
+      if (startDateObj < today) {
+        errors.startDate = 'Ngày bắt đầu phải từ hôm nay trở đi';
+      }
+    }
+    if (!voucherForm.expiryDate) {
+      errors.expiryDate = 'Chọn ngày kết thúc';
+    } else if (voucherForm.startDate && voucherForm.startDate > voucherForm.expiryDate) {
+      errors.expiryDate = 'Ngày kết thúc phải sau ngày bắt đầu';
+    }
     if (!voucherForm.usageLimit || Number(voucherForm.usageLimit) <= 0) {
       errors.usageLimit = 'Giới hạn sử dụng phải lớn hơn 0';
     }
@@ -542,8 +556,22 @@ function StaffVouchers() {
     if (!promotionForm.discountValue || Number(promotionForm.discountValue) <= 0) {
       errors.discountValue = 'Giá trị giảm không hợp lệ';
     }
-    if (!promotionForm.startDate) errors.startDate = 'Chọn ngày bắt đầu';
-    if (!promotionForm.expiryDate) errors.expiryDate = 'Chọn ngày kết thúc';
+    if (!promotionForm.startDate) {
+      errors.startDate = 'Chọn ngày bắt đầu';
+    } else {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const startDateObj = new Date(promotionForm.startDate);
+      startDateObj.setHours(0, 0, 0, 0);
+      if (startDateObj < today) {
+        errors.startDate = 'Ngày bắt đầu phải từ hôm nay trở đi';
+      }
+    }
+    if (!promotionForm.expiryDate) {
+      errors.expiryDate = 'Chọn ngày kết thúc';
+    } else if (promotionForm.startDate && promotionForm.startDate > promotionForm.expiryDate) {
+      errors.expiryDate = 'Ngày kết thúc phải sau ngày bắt đầu';
+    }
     if (!promotionForm.imageUrl && !promotionImageFile) {
       errors.imageUrl = 'Vui lòng chọn hình khuyến mãi';
     }
@@ -684,12 +712,6 @@ function StaffVouchers() {
       console.error('Error deleting promotion:', error);
       notify.error('Không thể xóa, vui lòng thử lại.');
     }
-  };
-
-  const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedDate('');
-    setStatusFilter('all');
   };
 
   const resolveItemType = (entry = {}) => {
@@ -923,5 +945,5 @@ function StaffVouchers() {
   );
 }
 
-export default StaffVouchers; 
-
+export default StaffVouchers;
+ 

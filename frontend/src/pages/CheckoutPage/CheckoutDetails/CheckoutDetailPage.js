@@ -480,7 +480,7 @@ function CheckoutDetailPage() {
     }
 
     if (userId && hasUsedVoucher(userId, code)) {
-      notify.error('Mã chỉ dùng được 1 lần');
+      notify.error('Bạn đã sử dụng mã giảm giá này cho một đơn hàng khác.');
       return;
     }
 

@@ -21,6 +21,11 @@ import com.nova_beauty.backend.util.SecurityUtil;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
+import java.util.Iterator;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +43,7 @@ public class CartService {
     PromotionRepository promotionRepository;
     VoucherRepository voucherRepository;
     OrderRepository orderRepository;
+    ObjectMapper objectMapper = new ObjectMapper();
 
     @Transactional
     @PreAuthorize("hasRole('CUSTOMER')")
@@ -112,7 +118,7 @@ public class CartService {
             cartItem = CartItem.builder()
                     .cart(cart)
                     .product(product)
-                    .unitPrice(calculateUnitPrice(product))
+                    .unitPrice(calculateUnitPrice(product, normalizedColorCode))
                     .quantity(0)
                     .colorCode(normalizedColorCode)
                     .build();
@@ -140,35 +146,137 @@ public class CartService {
     }
 
 
-     //Tính đơn giá sản phẩm cho giỏ hàng.
+     //Tính đơn giá sản phẩm cho giỏ hàng - giống logic frontend ProductDetail
 
-
-    private double calculateUnitPrice(Product product) {
-        double basePrice = product.getPrice();
-        double discounted = basePrice;
-        // Apply active promotions by product
-        var today = java.time.LocalDate.now();
-        var promosByProduct = promotionRepository.findActiveByProductId(product.getId(), today);
-        var promosByCategory = product.getCategory() == null
-                ? java.util.List.<com.nova_beauty.backend.entity.Promotion>of()
-                : promotionRepository.findActiveByCategoryId(
-                        product.getCategory().getId(), today);
-
-        for (var p : java.util.stream.Stream.concat(promosByProduct.stream(), promosByCategory.stream())
-                .toList()) {
-            Double dv = p.getDiscountValue();
-            if (dv == null || dv <= 0) continue;
-            // Heuristic: <=1 => percent, else amount
-            double candidate = dv <= 1.0 ? basePrice * (1.0 - dv) : basePrice - dv;
-            if (p.getMaxDiscountValue() != null && p.getMaxDiscountValue() > 0 && dv > 1.0) {
-                candidate = Math.max(basePrice - p.getMaxDiscountValue(), candidate);
+    private double calculateUnitPrice(Product product, String colorCode) {
+        // Nếu có colorCode, tìm giá variant từ manufacturingLocation (giống frontend)
+        if (colorCode != null && !colorCode.trim().isEmpty()) {
+            Double variantPrice = resolveVariantPrice(product, colorCode.trim());
+            if (variantPrice != null && variantPrice > 0) {
+                // Variant có giá riêng, tính giá có thuế (giống frontend: variantPrice * (1 + tax))
+                Double tax = product.getTax();
+                if (tax == null) {
+                    tax = 0.08; // Mặc định 8% như frontend
+                }
+                double priceWithTax = variantPrice * (1.0 + tax);
+                return Math.round(priceWithTax); // Làm tròn như frontend
             }
-            discounted = Math.min(discounted, Math.max(candidate, 0));
         }
+        
+        // Nếu không có variant price, dùng giá sản phẩm và áp dụng promotion (giống ProductService)
+        // Lấy unitPrice từ product (giá gốc chưa có tax)
+        double unitPrice = product.getUnitPrice() != null ? product.getUnitPrice() : 0.0;
+        if (unitPrice <= 0) {
+            // Nếu không có unitPrice, thử tính từ price (giả sử price đã có tax)
+            double price = product.getPrice() != null ? product.getPrice() : 0.0;
+            Double tax = product.getTax();
+            if (tax == null) tax = 0.08; // Mặc định 8%
+            if (price > 0 && tax > 0) {
+                unitPrice = price / (1.0 + tax);
+            } else {
+                unitPrice = price;
+            }
+        }
+        
+        // Tính giá có thuế (giống ProductService.applyActivePromotionToProduct)
+        Double tax = product.getTax();
+        if (tax == null) tax = 0.08; // Mặc định 8%
+        double priceWithTax = unitPrice * (1.0 + tax);
+        
+        // Tìm promotion active (giống ProductService.findActivePromotionForProduct)
+        var today = java.time.LocalDate.now();
+        com.nova_beauty.backend.entity.Promotion activePromotion = null;
+        
+        // Kiểm tra promotion trực tiếp của product
+        if (product.getPromotion() != null && isPromotionActive(product.getPromotion(), today)) {
+            activePromotion = product.getPromotion();
+        }
+        
+        // Nếu chưa có, tìm promotion theo productId
+        if (activePromotion == null) {
+        var promosByProduct = promotionRepository.findActiveByProductId(product.getId(), today);
+            if (!promosByProduct.isEmpty()) {
+                activePromotion = promosByProduct.get(0); // Lấy promotion đầu tiên
+            }
+        }
+        
+        // Nếu chưa có, tìm promotion theo category
+        if (activePromotion == null && product.getCategory() != null) {
+            var promosByCategory = promotionRepository.findActiveByCategoryId(
+                        product.getCategory().getId(), today);
+            if (!promosByCategory.isEmpty()) {
+                activePromotion = promosByCategory.get(0); // Lấy promotion đầu tiên
+            }
+        }
+        
+        // Tính discount và final price (giống ProductService.calculateDiscountAmount)
+        if (activePromotion != null) {
+            double discountAmount = calculateDiscountAmount(activePromotion, priceWithTax);
+            double finalPrice = Math.max(0, priceWithTax - discountAmount);
+            return Math.round(finalPrice);
+        } else {
+            // Không có promotion, trả về giá có thuế
+            return Math.round(priceWithTax);
+        }
+    }
 
-        // Apply tax if provided (assume tax is percentage, e.g., 0.1 for 10%) to derive pre-tax unit price? Keep
-        // unitPrice pre-tax
-        return discounted;
+    /**
+     * Tìm giá variant từ manufacturingLocation JSON (giống frontend normalizeVariantRecords)
+     * Trả về variant.price nếu tìm thấy, null nếu không có
+     */
+    private Double resolveVariantPrice(Product product, String colorCode) {
+        if (product == null || colorCode == null || colorCode.isBlank()) {
+            return null;
+        }
+        
+        String raw = product.getManufacturingLocation();
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        
+        try {
+            JsonNode root = objectMapper.readTree(raw);
+            JsonNode variantsNode = extractVariantsNode(root);
+            if (variantsNode != null && variantsNode.isArray()) {
+                String normalized = colorCode.trim().toLowerCase(Locale.ROOT);
+                Iterator<JsonNode> it = variantsNode.elements();
+                while (it.hasNext()) {
+                    JsonNode node = it.next();
+                    String code = textLower(node.get("code"));
+                    String name = textLower(node.get("name"));
+                    
+                    // So khớp code hoặc name (giống frontend)
+                    if (normalized.equals(code) || normalized.equals(name)) {
+                        // Lấy variant.price (giống frontend: entry.price)
+                        if (node.hasNonNull("price")) {
+                            double price = node.get("price").asDouble(-1);
+                            if (price > 0) {
+                                return price;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // Nếu parse JSON lỗi, trả về null
+        }
+        
+        return null;
+    }
+
+    private JsonNode extractVariantsNode(JsonNode root) {
+        if (root == null) return null;
+        if (root.isArray()) return root;
+        if (root.has("variants")) return root.get("variants");
+        if (root.has("colors")) return root.get("colors");
+        if (root.has("data")) return root.get("data");
+        return null;
+    }
+
+    private String textLower(JsonNode node) {
+        if (node == null || node.isNull()) return null;
+        String s = node.asText();
+        return s == null ? null : s.trim().toLowerCase(Locale.ROOT);
     }
 
     private void recalcCartTotals(Cart cart) {
