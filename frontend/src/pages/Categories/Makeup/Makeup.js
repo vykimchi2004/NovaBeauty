@@ -8,60 +8,6 @@ import { scrollToTop } from '~/services/utils';
 const cx = classNames.bind(styles);
 
 function Makeup() {
-  const products = [
-    {
-      id: 1,
-      brand: 'CLUB CLIO',
-      name: 'Phấn Nước Mịn Li',
-      desc: '[ĐỘC QUYỀN] Phấn Nước Mịn Li, Che Phủ Lỗ Chân Lông Clio Kill Cover Mesh Blur',
-      price: '579.000đ',
-      oldPrice: '679.000đ',
-      discount: 15,
-      reviews: 32,
-      rating: 5,
-      image: image1,
-      volume: '15g',
-    },
-    {
-      id: 2,
-      brand: 'AMUSE',
-      name: 'Son Thạch Bóng',
-      desc: 'Son Thạch Bóng Thuần Chay Amuse Jel-Fit Tint',
-      price: '339.000đ',
-      oldPrice: '399.000đ',
-      discount: 15,
-      reviews: 21,
-      rating: 4,
-      image: image1,
-      volume: '3.8g',
-    },
-    {
-      id: 3,
-      brand: 'AMUSE',
-      name: 'Bảng Phấn Mắt',
-      desc: 'Bảng Phấn Mắt 9 Ô Thuần Chay Amuse Eye Color Palette',
-      price: '659.000đ',
-      oldPrice: '',
-      discount: '',
-      reviews: 7,
-      rating: 5,
-      image: image1,
-      volume: '11g',
-    },
-    {
-      id: 4,
-      brand: 'CLUB CLIO',
-      name: 'Mascara Làm Cong Mi',
-      desc: 'Mascara Chống Trôi Clio Kill Lash Superproof Mascara',
-      price: '275.000đ',
-      oldPrice: '339.000đ',
-      discount: 19,
-      reviews: 28,
-      rating: 5,
-      image: image1,
-      volume: '7g',
-    },
-  ];
 
   return (
     <div className={cx('makeup-page')}>
