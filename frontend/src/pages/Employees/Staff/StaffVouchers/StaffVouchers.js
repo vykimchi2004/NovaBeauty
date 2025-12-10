@@ -20,7 +20,7 @@ import {
   updateVoucher,
   deleteVoucher,
 } from '~/services/voucher';
-import { uploadPromotionMedia, uploadVoucherMedia } from '~/services/media';
+import { uploadProductMedia } from '~/services/media';
 import { storage } from '~/services/utils';
 import { STORAGE_KEYS } from '~/services/config';
 import { addStaffNotification, detectStatusNotifications, detectDeletionNotifications } from '~/utils/staffNotifications';
@@ -587,7 +587,7 @@ function StaffVouchers() {
     if (voucherImageFile) {
       try {
         setUploadingVoucherImage(true);
-        const uploaded = await uploadVoucherMedia([voucherImageFile]);
+        const uploaded = await uploadProductMedia([voucherImageFile]);
         imageUrl = uploaded?.[0] || '';
       } catch (error) {
         notify.error('Không thể tải hình voucher, vui lòng thử lại.');
@@ -643,7 +643,7 @@ function StaffVouchers() {
     if (promotionImageFile) {
       try {
         setUploadingPromotionImage(true);
-        const uploaded = await uploadPromotionMedia([promotionImageFile]);
+        const uploaded = await uploadProductMedia([promotionImageFile]);
         promotionImageUrl = uploaded?.[0] || '';
       } catch (error) {
         notify.error('Không thể tải hình khuyến mãi, vui lòng thử lại.');
