@@ -180,10 +180,18 @@ const buildRefundSummary = (apiOrder, mappedItems = []) => {
         };
     }
 
-    const productValue = sumProductValue(apiOrder.items || mappedItems);
     const shippingFee = apiOrder.shippingFee || 0;
-    const totalPaid =
-        apiOrder.refundTotalPaid ?? apiOrder.totalAmount ?? productValue + shippingFee;
+    const totalPaid = apiOrder.refundTotalPaid ?? apiOrder.totalAmount ?? 0;
+    
+    // Tính giá trị sản phẩm ban đầu (chưa có voucher)
+    const rawProductValue = sumProductValue(apiOrder.items || mappedItems);
+    
+    // Nếu có voucher (totalPaid khác với rawProductValue + shippingFee), 
+    // thì giá trị sản phẩm = totalPaid - shippingFee
+    // Nếu không có voucher, giữ nguyên giá trị sản phẩm ban đầu
+    const productValue = totalPaid > 0 && Math.abs(totalPaid - (rawProductValue + shippingFee)) > 0.01
+        ? Math.max(0, totalPaid - shippingFee)
+        : rawProductValue;
     const secondShippingFee = Math.max(
         0,
         Math.round(

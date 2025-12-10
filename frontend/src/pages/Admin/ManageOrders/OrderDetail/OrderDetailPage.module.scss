@@ -596,6 +596,22 @@ $white: #fff;
             font-size: 16px;
         }
     }
+
+    &.waiting {
+        padding: 16px;
+        text-align: center;
+        border: none;
+        background: #fff3cd;
+        border-radius: 8px;
+        color: #856404;
+        font-weight: 600;
+        font-size: 14px;
+        margin-top: 8px;
+
+        span {
+            color: #856404;
+        }
+    }
 }
 
 @media (max-width: 992px) {

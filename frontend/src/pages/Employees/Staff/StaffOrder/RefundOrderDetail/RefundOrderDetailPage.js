@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from './RefundOrderDetailPage.module.scss';
 import { getApiBaseUrl, getStoredToken } from '~/services/utils';
@@ -92,12 +92,21 @@ const buildRefundSummary = (order, refundInfo, selectedItems = []) => {
         };
     }
 
-    const productValue = selectedItems.reduce(
+    const shippingFee = order.shippingFee || 0;
+    const totalPaid = order.refundTotalPaid ?? order.totalAmount ?? 0;
+    
+    // Tính giá trị sản phẩm ban đầu (chưa có voucher)
+    const rawProductValue = selectedItems.reduce(
         (sum, item) => sum + Number(item.totalPrice || item.finalPrice || 0),
         0,
     );
-    const shippingFee = order.shippingFee || 0;
-    const totalPaid = order.refundTotalPaid ?? order.totalAmount ?? productValue + shippingFee;
+    
+    // Nếu có voucher (totalPaid khác với rawProductValue + shippingFee), 
+    // thì giá trị sản phẩm = totalPaid - shippingFee
+    // Nếu không có voucher, giữ nguyên giá trị sản phẩm ban đầu
+    const productValue = totalPaid > 0 && rawProductValue > 0 && Math.abs(totalPaid - (rawProductValue + shippingFee)) > 0.01
+        ? Math.max(0, totalPaid - shippingFee)
+        : (rawProductValue > 0 ? rawProductValue : Math.max(0, totalPaid - shippingFee));
 
     const secondShippingFee = Math.max(
         0,
@@ -153,6 +162,7 @@ const formatDateInput = (value) => {
 export default function RefundOrderDetailPage() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const [order, setOrder] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -314,7 +324,13 @@ export default function RefundOrderDetailPage() {
     }, [apiBaseUrl, refundInfo.mediaUrls]);
 
     const handleBack = () => {
-        navigate(-1);
+        // Nếu có state từ location, quay về với tab tương ứng
+        const fromTab = location.state?.fromTab;
+        if (fromTab) {
+            navigate('/staff/orders', { state: { activeTab: fromTab } });
+        } else {
+            navigate(-1);
+        }
     };
 
     const handleReject = async () => {

@@ -15,6 +15,7 @@ import com.nova_beauty.backend.repository.PromotionRepository;
 import com.nova_beauty.backend.repository.UserRepository;
 import com.nova_beauty.backend.enums.DiscountValueType;
 import com.nova_beauty.backend.enums.DiscountApplyScope;
+import com.nova_beauty.backend.enums.PromotionStatus;
 import com.nova_beauty.backend.repository.VoucherRepository;
 import com.nova_beauty.backend.repository.OrderRepository;
 import com.nova_beauty.backend.util.SecurityUtil;
@@ -599,5 +600,44 @@ public class CartService {
         
         // Tính lại tổng tiền sau khi đã loại bỏ items
         recalcCartTotals(cart);
+    }
+
+    private boolean isPromotionActive(Promotion promotion, LocalDate today) {
+        if (promotion == null) return false;
+
+        if (promotion.getStatus() != PromotionStatus.APPROVED) {
+            return false;
+        }
+        if (!promotion.getIsActive()) {
+            return false;
+        }
+
+        if (promotion.getStartDate() != null && promotion.getStartDate().isAfter(today)) {
+            return false;
+        }
+        if (promotion.getExpiryDate() != null && promotion.getExpiryDate().isBefore(today)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private double calculateDiscountAmount(Promotion promotion, double basePrice) {
+        if (basePrice <= 0 || promotion == null) return 0;
+
+        double discountValue = promotion.getDiscountValue() != null ? promotion.getDiscountValue() : 0;
+        double discountAmount = 0;
+
+        switch (promotion.getDiscountValueType()) {
+            case PERCENTAGE -> {
+                discountAmount = basePrice * (discountValue / 100.0);
+                Double maxDiscount = promotion.getMaxDiscountValue();
+                if (maxDiscount != null && maxDiscount > 0) {
+                    discountAmount = Math.min(discountAmount, maxDiscount);
+                }
+            }
+            case AMOUNT -> discountAmount = discountValue;
+        }
+        return Math.min(discountAmount, basePrice);
     }
 }

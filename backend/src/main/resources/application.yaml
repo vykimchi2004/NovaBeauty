@@ -62,6 +62,14 @@ momo:
   secret-key: "SetA5RDnLHvt51AULf51DyauxUo3kDU6"
   request-type: "captureWallet"
 
+
+
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
+  secure: true
+
 # Layer1 - Controller: Quan ly cac mapping, endpoint
 # Layer2 - Service: Xu ly cac logic lien quan toi subdomain
 # Layer3 - Repository: Tang tuong tac truc tiep voi DBMS

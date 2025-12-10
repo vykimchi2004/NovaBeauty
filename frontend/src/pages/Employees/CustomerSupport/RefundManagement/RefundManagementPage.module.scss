@@ -158,40 +158,38 @@
 }
 
 .table-container {
-    width: 100%;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
     overflow-x: auto;
 }
 
 .refund-table {
     width: 100%;
     border-collapse: collapse;
-    background-color: #ffffff;
-    border-radius: 10px;
+    min-width: 800px;
 
     thead {
         background: #e5677d;
         color: #fff;
 
         th {
-            padding: 16px;
+            padding: 16px 12px;
             text-align: left;
             font-weight: 600;
             font-size: 14px;
-            color: #ffffff;
+            white-space: nowrap;
         }
     }
 
     tbody {
         tr {
             border-bottom: 1px solid #f0f0f0;
-            transition: background 0.2s;
-
-            &:nth-child(even) {
-                background: #ffffff;
-            }
+            transition: background-color 0.2s;
 
             &:hover {
-                background: #fff5f8;
+                background-color: #fff0f6;
             }
 
             &:last-child {
@@ -200,9 +198,9 @@
         }
 
         td {
-            padding: 16px;
+            padding: 16px 12px;
             font-size: 14px;
-            color: #333;
+            color: #212529;
             vertical-align: middle;
         }
     }
@@ -210,60 +208,60 @@
 
 .status-badge {
     display: inline-block;
-    padding: 4px 12px;
+    padding: 6px 12px;
     border-radius: 12px;
     font-size: 12px;
-    font-weight: 500;
-}
+    font-weight: 600;
 
-.status-badge.pending {
-    background: #FEF3C7;
-    color: #92400E;
-}
-
-.status-badge.confirmed {
-    background: #D1FAE5;
-    color: #065F46;
-}
-
-.status-badge.received {
-    background: #DBEAFE;
-    color: #1E40AF;
-}
-
-.status-badge.refunding {
-    background: #E0E7FF;
-    color: #3730A3;
-}
-
-.status-badge.completed {
-    background: #D1FAE5;
-    color: #065F46;
-}
-
-.status-badge.rejected {
-    background: #FEE2E2;
-    color: #991B1B;
+    &.pending,
+    &.return-requested {
+        background: rgba(255, 193, 7, 0.1);
+        color: #f59f00;
+    }
+    &.processing,
+    &.confirmed,
+    &.received,
+    &.shipping {
+        background: rgba(28, 126, 214, 0.1);
+        color: #1c7ed6;
+    }
+    &.delivered,
+    &.completed,
+    &.refunded {
+        background: #d4edda;
+        color: #155724;
+    }
+    &.cancelled,
+    &.rejected,
+    &.return-rejected {
+        background: rgba(224, 49, 49, 0.1);
+        color: #e03131;
+    }
+    &.refunding {
+        background: rgba(28, 126, 214, 0.1);
+        color: #1c7ed6;
+    }
 }
 
 .view-btn {
     padding: 8px 16px;
+    background: #e5677d;
+    color: white;
     border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 14px;
+    border-radius: 8px;
+    font-size: 13px;
     font-weight: 600;
+    cursor: pointer;
     transition: all 0.2s;
     white-space: nowrap;
-    background: #e5677d;
-    color: #fff;
 
     &:hover {
-        background: #d4556b;
+        box-shadow: 0 2px 8px rgba(255, 84, 155, 0.3);
         transform: translateY(-1px);
+    }
+
+    &:active {
+        transform: translateY(0);
     }
 }
 

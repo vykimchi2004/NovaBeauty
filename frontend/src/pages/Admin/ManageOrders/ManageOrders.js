@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import classNames from 'classnames/bind';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import styles from './ManageOrders.module.scss';
 import { formatDateTime } from '~/services/utils';
 import orderService from '~/services/order';
@@ -117,12 +117,20 @@ const buildRefundSummary = (order) => {
         };
     }
 
-    const totalPaid = toNumber(order.refundTotalPaid, toNumber(order.totalAmount));
     const shippingFee = toNumber(order.shippingFee);
-    const productValue =
-        toNumber(order.refundProductValue) ||
-        toNumber(order.selectedItemsTotal) ||
-        Math.max(0, totalPaid - shippingFee);
+    const totalPaid = toNumber(order.refundTotalPaid) || toNumber(order.totalAmount) || 0;
+    
+    // Tính giá trị sản phẩm ban đầu (chưa có voucher)
+    const rawProductValue = toNumber(order.refundProductValue) || 
+        toNumber(order.selectedItemsTotal) || 
+        0;
+    
+    // Nếu có voucher (totalPaid khác với rawProductValue + shippingFee), 
+    // thì giá trị sản phẩm = totalPaid - shippingFee
+    // Nếu không có voucher, giữ nguyên giá trị sản phẩm ban đầu
+    const productValue = totalPaid > 0 && rawProductValue > 0 && Math.abs(totalPaid - (rawProductValue + shippingFee)) > 0.01
+        ? Math.max(0, totalPaid - shippingFee)
+        : (rawProductValue > 0 ? rawProductValue : Math.max(0, totalPaid - shippingFee));
 
     const secondShippingFee = Math.max(
         0,
@@ -221,6 +229,7 @@ const mapOrderFromApi = (order) => {
 
 function ManageOrders() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -231,6 +240,15 @@ function ManageOrders() {
     const [refundSearchTerm, setRefundSearchTerm] = useState('');
     const [refundStatusFilter, setRefundStatusFilter] = useState('all');
     const [activeTab, setActiveTab] = useState('orders');
+
+    // Nhận state từ location để set activeTab khi quay về từ OrderDetailPage
+    useEffect(() => {
+        if (location.state?.activeTab) {
+            setActiveTab(location.state.activeTab);
+            // Xóa state để tránh set lại khi component re-render
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+    }, [location.state, navigate, location.pathname]);
     const [currentPage, setCurrentPage] = useState(1);
     const [refundCurrentPage, setRefundCurrentPage] = useState(1);
 
@@ -405,7 +423,7 @@ function ManageOrders() {
 
     const handleViewDetail = (orderId) => {
         if (!orderId) return;
-        navigate(`/admin/orders/${orderId}`);
+        navigate(`/admin/orders/${orderId}`, { state: { fromTab: activeTab } });
     };
 
     return (

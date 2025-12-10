@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from './OrderDetailPage.module.scss';
 import { formatCurrency, formatDateTime, getApiBaseUrl, getStoredToken } from '~/services/utils';
@@ -159,12 +159,6 @@ const normalizeDateInput = (value) => {
 const buildRefundSummary = (order) => {
     if (!order) return null;
 
-    const productValue =
-        order.items?.reduce(
-            (sum, item) => sum + Number(item.total || item.totalPrice || item.finalPrice || 0),
-            0,
-        ) || 0;
-
     const shippingFee = Number.isFinite(Number(order.shippingFee))
         ? Number(order.shippingFee)
         : 0;
@@ -174,7 +168,21 @@ const buildRefundSummary = (order) => {
             ? Number(order.refundTotalPaid)
             : Number.isFinite(Number(order.totalAmount))
                 ? Number(order.totalAmount)
-                : productValue + shippingFee;
+                : 0;
+
+    // Tính giá trị sản phẩm ban đầu (chưa có voucher)
+    const rawProductValue =
+        order.items?.reduce(
+            (sum, item) => sum + Number(item.total || item.totalPrice || item.finalPrice || 0),
+            0,
+        ) || 0;
+
+    // Nếu có voucher (totalPaid khác với rawProductValue + shippingFee), 
+    // thì giá trị sản phẩm = totalPaid - shippingFee
+    // Nếu không có voucher, giữ nguyên giá trị sản phẩm ban đầu
+    const productValue = totalPaid > 0 && rawProductValue > 0 && Math.abs(totalPaid - (rawProductValue + shippingFee)) > 0.01
+        ? Math.max(0, totalPaid - shippingFee)
+        : (rawProductValue > 0 ? rawProductValue : Math.max(0, totalPaid - shippingFee));
 
     const secondShippingFee = Math.max(
         0,
@@ -234,6 +242,11 @@ const buildRefundSummary = (order) => {
         staffTotal = Number.isFinite(staffRawTotal) ? staffRawTotal : customerTotal;
     }
 
+    // Xác định nhân viên đã xác nhận chưa
+    // Nhân viên đã xác nhận nếu trạng thái đơn hàng là RETURN_STAFF_CONFIRMED hoặc REFUNDED
+    const normalizedStatus = String(order.status || '').toUpperCase();
+    const isStaffConfirmed = normalizedStatus === 'RETURN_STAFF_CONFIRMED' || normalizedStatus === 'REFUNDED';
+
     return {
         totalPaid,
         productValue,
@@ -245,6 +258,7 @@ const buildRefundSummary = (order) => {
         // Dùng cho 2 block tóm tắt
         customerTotal,
         staffTotal,
+        isStaffConfirmed,
     };
 };
 
@@ -253,6 +267,7 @@ const buildAdminConfirmMessage = () =>
 
 export default function OrderDetailPage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { id } = useParams();
     const apiBaseUrl = useMemo(() => getApiBaseUrl(), []);
 
@@ -366,7 +381,13 @@ export default function OrderDetailPage() {
     }, [apiBaseUrl, id]);
 
     const handleBack = () => {
-        navigate(-1);
+        // Nếu có state từ location, quay về với tab tương ứng
+        const fromTab = location.state?.fromTab;
+        if (fromTab) {
+            navigate('/admin/orders', { state: { activeTab: fromTab } });
+        } else {
+            navigate(-1);
+        }
     };
 
     const handleInputChange = (field, value) => {
@@ -697,30 +718,38 @@ export default function OrderDetailPage() {
 
                             <div className={cx('refundSummaryBlock')}>
                                 <p className={cx('refundSummaryHeading')}>Theo trạng thái hàng nhận về</p>
-                                <div className={cx('refundSummaryRow')}>
-                                    <span>Tổng đơn (đã thanh toán)</span>
-                                    <span>{formatCurrency(refundSummary.totalPaid)}</span>
-                                </div>
-                                <div className={cx('refundSummaryRow')}>
-                                    <span>Giá trị sản phẩm</span>
-                                    <span>{formatCurrency(refundSummary.productValue)}</span>
-                                </div>
-                                <div className={cx('refundSummaryRow')}>
-                                    <span>Phí vận chuyển (lần đầu)</span>
-                                    <span>{formatCurrency(refundSummary.shippingFee)}</span>
-                                </div>
-                                <div className={cx('refundSummaryRow')}>
-                                    <span>Phí ship (lần 2 - khách tạm ứng)</span>
-                                    <span>{formatCurrency(refundSummary.secondShippingFee)}</span>
-                                </div>
-                                <div className={cx('refundSummaryRow')}>
-                                    <span>Phí hoàn trả (10% khi lỗi khách hàng)</span>
-                                    <span>{formatCurrency(refundSummary.returnPenalty)}</span>
-                                </div>
-                                <div className={cx('refundSummaryRow', 'total')}>
-                                    <span>Tổng hoàn (nhân viên xác nhận)</span>
-                                    <span>{formatCurrency(refundSummary.staffTotal)}</span>
-                                </div>
+                                {!refundSummary.isStaffConfirmed ? (
+                                    <div className={cx('refundSummaryRow', 'waiting')}>
+                                        <span>Chờ nhân viên xác nhận</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className={cx('refundSummaryRow')}>
+                                            <span>Tổng đơn (đã thanh toán)</span>
+                                            <span>{formatCurrency(refundSummary.totalPaid)}</span>
+                                        </div>
+                                        <div className={cx('refundSummaryRow')}>
+                                            <span>Giá trị sản phẩm</span>
+                                            <span>{formatCurrency(refundSummary.productValue)}</span>
+                                        </div>
+                                        <div className={cx('refundSummaryRow')}>
+                                            <span>Phí vận chuyển (lần đầu)</span>
+                                            <span>{formatCurrency(refundSummary.shippingFee)}</span>
+                                        </div>
+                                        <div className={cx('refundSummaryRow')}>
+                                            <span>Phí ship (lần 2 - khách tạm ứng)</span>
+                                            <span>{formatCurrency(refundSummary.secondShippingFee)}</span>
+                                        </div>
+                                        <div className={cx('refundSummaryRow')}>
+                                            <span>Phí hoàn trả (10% khi lỗi khách hàng)</span>
+                                            <span>{formatCurrency(refundSummary.returnPenalty)}</span>
+                                        </div>
+                                        <div className={cx('refundSummaryRow', 'total')}>
+                                            <span>Tổng hoàn (nhân viên xác nhận)</span>
+                                            <span>{formatCurrency(refundSummary.staffTotal)}</span>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </section>

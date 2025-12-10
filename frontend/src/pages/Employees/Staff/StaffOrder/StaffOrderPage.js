@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import classNames from 'classnames/bind';
 import styles from './StaffOrderPage.module.scss';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import SearchAndSort from '~/components/Common/SearchAndSort/SearchAndSort';
 import CancelOrderDialog from '~/components/Common/ConfirmDialog/CancelOrderDialog';
 import orderService from '~/services/order';
@@ -144,6 +144,7 @@ const formatOrderDateTime = (value) => {
 
 export default function StaffOrderPage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -168,6 +169,15 @@ export default function StaffOrderPage() {
     const [refundCurrentPage, setRefundCurrentPage] = useState(1);
     const refundItemsPerPage = 8;
     const [activeTab, setActiveTab] = useState('orders');
+
+    // Nhận state từ location để set activeTab khi quay về từ RefundOrderDetailPage
+    useEffect(() => {
+        if (location.state?.activeTab) {
+            setActiveTab(location.state.activeTab);
+            // Xóa state để tránh set lại khi component re-render
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+    }, [location.state, navigate, location.pathname]);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [selectedOrderId, setSelectedOrderId] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
@@ -511,7 +521,7 @@ export default function StaffOrderPage() {
 
     const handleViewRefundDetail = (orderId) => {
         if (!orderId) return;
-        navigate(`/staff/refund-orders/${orderId}`);
+        navigate(`/staff/refund-orders/${orderId}`, { state: { fromTab: activeTab } });
     };
 
     const renderOrdersSection = () => (

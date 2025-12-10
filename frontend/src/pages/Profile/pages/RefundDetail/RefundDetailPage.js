@@ -149,12 +149,21 @@ export const calculateRefund = (order, refundInfo) => {
     const selectedItems = order.items.filter((item) =>
         refundInfo.selectedProducts.includes(item.id),
     );
-    const productValue = selectedItems.reduce(
+    const shippingFee = order.shippingFee || 0;
+    const totalPaid = order.refundTotalPaid ?? order.totalAmount ?? 0;
+    
+    // Tính giá trị sản phẩm ban đầu (chưa có voucher)
+    const rawProductValue = selectedItems.reduce(
         (sum, item) => sum + (item.totalPrice || item.finalPrice || 0),
         0,
     );
-    const shippingFee = order.shippingFee || 0;
-    const totalPaid = order.refundTotalPaid ?? order.totalAmount ?? productValue + shippingFee;
+    
+    // Nếu có voucher (totalPaid khác với rawProductValue + shippingFee), 
+    // thì giá trị sản phẩm = totalPaid - shippingFee
+    // Nếu không có voucher, giữ nguyên giá trị sản phẩm ban đầu
+    const productValue = totalPaid > 0 && Math.abs(totalPaid - (rawProductValue + shippingFee)) > 0.01
+        ? Math.max(0, totalPaid - shippingFee)
+        : rawProductValue;
 
     const estimatedReturnShippingFee = [
         order.refundSecondShippingFee,
