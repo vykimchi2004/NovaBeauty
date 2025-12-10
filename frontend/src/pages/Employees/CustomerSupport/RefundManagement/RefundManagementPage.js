@@ -286,8 +286,7 @@ export default function RefundManagementPage() {
                                     <tr>
                                         <th>Mã đơn</th>
                                         <th>Khách hàng</th>
-                                        <th>Tổng tiền</th>
-                                        <th>Tiền hoàn</th>
+                                        <th>Lí do hoàn tiền</th>
                                         <th>Ngày nhân viên xác nhận</th>
                                         <th>Trạng thái</th>
                                         <th>Hành động</th>
@@ -298,8 +297,32 @@ export default function RefundManagementPage() {
                                         <tr key={refund.id}>
                                             <td>{refund.orderCode}</td>
                                             <td>{refund.customer}</td>
-                                            <td>{formatCurrencyWithDot(refund.totalAmount)}</td>
-                                            <td>{formatCurrencyWithDot(refund.refundAmount)}</td>
+                                            <td>
+                                                <div className={cx('refund-reason-cell')}>
+                                                    {refund.refundReasonType ? (
+                                                        <>
+                                                            <div className={cx('refund-reason-title')}>
+                                                                {refund.refundReasonType === 'store' 
+                                                                    ? 'Sản phẩm gặp sự cố từ cửa hàng'
+                                                                    : refund.refundReasonType === 'customer'
+                                                                    ? 'Thay đổi nhu cầu / Mua nhầm'
+                                                                    : refund.refundReasonType}
+                                                            </div>
+                                                            {refund.refundDescription && (
+                                                                <div className={cx('refund-description')}>
+                                                                    {refund.refundDescription.length > 80 
+                                                                        ? `${refund.refundDescription.substring(0, 80)}...` 
+                                                                        : refund.refundDescription}
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        <div className={cx('refund-description', 'no-description')}>
+                                                            Chưa có lý do
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
                                             <td>{formatDate(refund.confirmationDate)}</td>
                                             <td>
                                                 <span

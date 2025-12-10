@@ -107,6 +107,8 @@ const mapOrderFromApi = (order) => {
         rawStatus: rawStatus,
         statusLabel: label,
         statusClass: css,
+        refundReasonType: order.refundReasonType || '',
+        refundDescription: order.refundDescription || '',
     };
 };
 
@@ -690,8 +692,7 @@ export default function StaffOrderPage() {
                             <tr>
                                 <th>Mã đơn</th>
                                 <th>Khách hàng</th>
-                                <th>Tổng tiền</th>
-                                <th>Tiền hoàn</th>
+                                <th>Lí do hoàn tiền</th>
                                 <th>Ngày nhận hàng</th>
                                 <th>Trạng thái</th>
                                 <th>Thao tác</th>
@@ -713,16 +714,30 @@ export default function StaffOrderPage() {
                                             )}
                                         </td>
                                         <td>
-                                            {new Intl.NumberFormat('vi-VN', {
-                                                style: 'currency',
-                                                currency: 'VND',
-                                            }).format(order.totalAmount || 0)}
-                                        </td>
-                                        <td>
-                                            {new Intl.NumberFormat('vi-VN', {
-                                                style: 'currency',
-                                                currency: 'VND',
-                                            }).format(order.refundAmount || 0)}
+                                            <div className={cx('refund-reason-cell')}>
+                                                {order.refundReasonType ? (
+                                                    <>
+                                                        <div className={cx('refund-reason-title')}>
+                                                            {order.refundReasonType === 'store' 
+                                                                ? 'Sản phẩm gặp sự cố từ cửa hàng'
+                                                                : order.refundReasonType === 'customer'
+                                                                ? 'Thay đổi nhu cầu / Mua nhầm'
+                                                                : order.refundReasonType}
+                                                        </div>
+                                                        {order.refundDescription && (
+                                                            <div className={cx('refund-description')}>
+                                                                {order.refundDescription.length > 80 
+                                                                    ? `${order.refundDescription.substring(0, 80)}...` 
+                                                                    : order.refundDescription}
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <div className={cx('refund-description', 'no-description')}>
+                                                        Chưa có lý do
+                                                    </div>
+                                                )}
+                                            </div>
                                         </td>
                                         <td>
                                             {order.receivedDate
@@ -745,7 +760,7 @@ export default function StaffOrderPage() {
                             })}
                             {paginatedRefundOrders.length === 0 && !loading && (
                                 <tr>
-                                    <td colSpan={7} className={cx('empty')}>
+                                    <td colSpan={6} className={cx('empty')}>
                                         Không có đơn hoàn về nào phù hợp.
                                     </td>
                                 </tr>

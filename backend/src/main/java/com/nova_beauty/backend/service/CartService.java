@@ -15,6 +15,7 @@ import com.nova_beauty.backend.repository.PromotionRepository;
 import com.nova_beauty.backend.repository.UserRepository;
 import com.nova_beauty.backend.enums.DiscountValueType;
 import com.nova_beauty.backend.enums.DiscountApplyScope;
+import com.nova_beauty.backend.enums.PromotionStatus;
 import com.nova_beauty.backend.repository.VoucherRepository;
 import com.nova_beauty.backend.repository.OrderRepository;
 import com.nova_beauty.backend.util.SecurityUtil;
@@ -146,7 +147,7 @@ public class CartService {
     }
 
 
-     //Tính đơn giá sản phẩm cho giỏ hàng - giống logic frontend ProductDetail
+    //Tính đơn giá sản phẩm cho giỏ hàng - giống logic frontend ProductDetail
 
     private double calculateUnitPrice(Product product, String colorCode) {
         // Nếu có colorCode, tìm giá variant từ manufacturingLocation (giống frontend)
@@ -162,7 +163,7 @@ public class CartService {
                 return Math.round(priceWithTax); // Làm tròn như frontend
             }
         }
-        
+
         // Nếu không có variant price, dùng giá sản phẩm và áp dụng promotion (giống ProductService)
         // Lấy unitPrice từ product (giá gốc chưa có tax)
         double unitPrice = product.getUnitPrice() != null ? product.getUnitPrice() : 0.0;
@@ -177,38 +178,38 @@ public class CartService {
                 unitPrice = price;
             }
         }
-        
+
         // Tính giá có thuế (giống ProductService.applyActivePromotionToProduct)
         Double tax = product.getTax();
         if (tax == null) tax = 0.08; // Mặc định 8%
         double priceWithTax = unitPrice * (1.0 + tax);
-        
+
         // Tìm promotion active (giống ProductService.findActivePromotionForProduct)
         var today = java.time.LocalDate.now();
         com.nova_beauty.backend.entity.Promotion activePromotion = null;
-        
+
         // Kiểm tra promotion trực tiếp của product
         if (product.getPromotion() != null && isPromotionActive(product.getPromotion(), today)) {
             activePromotion = product.getPromotion();
         }
-        
+
         // Nếu chưa có, tìm promotion theo productId
         if (activePromotion == null) {
-        var promosByProduct = promotionRepository.findActiveByProductId(product.getId(), today);
+            var promosByProduct = promotionRepository.findActiveByProductId(product.getId(), today);
             if (!promosByProduct.isEmpty()) {
                 activePromotion = promosByProduct.get(0); // Lấy promotion đầu tiên
             }
         }
-        
+
         // Nếu chưa có, tìm promotion theo category
         if (activePromotion == null && product.getCategory() != null) {
             var promosByCategory = promotionRepository.findActiveByCategoryId(
-                        product.getCategory().getId(), today);
+                    product.getCategory().getId(), today);
             if (!promosByCategory.isEmpty()) {
                 activePromotion = promosByCategory.get(0); // Lấy promotion đầu tiên
             }
         }
-        
+
         // Tính discount và final price (giống ProductService.calculateDiscountAmount)
         if (activePromotion != null) {
             double discountAmount = calculateDiscountAmount(activePromotion, priceWithTax);
@@ -228,12 +229,12 @@ public class CartService {
         if (product == null || colorCode == null || colorCode.isBlank()) {
             return null;
         }
-        
+
         String raw = product.getManufacturingLocation();
         if (raw == null || raw.isBlank()) {
             return null;
         }
-        
+
         try {
             JsonNode root = objectMapper.readTree(raw);
             JsonNode variantsNode = extractVariantsNode(root);
@@ -244,7 +245,7 @@ public class CartService {
                     JsonNode node = it.next();
                     String code = textLower(node.get("code"));
                     String name = textLower(node.get("name"));
-                    
+
                     // So khớp code hoặc name (giống frontend)
                     if (normalized.equals(code) || normalized.equals(name)) {
                         // Lấy variant.price (giống frontend: entry.price)
@@ -260,7 +261,7 @@ public class CartService {
         } catch (Exception ignored) {
             // Nếu parse JSON lỗi, trả về null
         }
-        
+
         return null;
     }
 
@@ -285,12 +286,12 @@ public class CartService {
         double subtotal = cartItems == null || cartItems.isEmpty()
                 ? 0.0
                 : cartItems.stream()
-                        .mapToDouble(CartItem::getFinalPrice)
-                        .sum();
+                .mapToDouble(CartItem::getFinalPrice)
+                .sum();
         // Làm tròn subtotal về đơn vị đồng
         subtotal = Math.round(subtotal);
         cart.setSubtotal(subtotal);
-        
+
         // Nếu có voucher đang được áp dụng, tính lại voucher discount dựa trên subtotal mới
         double voucherDiscount = 0.0;
         if (cart.getAppliedVoucherCode() != null && !cart.getAppliedVoucherCode().isEmpty()) {
@@ -300,25 +301,25 @@ public class CartService {
             // Nếu không có voucher, set voucherDiscount về 0
             cart.setVoucherDiscount(0.0);
         }
-        
+
         double total = Math.max(0.0, subtotal - voucherDiscount);
         cart.setTotalAmount(total);
         cartRepository.save(cart);
     }
-    
+
     // Tính lại voucher discount khi số lượng sản phẩm thay đổi
     private double recalculateVoucherDiscount(Cart cart, double subtotal) {
         try {
             // Lấy voucher từ database
             var voucher = voucherRepository.findByCode(cart.getAppliedVoucherCode())
                     .orElse(null);
-            
+
             // Nếu voucher không tồn tại hoặc không active, xóa voucher khỏi cart
             if (voucher == null || !voucher.getIsActive() || voucher.getStatus() != com.nova_beauty.backend.enums.VoucherStatus.APPROVED) {
                 cart.setAppliedVoucherCode(null);
                 return 0.0;
             }
-            
+
             // Kiểm tra voucher còn hiệu lực không
             LocalDate today = LocalDate.now();
             if ((voucher.getStartDate() != null && today.isBefore(voucher.getStartDate()))
@@ -326,25 +327,25 @@ public class CartService {
                 cart.setAppliedVoucherCode(null);
                 return 0.0;
             }
-            
+
             // Refresh cart để đảm bảo cartItems được load
             cart = cartRepository.findById(cart.getId()).orElse(cart);
             // Force load cartItems
             if (cart.getCartItems() != null) {
                 cart.getCartItems().size(); // Trigger lazy loading
             }
-            
+
             // Tính tổng giá trị đơn hàng có thể áp dụng voucher
             double applicableSubtotal = calculateApplicableSubtotal(cart, voucher);
-            
+
             // Kiểm tra minOrderValue
-            if (voucher.getMinOrderValue() != null && voucher.getMinOrderValue() > 0 
+            if (voucher.getMinOrderValue() != null && voucher.getMinOrderValue() > 0
                     && applicableSubtotal < voucher.getMinOrderValue()) {
                 // Nếu không đủ điều kiện, xóa voucher khỏi cart
                 cart.setAppliedVoucherCode(null);
                 return 0.0;
             }
-            
+
             // Tính giá trị giảm giá dựa trên loại giảm giá của voucher
             double discountValue = voucher.getDiscountValue();
             double discount;
@@ -353,19 +354,19 @@ public class CartService {
             } else {
                 discount = discountValue;
             }
-            
+
             // Áp dụng maxDiscountValue nếu có
             if (voucher.getMaxDiscountValue() != null && voucher.getMaxDiscountValue() > 0) {
                 discount = Math.min(discount, voucher.getMaxDiscountValue());
             }
-            
+
             // Giới hạn discount không được vượt quá giá trị đơn hàng
             if (voucher.getApplyScope() == null || voucher.getApplyScope() == DiscountApplyScope.ORDER) {
                 discount = Math.min(discount, subtotal);
             } else {
                 discount = Math.min(discount, applicableSubtotal);
             }
-            
+
             return discount;
         } catch (Exception e) {
             // Nếu có lỗi, xóa voucher khỏi cart và trả về 0
@@ -393,7 +394,7 @@ public class CartService {
                 || (voucher.getExpiryDate() != null && today.isAfter(voucher.getExpiryDate()))) {
             throw new AppException(ErrorCode.VOUCHER_NOT_EXISTED);
         }
-        
+
         // Lấy current user
         User currentUser = cart.getUser();
         if (currentUser == null) {
@@ -401,10 +402,10 @@ public class CartService {
             currentUser = userRepository.findByEmail(authentication.getName())
                     .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
         }
-        
+
 
         final String userId = currentUser.getId();
-        
+
 
         if (voucher.getUsagePerUser() != null && voucher.getUsagePerUser() > 0) {
             long userUsageCount = orderRepository.findAll().stream()
@@ -412,26 +413,26 @@ public class CartService {
                     .filter(order -> order.getCart() != null && order.getCart().getAppliedVoucherCode() != null)
                     .filter(order -> voucher.getCode().equals(order.getCart().getAppliedVoucherCode()))
                     .count();
-            
+
             if (userUsageCount >= voucher.getUsagePerUser()) {
                 throw new AppException(ErrorCode.VOUCHER_USAGE_LIMIT_EXCEEDED);
             }
         }
-        
+
         recalcCartTotals(cart);
-        
+
         // Tính tổng giá trị đơn hàng có thể áp dụng voucher
         double applicableSubtotal = calculateApplicableSubtotal(cart, voucher);
-        
 
-        if (voucher.getMinOrderValue() != null && voucher.getMinOrderValue() > 0 
+
+        if (voucher.getMinOrderValue() != null && voucher.getMinOrderValue() > 0
                 && applicableSubtotal < voucher.getMinOrderValue()) {
             throw new AppException(ErrorCode.INVALID_VOUCHER_MINIUM);
         }
 
         // Lấy tổng giá trị đơn hàng để tính toán cuối cùng
         double fullSubtotal = cart.getSubtotal();
-        
+
         // Tính giá trị giảm giá dựa trên loại giảm giá của voucher
         double discountValue = voucher.getDiscountValue();
         double discount;
@@ -440,12 +441,12 @@ public class CartService {
         } else {
             discount = discountValue;
         }
-        
+
         // Nếu giá trị giảm giá vượt quá giá trị giảm giá tối đa của voucher, set giá trị giảm giá tối đa của voucher
         if (voucher.getMaxDiscountValue() != null && voucher.getMaxDiscountValue() > 0) {
             discount = Math.min(discount, voucher.getMaxDiscountValue());
         }
-        
+
         // Giới hạn discount không được vượt quá giá trị đơn hàng
         // Nếu voucher áp dụng cho toàn bộ đơn hàng (ORDER), giới hạn bởi fullSubtotal để đảm bảo maxDiscountValue được áp dụng đúng
         // Nếu voucher áp dụng cho sản phẩm/category cụ thể, giới hạn bởi applicableSubtotal
@@ -483,14 +484,14 @@ public class CartService {
                         // Nếu sản phẩm có nằm trong danh sách sản phẩm của voucher, return true
                         return voucher.getProductApply() != null
                                 && voucher.getProductApply().stream()
-                                        .anyMatch(vp -> vp.getId().equals(product.getId()));
+                                .anyMatch(vp -> vp.getId().equals(product.getId()));
                     } else if (scope == DiscountApplyScope.CATEGORY) {
                         // Nếu danh mục sản phẩm có nằm trong danh sách danh mục của voucher, return true
                         Category productCategory = product.getCategory();
                         return productCategory != null
                                 && voucher.getCategoryApply() != null
                                 && voucher.getCategoryApply().stream()
-                                        .anyMatch(vc -> vc.getId().equals(productCategory.getId()));
+                                .anyMatch(vc -> vc.getId().equals(productCategory.getId()));
                     }
                     return false;
                 })
@@ -584,20 +585,59 @@ public class CartService {
         if (cart == null) {
             return;
         }
-        
+
         // Xóa items khỏi collection trước để tránh lỗi khi recalcCartTotals
         if (cart.getCartItems() != null && !cart.getCartItems().isEmpty()) {
             cart.getCartItems().removeIf(item -> cartItemIds.contains(item.getId()));
         }
-        
+
         // Sau đó mới xóa items khỏi DB
         cartItemIds.forEach(id -> cartItemRepository.findById(id).ifPresent(item -> {
             if (item.getCart() != null && item.getCart().getId().equals(cart.getId())) {
                 cartItemRepository.delete(item);
             }
         }));
-        
+
         // Tính lại tổng tiền sau khi đã loại bỏ items
         recalcCartTotals(cart);
+    }
+
+    private boolean isPromotionActive(Promotion promotion, LocalDate today) {
+        if (promotion == null) return false;
+
+        if (promotion.getStatus() != PromotionStatus.APPROVED) {
+            return false;
+        }
+        if (!promotion.getIsActive()) {
+            return false;
+        }
+
+        if (promotion.getStartDate() != null && promotion.getStartDate().isAfter(today)) {
+            return false;
+        }
+        if (promotion.getExpiryDate() != null && promotion.getExpiryDate().isBefore(today)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private double calculateDiscountAmount(Promotion promotion, double basePrice) {
+        if (basePrice <= 0 || promotion == null) return 0;
+
+        double discountValue = promotion.getDiscountValue() != null ? promotion.getDiscountValue() : 0;
+        double discountAmount = 0;
+
+        switch (promotion.getDiscountValueType()) {
+            case PERCENTAGE -> {
+                discountAmount = basePrice * (discountValue / 100.0);
+                Double maxDiscount = promotion.getMaxDiscountValue();
+                if (maxDiscount != null && maxDiscount > 0) {
+                    discountAmount = Math.min(discountAmount, maxDiscount);
+                }
+            }
+            case AMOUNT -> discountAmount = discountValue;
+        }
+        return Math.min(discountAmount, basePrice);
     }
 }
