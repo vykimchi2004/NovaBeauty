@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faEye, faTimes, faCheck, faXmark, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faEye, faTimes, faTrash } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from './ManageProduct.module.scss';
 import { getProducts, processProductApproval, deleteProduct } from '~/services/product';
@@ -12,7 +12,7 @@ import {
   extractReviewHighlights
 } from '~/utils/productPresentation';
 import { createStatusHelpers } from '~/utils/statusHelpers';
-import { normalizeVariantRecords } from '~/utils/colorVariants';
+import { normalizeVariantRecords } from '~/utils/productVariants';
 
 const cx = classNames.bind(styles);
 
@@ -22,7 +22,7 @@ const STATUS_CONFIG = {
   TU_CHOI: { label: 'Từ chối', class: 'rejected' }
 };
 
-const { normalizeStatus, getNormalizedProductStatus, formatStatusDisplay } = createStatusHelpers(STATUS_CONFIG);
+const { getNormalizedProductStatus, formatStatusDisplay } = createStatusHelpers(STATUS_CONFIG);
 
 const getProductMediaList = (product) => {
   if (!product) return [];
@@ -52,7 +52,6 @@ function ManageProduct() {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
   const [viewingProduct, setViewingProduct] = useState(null);
   const [showApproveConfirm, setShowApproveConfirm] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -80,24 +79,7 @@ function ManageProduct() {
     fetchProducts();
   }, []);
 
-  useEffect(() => {
-    applyFilters();
-  }, [products, searchTerm, filterStatus]);
-
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      const data = await getProducts();
-      setProducts(data || []);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      notify.error('Không thể tải danh sách sản phẩm. Vui lòng thử lại.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let list = [...(products || [])];
     const keyword = searchTerm.trim().toLowerCase();
 
@@ -111,11 +93,24 @@ function ManageProduct() {
       );
     }
 
-    if (filterStatus !== 'all') {
-      list = list.filter((product) => getNormalizedProductStatus(product) === filterStatus);
-    }
-
     setFilteredProducts(list);
+  }, [products, searchTerm]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const data = await getProducts();
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      notify.error('Không thể tải danh sách sản phẩm. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatPrice = (price) => {
@@ -150,24 +145,6 @@ function ManageProduct() {
   const handleViewDetail = (product) => {
     setViewingProduct(product);
     setSelectedImageIndex(0);
-  };
-
-  const openApprovePrompt = (product) => {
-    setViewingProduct(product);
-    setSelectedImageIndex(0);
-    setShowRejectModal(false);
-    setShowDeleteConfirm(false);
-    setRejectReason('');
-    setShowApproveConfirm(true);
-  };
-
-  const openRejectPrompt = (product) => {
-    setViewingProduct(product);
-    setSelectedImageIndex(0);
-    setShowApproveConfirm(false);
-    setShowDeleteConfirm(false);
-    setRejectReason('');
-    setShowRejectModal(true);
   };
 
   const openDeletePrompt = (product) => {
@@ -294,19 +271,6 @@ function ManageProduct() {
                   <FontAwesomeIcon icon={faSearch} />
                 </button>
               </div>
-              <div className={cx('sortGroup')}>
-                <span className={cx('sortLabel')}>Trạng thái:</span>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className={cx('sortSelect')}
-                >
-                  <option value="all">Tất cả</option>
-                  <option value="CHO_DUYET">Chờ duyệt</option>
-                  <option value="DA_DUYET">Đã duyệt</option>
-                  <option value="TU_CHOI">Từ chối</option>
-                </select>
-              </div>
             </div>
           </div>
 
@@ -318,7 +282,6 @@ function ManageProduct() {
                   <th>Danh mục</th>
                   <th>Thương hiệu</th>
                   <th>Giá</th>
-                  <th>Trạng thái</th>
                   <th>Trọng lượng</th>
                   <th>Ngày gửi</th>
                   <th>Thao tác</th>
@@ -327,7 +290,7 @@ function ManageProduct() {
               <tbody>
                 {filteredProducts.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className={cx('empty')}>
+                    <td colSpan="7" className={cx('empty')}>
                       Không có sản phẩm nào
                     </td>
                   </tr>
@@ -343,7 +306,6 @@ function ManageProduct() {
                       <td>{product.categoryName || '-'}</td>
                       <td>{product.brand || '-'}</td>
                       <td className={cx('priceCell')}>{formatPrice(product.price)}</td>
-                      <td>{getStatusBadge(product.status, product)}</td>
                       <td>{formatWeight(product.weight)}</td>
                       <td>{formatDate(product.createdAt)}</td>
                       <td>

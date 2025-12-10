@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.nova_beauty.backend.dto.request.ReviewCreationRequest;
 import com.nova_beauty.backend.dto.request.ReviewReplyRequest;
 import com.nova_beauty.backend.dto.response.ReviewResponse;
+import com.nova_beauty.backend.entity.Order;
 import com.nova_beauty.backend.entity.Product;
 import com.nova_beauty.backend.entity.Review;
 import com.nova_beauty.backend.entity.User;
@@ -18,9 +19,11 @@ import com.nova_beauty.backend.exception.AppException;
 import com.nova_beauty.backend.exception.ErrorCode;
 import com.nova_beauty.backend.mapper.ReviewMapper;
 import com.nova_beauty.backend.mapper.UserMapper;
+import com.nova_beauty.backend.repository.OrderRepository;
 import com.nova_beauty.backend.repository.ProductRepository;
 import com.nova_beauty.backend.repository.ReviewRepository;
 import com.nova_beauty.backend.repository.UserRepository;
+import com.nova_beauty.backend.enums.OrderStatus;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +39,7 @@ public class ReviewService {
     ReviewRepository reviewRepository;
     UserRepository userRepository;
     ProductRepository productRepository;
+    OrderRepository orderRepository;
     ReviewMapper reviewMapper;
     private final UserMapper userMapper;
 
@@ -92,6 +96,32 @@ public class ReviewService {
         Product product = productRepository
                 .findById(productId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
+
+        // Kiểm tra user đã mua sản phẩm này chưa
+        // Chỉ cho phép đánh giá nếu user đã có đơn hàng chứa sản phẩm này và đơn hàng đã được giao (DELIVERED)
+        List<Order> userOrders = orderRepository.findByUserEmail(userEmail);
+        boolean hasPurchased = userOrders.stream()
+                .anyMatch(order -> {
+                    // Chỉ kiểm tra các đơn hàng đã được giao
+                    if (order.getStatus() != OrderStatus.DELIVERED) {
+                        return false;
+                    }
+                    // Kiểm tra trong order items
+                    if (order.getItems() != null) {
+                        return order.getItems().stream()
+                                .anyMatch(item -> {
+                                    Product itemProduct = item.getProduct();
+                                    return itemProduct != null && 
+                                           (itemProduct.getId().equals(productId) || 
+                                            itemProduct.getId().equals(product.getId()));
+                                });
+                    }
+                    return false;
+                });
+
+        if (!hasPurchased) {
+            throw new AppException(ErrorCode.REVIEW_NOT_PURCHASED);
+        }
 
         // Create review entity using mapper
         Review review = reviewMapper.toReview(request);

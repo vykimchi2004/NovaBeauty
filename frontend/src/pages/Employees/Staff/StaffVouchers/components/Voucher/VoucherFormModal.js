@@ -240,6 +240,7 @@ function VoucherFormModal({
                 type="date"
                 value={formData.startDate}
                 onChange={(e) => onChange('startDate', e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
               />
               {formErrors.startDate && <span className={cx('errorText')}>{formErrors.startDate}</span>}
             </div>
@@ -249,6 +250,7 @@ function VoucherFormModal({
                 type="date"
                 value={formData.expiryDate}
                 onChange={(e) => onChange('expiryDate', e.target.value)}
+                min={formData.startDate || new Date().toISOString().split('T')[0]}
               />
               {formErrors.expiryDate && <span className={cx('errorText')}>{formErrors.expiryDate}</span>}
             </div>

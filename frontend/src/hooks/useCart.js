@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import cartService from '~/services/cart';
 import { getProductById } from '~/services/product';
-import { normalizeVariantRecords } from '~/utils/colorVariants';
+import { normalizeVariantRecords } from '~/utils/productVariants';
 import { storage } from '~/services/utils';
 import { STORAGE_KEYS } from '~/services/config';
+import { getStoredUserId, hasUsedVoucher } from '~/utils/voucherUsage';
 import notify from '~/utils/notification';
 
 /**
@@ -201,7 +202,15 @@ export const useCart = ({ autoLoad = true, listenToEvents = true } = {}) => {
   // Áp dụng voucher
   const applyVoucher = useCallback(async (code) => {
     try {
-      const cartData = await cartService.applyVoucher(code);
+      const normalizedCode = (code || '').toString().trim().toUpperCase();
+      const userId = getStoredUserId();
+      if (userId && hasUsedVoucher(userId, normalizedCode)) {
+        const error = new Error('Bạn đã sử dụng mã giảm giá này cho một đơn hàng khác.');
+        error.code = 'VOUCHER_USAGE_LIMIT';
+        throw error;
+      }
+
+      const cartData = await cartService.applyVoucher(normalizedCode);
       setAppliedDiscount(cartData.voucherDiscount || 0);
       setAppliedVoucherCode(cartData.appliedVoucherCode);
       setTotal(cartData.totalAmount || 0);

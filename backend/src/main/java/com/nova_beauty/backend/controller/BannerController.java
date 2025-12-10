@@ -4,6 +4,7 @@ import java.util.List;
 
 import jakarta.validation.Valid;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.nova_beauty.backend.dto.request.ApiResponse;
@@ -71,6 +72,7 @@ public class BannerController {
     }
 
     @DeleteMapping("/{bannerId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     ApiResponse<String> deleteBanner(@PathVariable String bannerId) {
         bannerService.deleteBanner(bannerId);
         return ApiResponse.<String>builder().result("Banner has been deleted").build();

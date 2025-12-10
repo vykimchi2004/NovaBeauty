@@ -5,7 +5,7 @@ import classNames from 'classnames/bind';
 import styles from '../../StaffProducts.module.scss';
 import fallbackImage from '~/assets/images/products/image1.jpg';
 import { extractReviewHighlights, extractTextureInfo } from '~/utils/productPresentation';
-import { normalizeVariantRecords } from '~/utils/colorVariants';
+import { normalizeVariantRecords, getVariantLabel } from '~/utils/productVariants';
 
 const cx = classNames.bind(styles);
 
@@ -71,6 +71,12 @@ function ProductDetailPage({
     [detailProduct.manufacturingLocation],
   );
 
+  // Lấy variantLabel từ manufacturingLocation
+  const variantLabel = React.useMemo(
+    () => getVariantLabel(detailProduct.manufacturingLocation),
+    [detailProduct.manufacturingLocation],
+  );
+
   useEffect(() => {
     if (product) {
       console.log('Product detail data:', {
@@ -89,6 +95,23 @@ function ProductDetailPage({
     if (weight === null || weight === undefined || weight === '') return '-';
     return `${weight} g`;
   };
+
+  // Lấy các giá trị trọng lượng khác nhau từ variants
+  const getVariantWeights = () => {
+    if (!colorVariants || colorVariants.length === 0) return null;
+    
+    const weights = new Set();
+    
+    colorVariants.forEach((variant) => {
+      if (variant.weight !== null && variant.weight !== undefined && variant.weight !== '') {
+        weights.add(Number(variant.weight));
+      }
+    });
+    
+    return weights.size > 0 ? Array.from(weights).sort((a, b) => a - b) : null;
+  };
+
+  const variantWeights = getVariantWeights();
 
   const formatDateTime = (value) => {
     if (!value) return '-';
@@ -136,6 +159,17 @@ function ProductDetailPage({
     infoRows.push({ label: 'Kích thước / Quy cách', value: detailProduct.size });
   }
 
+  // Hiển thị trọng lượng: nếu có variant với trọng lượng khác nhau, hiển thị tất cả
+  const displayWeight = () => {
+    if (variantWeights && variantWeights.length > 0) {
+      // Có variant với trọng lượng riêng
+      const weightValues = variantWeights.map(w => `${w} g`).join(' & ');
+      return weightValues;
+    }
+    // Dùng trọng lượng chính của sản phẩm
+    return formatWeight(detailProduct.weight);
+  };
+
   infoRows.push(
     {
       label: 'Giá niêm yết',
@@ -146,7 +180,7 @@ function ProductDetailPage({
       value: detailProduct.purchasePrice ? formatPrice(detailProduct.purchasePrice) : '-',
     },
     { label: 'Thuế', value: '8%' },
-    { label: 'Trọng lượng', value: formatWeight(detailProduct.weight) },
+    { label: 'Trọng lượng', value: displayWeight() },
     { label: 'Kết cấu', value: textureInfo },
     { label: 'Loại da', value: skinTypeInfo },
     { label: 'Ngày gửi', value: formatDateTime(detailProduct.createdAt) },
@@ -318,7 +352,7 @@ function ProductDetailPage({
 
                 {colorVariants && colorVariants.length > 0 && (
                   <div className={cx('detailTextGroup')}>
-                    <span className={cx('detailInfoLabel')}>Mã màu</span>
+                    <span className={cx('detailInfoLabel')}>{variantLabel}</span>
                     <div className={cx('variantDetailList')}>
                       {colorVariants.map((variant) => (
                         <div
@@ -353,7 +387,7 @@ function ProductDetailPage({
                           </div>
                           <div className={cx('variantDetailInfo')}>
                             <div className={cx('variantDetailName')}>
-                              {variant.name || variant.code || 'Mã màu'}
+                              {variant.name || variant.code || variantLabel}
                             </div>
                             <div className={cx('variantDetailCode')}>
                               Mã: {variant.code || 'Không có'}

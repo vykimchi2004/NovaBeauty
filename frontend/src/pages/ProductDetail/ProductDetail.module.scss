@@ -358,6 +358,9 @@
 .color-code-badge {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: 60px;
+  min-height: 36px;
   padding: 8px 14px;
   background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
   border: 1px solid #e5677d;
@@ -365,6 +368,12 @@
   color: #e5677d;
   font-weight: 600;
   font-size: 13px;
+  white-space: nowrap;
+  
+  // Ẩn nút nếu không có nội dung
+  &:empty {
+    display: none;
+  }
 }
 
 .color-code-button {

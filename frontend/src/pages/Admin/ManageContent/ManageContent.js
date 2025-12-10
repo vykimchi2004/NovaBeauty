@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faTrash, faCheck, faTimes, faEye } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
@@ -14,46 +14,14 @@ function ManageContent() {
   const [filteredBanners, setFilteredBanners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('PENDING_APPROVAL');
   const [showModal, setShowModal] = useState(false);
   const [selectedBanner, setSelectedBanner] = useState(null);
 
   useEffect(() => {
-    applySearchFilter();
-  }, [searchTerm, banners]);
+    fetchBanners();
+  }, []);
 
-  useEffect(() => {
-    fetchBanners(filterStatus);
-  }, [filterStatus]);
-
-  const fetchBanners = async (status = 'all') => {
-    try {
-      setLoading(true);
-      const data = await getBanners();
-      let filtered = data || [];
-
-      // Filter by status
-      if (status !== 'all') {
-        if (status === 'PENDING_APPROVAL') {
-          filtered = filtered.filter((b) => b.pendingReview === true);
-        } else if (status === 'APPROVED') {
-          filtered = filtered.filter((b) => b.status === true && b.pendingReview === false);
-        } else if (status === 'REJECTED') {
-          filtered = filtered.filter((b) => b.status === false && b.rejectionReason);
-        }
-      }
-
-      setBanners(filtered);
-      setFilteredBanners(filtered);
-    } catch (err) {
-      console.error('Error fetching banners:', err);
-      notify.error('Không thể tải danh sách banner. Vui lòng thử lại.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const applySearchFilter = () => {
+  const applySearchFilter = useCallback(() => {
     let filtered = [...banners];
 
     if (searchTerm) {
@@ -67,6 +35,24 @@ function ManageContent() {
     }
 
     setFilteredBanners(filtered);
+  }, [banners, searchTerm]);
+
+  useEffect(() => {
+    applySearchFilter();
+  }, [applySearchFilter]);
+
+  const fetchBanners = async () => {
+    try {
+      setLoading(true);
+      const data = await getBanners();
+      setBanners(data || []);
+      setFilteredBanners(data || []);
+    } catch (err) {
+      console.error('Error fetching banners:', err);
+      notify.error('Không thể tải danh sách banner. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const closeModal = () => {
@@ -119,7 +105,7 @@ function ManageContent() {
       });
       notify.success('Đã duyệt banner thành công!');
       closeModal();
-      fetchBanners(filterStatus);
+      fetchBanners();
     } catch (err) {
       console.error('Error approving banner:', err);
       notify.error('Không thể duyệt banner. Vui lòng thử lại.');
@@ -138,24 +124,11 @@ function ManageContent() {
       });
       notify.success('Đã từ chối banner.');
       closeModal();
-      fetchBanners(filterStatus);
+      fetchBanners();
     } catch (err) {
       console.error('Error rejecting banner:', err);
       notify.error('Không thể từ chối banner. Vui lòng thử lại.');
     }
-  };
-
-  const getStatusBadge = (banner) => {
-    if (banner.pendingReview === true) {
-      return <span className={cx('statusBadge', 'pending')}>Chờ duyệt</span>;
-    }
-    if (banner.status === true && banner.pendingReview === false) {
-      return <span className={cx('statusBadge', 'approved')}>Đã duyệt</span>;
-    }
-    if (banner.status === false && banner.rejectionReason) {
-      return <span className={cx('statusBadge', 'rejected')}>Từ chối</span>;
-    }
-    return <span className={cx('statusBadge', 'default')}>-</span>;
   };
 
   const formatDate = (dateString) => {
@@ -189,19 +162,6 @@ function ManageContent() {
               <FontAwesomeIcon icon={faSearch} />
             </button>
           </div>
-          <div className={cx('sortGroup')}>
-            <span className={cx('sortLabel')}>Trạng thái:</span>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className={cx('sortSelect')}
-            >
-              <option value="all">Tất cả</option>
-              <option value="PENDING_APPROVAL">Chờ duyệt</option>
-              <option value="APPROVED">Đã duyệt</option>
-              <option value="REJECTED">Từ chối</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -215,7 +175,6 @@ function ManageContent() {
               <th>Ngày tạo</th>
               <th>Ngày bắt đầu</th>
               <th>Ngày kết thúc</th>
-              <th>Trạng thái</th>
               <th>Sản phẩm</th>
               <th>Thao tác</th>
             </tr>
@@ -223,7 +182,7 @@ function ManageContent() {
           <tbody>
         {filteredBanners.length === 0 ? (
               <tr>
-                <td colSpan="9" className={cx('empty')}>
+                <td colSpan="8" className={cx('empty')}>
                   Không có banner nào
                 </td>
               </tr>
@@ -252,7 +211,6 @@ function ManageContent() {
                   <td>{formatDate(banner.createdAt)}</td>
                   <td>{formatDate(banner.startDate)}</td>
                   <td>{formatDate(banner.endDate)}</td>
-                  <td>{getStatusBadge(banner)}</td>
                   <td>
                     {banner.productNames && banner.productNames.length > 0 ? (
                       <span title={banner.productNames.join(', ')}>
@@ -310,7 +268,6 @@ function ManageContent() {
               <div className={cx('detailRight')}>
                 <div className={cx('detailHeaderBlock')}>
                   <h3>Chi tiết banner</h3>
-                  <div className={cx('detailStatus')}>{getStatusBadge(selectedBanner)}</div>
               </div>
 
                 <div className={cx('detailInfoList')}>

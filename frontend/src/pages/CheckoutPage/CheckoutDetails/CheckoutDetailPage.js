@@ -10,7 +10,13 @@ import { useAddress } from '~/hooks';
 import orderService from '~/services/order';
 import { setDefaultAddress, formatFullAddress } from '~/services/address';
 import { getProductById } from '~/services/product';
-import { normalizeVariantRecords } from '~/utils/colorVariants';
+import { normalizeVariantRecords } from '~/utils/productVariants';
+import {
+  getStoredUserId,
+  hasUsedVoucher,
+  markVoucherUsed,
+  setPendingVoucher,
+} from '~/utils/voucherUsage';
 
 const cx = classNames.bind(styles);
 
@@ -49,6 +55,7 @@ function CheckoutDetailPage() {
   const [voucherCodeInput, setVoucherCodeInput] = useState('');
   const [applyingVoucher, setApplyingVoucher] = useState(false);
   const [selectedVoucherCode, setSelectedVoucherCode] = useState('');
+  const [userId, setUserId] = useState(null);
   
   // Lấy voucher discount từ cart (giống LuminaBook)
   const voucherDiscount = cart?.voucherDiscount || 0;
@@ -274,7 +281,7 @@ function CheckoutDetailPage() {
           setCart(cartData);
           // Set voucher code nếu có (giống LuminaBook line 179-181)
           if (cartData.appliedVoucherCode) {
-            setSelectedVoucherCode(cartData.appliedVoucherCode);
+            setSelectedVoucherCode((cartData.appliedVoucherCode || '').toString().toUpperCase());
             console.log('[CheckoutDetailPage] Loaded voucher from cart:', cartData.appliedVoucherCode, 'discount:', cartData.voucherDiscount);
           } else {
             // Clear voucher code nếu không có
@@ -284,6 +291,7 @@ function CheckoutDetailPage() {
 
         const name = userInfo?.fullName || userInfo?.name || '';
         const phoneNumber = userInfo?.phone ?? userInfo?.phoneNumber ?? '';
+        setUserId(userInfo?.id || userInfo?.userId || userInfo?._id || getStoredUserId());
 
         setFullName(name);
         setPhone(phoneNumber);
@@ -471,13 +479,19 @@ function CheckoutDetailPage() {
       return;
     }
 
+    if (userId && hasUsedVoucher(userId, code)) {
+      notify.error('Mã chỉ dùng được 1 lần');
+      return;
+    }
+
     try {
       setApplyingVoucher(true);
       const cartService = (await import('~/services/cart')).default;
       const cartData = await cartService.applyVoucher(code);
       
       setCart(cartData);
-      setSelectedVoucherCode(code);
+      const appliedCode = (cartData?.appliedVoucherCode || code).toString().toUpperCase();
+      setSelectedVoucherCode(appliedCode);
       setVoucherCodeInput('');
       notify.success('Đã áp dụng mã giảm giá thành công');
     } catch (error) {
@@ -600,6 +614,10 @@ function CheckoutDetailPage() {
           throw new Error('Dữ liệu đơn hàng không hợp lệ.');
         }
         
+        if (selectedVoucherCode && userId) {
+          markVoucherUsed(userId, selectedVoucherCode);
+        }
+
         // Chuyển sang trang thank you với thông tin đơn hàng
         navigate('/order-success', {
           state: {
@@ -612,11 +630,15 @@ function CheckoutDetailPage() {
             subtotal: subtotal,
             shippingFee: shippingFee,
             voucherDiscount: voucherDiscount,
+            voucherCode: selectedVoucherCode,
           },
         });
       } else if (paymentMethod === 'momo') {
         // Nếu là MoMo, kiểm tra payUrl và redirect đến trang thanh toán MoMo ngay
         if (result.payUrl) {
+          if (selectedVoucherCode && userId) {
+            setPendingVoucher(userId, selectedVoucherCode);
+          }
           // Redirect đến trang thanh toán MoMo
           window.location.href = result.payUrl;
         } else {

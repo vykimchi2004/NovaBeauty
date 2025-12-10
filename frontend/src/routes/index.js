@@ -17,10 +17,6 @@ import Cart from '../pages/Cart/Cart';
 import CheckoutDetailPage from '../pages/CheckoutPage/CheckoutDetails/CheckoutDetailPage';
 import ConfirmCheckoutPage from '../pages/CheckoutPage/ConfirmCheckout/ConfirmCheckoutPage';
 import OrderSuccessPage from '../pages/CheckoutPage/OrderSuccess/OrderSuccessPage';
-import OrderHistoryPage from '../pages/Profile/pages/OrderHistory';
-import OrderDetailPage from '../pages/Profile/pages/OrderDetail';
-import RefundRequestPage from '../pages/Profile/pages/RefundRequest';
-import RefundDetailPage from '../pages/Profile/pages/RefundDetail';
 import Vouchers from '../pages/Vouchers/Vouchers';
 
 // Layouts
@@ -49,10 +45,6 @@ const publicRoutes = [
   { path: '/checkout', component: CheckoutDetailPage, layout: DefaultLayout },
   { path: '/checkout/confirm', component: ConfirmCheckoutPage, layout: DefaultLayout },
   { path: '/order-success', component: OrderSuccessPage, layout: DefaultLayout },
-  { path: '/customer-account/orders', component: OrderHistoryPage, layout: DefaultLayout },
-  { path: '/customer-account/orders/:id', component: OrderDetailPage, layout: DefaultLayout },
-  { path: '/customer-account/orders/:id/refund', component: RefundRequestPage, layout: DefaultLayout },
-  { path: '/customer-account/orders/:id/refund-detail', component: RefundDetailPage, layout: DefaultLayout },
   { path: '/vouchers', component: Vouchers, layout: DefaultLayout },
   // Admin shell with nested routes
   { path: '/admin/*', component: AdminPage },

@@ -8,7 +8,7 @@ import { getProductById } from '~/services/product';
 import { storage } from '~/services/utils';
 import { STORAGE_KEYS } from '~/services/config';
 import notify from '~/utils/notification';
-import { normalizeVariantRecords } from '~/utils/colorVariants';
+import { normalizeVariantRecords, getVariantLabel } from '~/utils/productVariants';
 import { getReviewsByProduct, createReview } from '~/services/review';
 import orderService from '~/services/order';
 
@@ -48,6 +48,8 @@ function ProductDetail() {
   const [newNameDisplay, setNewNameDisplay] = useState('');
   const [newComment, setNewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [hasPurchasedProduct, setHasPurchasedProduct] = useState(false);
+  const [checkingPurchase, setCheckingPurchase] = useState(false);
   const [activeReviewTab, setActiveReviewTab] = useState('latest'); // 'latest' | 'top'
   const [expandedReviews, setExpandedReviews] = useState({});
   const contentRefs = {
@@ -185,10 +187,10 @@ function ProductDetail() {
       return;
     }
 
-    // Kiểm tra nếu sản phẩm có mã màu thì phải chọn màu trước
+    // Kiểm tra nếu sản phẩm có variant thì phải chọn variant trước
     const hasColorVariants = colorOptions.length > 0;
     if (hasColorVariants && !selectedColorCode) {
-      notify.error(' Vui lòng chọn mã màu trước khi thêm vào giỏ hàng');
+      notify.error(`Vui lòng chọn ${variantLabel.toLowerCase()} trước khi thêm vào giỏ hàng`);
       return;
     }
 
@@ -286,10 +288,10 @@ function ProductDetail() {
       return;
     }
 
-    // Kiểm tra nếu sản phẩm có mã màu thì phải chọn màu trước
+    // Kiểm tra nếu sản phẩm có variant thì phải chọn variant trước
     const hasColorVariants = colorOptions.length > 0;
     if (hasColorVariants && !selectedColorCode) {
-      notify.error(' Vui lòng chọn mã màu trước khi mua');
+      notify.error(`Vui lòng chọn ${variantLabel.toLowerCase()} trước khi mua`);
       return;
     }
 
@@ -389,24 +391,56 @@ function ProductDetail() {
     [product?.manufacturingLocation]
   );
 
+  // Lấy variantLabel từ manufacturingLocation
+  const variantLabel = useMemo(
+    () => getVariantLabel(product?.manufacturingLocation),
+    [product?.manufacturingLocation]
+  );
+
+  // Lấy các giá trị trọng lượng khác nhau từ variants
+  const variantWeights = useMemo(() => {
+    if (!colorVariants || colorVariants.length === 0) return null;
+    
+    const weights = new Set();
+    
+    colorVariants.forEach((variant) => {
+      if (variant.weight !== null && variant.weight !== undefined && variant.weight !== '') {
+        weights.add(Number(variant.weight));
+      }
+    });
+    
+    return weights.size > 0 ? Array.from(weights).sort((a, b) => a - b) : null;
+  }, [colorVariants]);
+
   const colorOptions = useMemo(() => {
     if (!colorVariants.length) return [];
     const seen = new Set();
     return colorVariants.reduce((acc, variant) => {
       const code = (variant.code || variant.name || '').trim();
+      // Bỏ qua variant không có code và name
       if (!code || seen.has(code)) {
         return acc;
       }
       seen.add(code);
-      acc.push({
-        code,
-        label: variant.name || variant.code || `Mã màu ${acc.length + 1}`,
-        imageUrl: variant.imageUrl || '',
-        stockQuantity: variant.stockQuantity,
-      });
+      // Đảm bảo label luôn có giá trị, không được rỗng
+      const name = (variant.name || '').trim();
+      const codeValue = (variant.code || '').trim();
+      const label = name || codeValue || `${variantLabel} ${acc.length + 1}`;
+      
+      // Chỉ thêm variant nếu có label hợp lệ
+      if (label && label.trim()) {
+        acc.push({
+          code,
+          label: label.trim(),
+          imageUrl: variant.imageUrl || '',
+          stockQuantity: variant.stockQuantity,
+          price: variant.price, // Giá niêm yết của variant (nếu có)
+          purchasePrice: variant.purchasePrice, // Giá nhập của variant (nếu có)
+        });
+      }
       return acc;
-    }, []);
-  }, [colorVariants]);
+    }, [colorVariants, variantLabel]);
+  }, [colorVariants, variantLabel]);
 
   const galleryImages = useMemo(() => {
     const urls = [];
@@ -470,8 +504,62 @@ function ProductDetail() {
     fetchReviews();
   }, [id]);
 
-  // Check if user is logged in
+  // Check if user is logged in - tính toán một lần
   const isLoggedIn = !!storage.get(STORAGE_KEYS.TOKEN);
+
+  // Check if user has purchased this product
+  useEffect(() => {
+    const checkUserPurchase = async () => {
+      if (!id) {
+        setHasPurchasedProduct(false);
+        setCheckingPurchase(false);
+        return;
+      }
+
+      // Kiểm tra đăng nhập trực tiếp trong useEffect để tránh dependency
+      const token = storage.get(STORAGE_KEYS.TOKEN);
+      if (!token) {
+        setHasPurchasedProduct(false);
+        setCheckingPurchase(false);
+        return;
+      }
+
+      try {
+        setCheckingPurchase(true);
+        const orders = await orderService.getMyOrders();
+        
+        // Kiểm tra xem có đơn hàng nào chứa sản phẩm này không
+        // Đơn hàng phải ở trạng thái đã giao hàng (DELIVERED) - khớp với backend
+        const hasPurchased = orders.some((order) => {
+          // Chỉ kiểm tra các đơn hàng đã được giao (status: DELIVERED)
+          if (order.status !== 'DELIVERED') {
+            return false;
+          }
+
+          // Kiểm tra trong order items
+          if (order.items && Array.isArray(order.items)) {
+            return order.items.some((item) => {
+              // Kiểm tra productId hoặc product.id
+              const itemProductId = item.productId || item.product?.id;
+              return itemProductId === id || itemProductId === product?.id;
+            });
+          }
+          return false;
+        });
+
+        setHasPurchasedProduct(hasPurchased);
+        console.log(`[ProductDetail] User has purchased product ${id}:`, hasPurchased);
+      } catch (err) {
+        console.error('Error checking user purchase:', err);
+        // Nếu có lỗi, mặc định là false để không cho phép đánh giá
+        setHasPurchasedProduct(false);
+      } finally {
+        setCheckingPurchase(false);
+      }
+    };
+
+    checkUserPurchase();
+  }, [id, product?.id]);
 
   // Format review date
   const formatReviewDate = (isoString) => {
@@ -532,6 +620,24 @@ function ProductDetail() {
     [ratingDistribution],
   );
 
+  // Tính giá hiển thị: nếu đã chọn mã màu và variant có giá riêng, dùng giá variant
+  const displayPrice = useMemo(() => {
+    if (!product) return 0;
+    // Nếu đã chọn mã màu và variant có giá riêng
+    if (selectedColorCode && colorOptions.length > 0) {
+      const selectedOption = colorOptions.find(opt => opt.code === selectedColorCode);
+      if (selectedOption && selectedOption.price && parseFloat(selectedOption.price) > 0) {
+        // Variant có giá riêng, tính giá hiển thị (có thuế)
+        const variantPrice = parseFloat(selectedOption.price);
+        const tax = product.tax != null ? product.tax : 0.08; // Tax là decimal (0.08 = 8%)
+        const priceWithTax = variantPrice * (1 + tax);
+        return Math.round(priceWithTax);
+      }
+    }
+    // Dùng giá sản phẩm (đã áp dụng promotion nếu có)
+    return product.price || 0;
+  }, [product, selectedColorCode, colorOptions]);
+
   // Handle open login modal
   const openLoginModal = () => {
     window.dispatchEvent(new CustomEvent('openLoginModal'));
@@ -569,6 +675,10 @@ function ProductDetail() {
       // Kiểm tra kết quả từ server
       if (!ok && status >= 400) {
         const errorMessage = data?.message || data?.error || 'Không thể gửi đánh giá';
+        // Nếu là lỗi chưa mua sản phẩm, cập nhật lại trạng thái
+        if (errorMessage.includes('chưa mua sản phẩm') || errorMessage.includes('REVIEW_NOT_PURCHASED')) {
+          setHasPurchasedProduct(false);
+        }
         notify.error(`${errorMessage}${status ? ` (Lỗi: ${status})` : ''}`);
         return;
       }
@@ -659,11 +769,18 @@ function ProductDetail() {
     brand: product.brand || 'NOVA BEAUTY',
     name: product.name || 'Sản phẩm',
     description: product.description || '',
-    price: product.price || 0, // Giá sau giảm (đã áp dụng promotion nếu có)
+    price: displayPrice, // Giá hiển thị (có thể từ variant hoặc sản phẩm)
     oldPrice: (() => {
       // Only show old price if product has valid promotion
       if (!product.promotionId || !product.promotionName) return null;
       if (!product.discountValue || product.discountValue <= 0) return null;
+      // Nếu đang dùng giá variant, không hiển thị oldPrice
+      if (selectedColorCode && colorOptions.length > 0) {
+        const selectedOption = colorOptions.find(opt => opt.code === selectedColorCode);
+        if (selectedOption && selectedOption.price && parseFloat(selectedOption.price) > 0) {
+          return null; // Không hiển thị oldPrice khi dùng giá variant
+        }
+      }
       if (!product.price || product.price <= 0) return null;
       const originalPrice = product.price + product.discountValue;
       const discountPercent = Math.round((product.discountValue / originalPrice) * 100);
@@ -822,7 +939,7 @@ function ProductDetail() {
           {colorOptions.length > 0 && (
             <div className={cx('color-section')}>
               <label className={cx('color-label')}>
-                Mã màu: <span style={{ color: '#e74c3c', fontSize: '12px' }}>*</span>
+                {variantLabel}: <span style={{ color: '#e74c3c', fontSize: '12px' }}></span>
               </label>
               <div className={cx('color-codes-list')}>
                 {colorOptions.map((option, index) => (
@@ -848,8 +965,7 @@ function ProductDetail() {
               </div>
               {!selectedColorCode && (
                 <div className={cx('color-error-message')}>
-                
-                  <span className={cx('color-error-text')}>Vui lòng chọn mã màu</span>
+                  <span className={cx('color-error-text')}>Vui lòng chọn {variantLabel.toLowerCase()}</span>
                 </div>
               )}
             </div>
@@ -873,7 +989,7 @@ function ProductDetail() {
               className={cx('btn-cart')} 
               onClick={handleAddToCart}
               disabled={addingToCart || (colorOptions.length > 0 && !selectedColorCode)}
-              title={colorOptions.length > 0 && !selectedColorCode ? 'Vui lòng chọn mã màu trước' : ''}
+              title={colorOptions.length > 0 && !selectedColorCode ? `Vui lòng chọn ${variantLabel.toLowerCase()} trước` : ''}
             >
               <span>🛒</span> {addingToCart ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
             </button>
@@ -881,7 +997,7 @@ function ProductDetail() {
               className={cx('btn-buy-now')}
               onClick={handleBuyNow}
               disabled={addingToCart || (colorOptions.length > 0 && !selectedColorCode)}
-              title={colorOptions.length > 0 && !selectedColorCode ? 'Vui lòng chọn mã màu trước' : ''}
+              title={colorOptions.length > 0 && !selectedColorCode ? `Vui lòng chọn ${variantLabel.toLowerCase()} trước` : ''}
             >
               {addingToCart ? 'Đang xử lý...' : 'MUA NGAY'}
             </button>
@@ -949,12 +1065,26 @@ function ProductDetail() {
                   <td className={cx('info-cell-value')}>{displayProduct.skinType}</td>
                 </tr>
               )}
-              {displayProduct.weight && (
-                <tr className={cx('info-row')}>
-                  <td className={cx('info-cell-label')}>Trọng lượng</td>
-                  <td className={cx('info-cell-value')}>{displayProduct.weight} g</td>
-                </tr>
-              )}
+              {(() => {
+                // Hiển thị trọng lượng: nếu có variant với trọng lượng khác nhau, hiển thị tất cả
+                const displayWeight = () => {
+                  if (variantWeights && variantWeights.length > 0) {
+                    // Có variant với trọng lượng riêng
+                    const weightValues = variantWeights.map(w => `${w} g`).join(' & ');
+                    return weightValues;
+                  }
+                  // Dùng trọng lượng chính của sản phẩm
+                  return displayProduct.weight ? `${displayProduct.weight} g` : null;
+                };
+
+                const weightValue = displayWeight();
+                return weightValue ? (
+                  <tr className={cx('info-row')}>
+                    <td className={cx('info-cell-label')}>Trọng lượng</td>
+                    <td className={cx('info-cell-value')}>{weightValue}</td>
+                  </tr>
+                ) : null;
+              })()}
             </tbody>
           </table>
         </div>
@@ -1111,6 +1241,14 @@ function ProductDetail() {
                   đăng nhập
                 </button>
                 {' '}để viết đánh giá.
+              </p>
+            ) : checkingPurchase ? (
+              <p className={cx('login-prompt')}>
+                Đang kiểm tra quyền đánh giá...
+              </p>
+            ) : !hasPurchasedProduct ? (
+              <p className={cx('login-prompt')}>
+                Chỉ khách hàng đã mua sản phẩm mới được viết đánh giá.
               </p>
             ) : (
               <div className={cx('write-review-container')}>

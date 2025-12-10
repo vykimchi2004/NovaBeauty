@@ -46,6 +46,10 @@ import com.nova_beauty.backend.repository.VoucherRepository;
 import com.nova_beauty.backend.repository.UserRepository;
 import com.nova_beauty.backend.repository.CartItemRepository;
 import com.nova_beauty.backend.repository.BannerRepository;
+import com.nova_beauty.backend.repository.OrderItemRepository;
+import com.nova_beauty.backend.repository.FinancialRecordRepository;
+import com.nova_beauty.backend.repository.ReviewRepository;
+import com.nova_beauty.backend.repository.InventoryRepository;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -66,6 +70,10 @@ public class ProductService {
     VoucherRepository voucherRepository;
     CartItemRepository cartItemRepository;
     BannerRepository bannerRepository;
+    OrderItemRepository orderItemRepository;
+    FinancialRecordRepository financialRecordRepository;
+    ReviewRepository reviewRepository;
+    InventoryRepository inventoryRepository;
     ProductMapper productMapper;
 
     // ========== CREATE OPERATIONS ==========
@@ -247,7 +255,7 @@ public class ProductService {
 
     // ========== DELETE OPERATIONS ==========
     @Transactional
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public void deleteProduct(String productId) {
         var context = SecurityContextHolder.getContext();
         String userEmail = context.getAuthentication().getName();
@@ -285,7 +293,34 @@ public class ProductService {
             log.info("Deleted {} cart items for product: {}", cartItems.size(), productId);
         }
 
-        // 4. Xóa product khỏi tất cả Banner.products (bảng banner_products)
+        // 4. Xóa tất cả OrderItem liên quan đến product này
+        List<OrderItem> orderItems = orderItemRepository.findByProductId(productId);
+        if (!orderItems.isEmpty()) {
+            orderItemRepository.deleteAll(orderItems);
+            log.warn("Deleted {} order items for product: {} (This will affect order history)", orderItems.size(), productId);
+        }
+
+        // 5. Xóa tất cả FinancialRecord liên quan đến product này
+        List<FinancialRecord> financialRecords = financialRecordRepository.findByProductId(productId);
+        if (!financialRecords.isEmpty()) {
+            financialRecordRepository.deleteAll(financialRecords);
+            log.warn("Deleted {} financial records for product: {} (This will affect financial history)", financialRecords.size(), productId);
+        }
+
+        // 6. Xóa tất cả Review liên quan đến product này
+        List<Review> reviews = reviewRepository.findByProductId(productId);
+        if (!reviews.isEmpty()) {
+            reviewRepository.deleteAll(reviews);
+            log.warn("Deleted {} reviews for product: {} (This will affect product ratings)", reviews.size(), productId);
+        }
+
+        // 7. Xóa Inventory liên quan đến product này
+        inventoryRepository.findByProductId(productId).ifPresent(inventory -> {
+            inventoryRepository.delete(inventory);
+            log.info("Deleted inventory for product: {}", productId);
+        });
+
+        // 8. Xóa product khỏi tất cả Banner.products (bảng banner_products)
         // Load banners từ product để đảm bảo quan hệ được load
         if (product.getBanners() != null && !product.getBanners().isEmpty()) {
             List<Banner> bannersWithProduct = new ArrayList<>(product.getBanners());
@@ -298,7 +333,7 @@ public class ProductService {
             log.info("Removed product {} from {} banners", productId, bannersWithProduct.size());
         }
 
-        // 5. Set product.promotion = null (náº¿u cÃ³ promotion trá»±c tiáº¿p)
+        // 9. Set product.promotion = null (náº¿u cÃ³ promotion trá»±c tiáº¿p)
         if (product.getPromotion() != null) {
             product.setPromotion(null);
             productRepository.save(product);

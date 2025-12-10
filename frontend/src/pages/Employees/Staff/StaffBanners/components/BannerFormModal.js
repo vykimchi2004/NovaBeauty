@@ -110,7 +110,7 @@ function BannerFormModal({
                 type="date"
                 value={formData.startDate}
                 onChange={(e) => onChange('startDate', e.target.value)}
-                min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
+                min={new Date().toISOString().split('T')[0]}
               />
               {formErrors.startDate && (
                 <span className={cx('errorText')}>{formErrors.startDate}</span>
@@ -123,7 +123,7 @@ function BannerFormModal({
                 type="date"
                 value={formData.endDate}
                 onChange={(e) => onChange('endDate', e.target.value)}
-                min={formData.startDate || new Date(Date.now() + 86400000).toISOString().split('T')[0]}
+                min={formData.startDate || new Date().toISOString().split('T')[0]}
               />
               {formErrors.endDate && <span className={cx('errorText')}>{formErrors.endDate}</span>}
             </div>

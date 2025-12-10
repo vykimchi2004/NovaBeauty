@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import classNames from 'classnames/bind';
 import { useNavigate } from 'react-router-dom';
 import styles from './ManageOrders.module.scss';
-import { formatDateTime, getApiBaseUrl, getStoredToken } from '~/services/utils';
+import { formatDateTime } from '~/services/utils';
 import orderService from '~/services/order';
 
 const cx = classNames.bind(styles);
@@ -495,7 +495,6 @@ function ManageOrders() {
                                     setSelectedDate('');
                                     setStatusFilter('all');
                                 }}
-                                style={{ marginTop: '12px', padding: '8px 16px', cursor: 'pointer' }}
                             >
                                 Xóa bộ lọc
                             </button>
@@ -589,7 +588,9 @@ function ManageOrders() {
                     {loading ? (
                         <div className={cx('stateCard')}>Đang tải danh sách đơn hoàn về...</div>
                     ) : refundEligibleOrders.length === 0 ? (
-                        <div className={cx('stateCard')}>Không có đơn hoàn tiền.</div>
+                        <div className={cx('stateCard')}>
+                            <p>Không có đơn hoàn tiền.</p>
+                        </div>
                     ) : (
                         <>
                             <div className={cx('tableWrapper')}>

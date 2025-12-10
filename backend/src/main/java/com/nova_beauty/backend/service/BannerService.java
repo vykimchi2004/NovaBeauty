@@ -53,8 +53,9 @@ public class BannerService {
         banner.setCreatedBy(user);
         banner.setCreatedAt(LocalDateTime.now());
         banner.setUpdatedAt(LocalDateTime.now());
-        banner.setStatus(Boolean.FALSE);
-        banner.setPendingReview(Boolean.TRUE);
+        // Staff tạo banner tự động được duyệt, không cần admin duyệt
+        banner.setStatus(Boolean.TRUE);
+        banner.setPendingReview(Boolean.FALSE);
 
         // Set order index if not provided
         if (banner.getOrderIndex() == null) {
@@ -128,19 +129,15 @@ public class BannerService {
         if (request.getLinkUrl() != null) {
             banner.setLinkUrl(request.getLinkUrl());
         }
-        // Náº¿u lÃ  staff (khÃ´ng pháº£i admin), luÃ´n set status vá» false (chá» duyá»‡t) khi gá»­i láº¡i
-        // vÃ  giá»¯ nguyÃªn rejectionReason
-        if (!isAdmin) {
-            // Staff gá»­i láº¡i banner -> luÃ´n set vá» chá» duyá»‡t
-            banner.setStatus(false);
-            banner.setPendingReview(true);
-            // Giá»¯ nguyÃªn rejectionReason (khÃ´ng xÃ³a)
-        } else {
-            // Admin cÃ³ thá»ƒ thay Ä‘á»•i status
-            if (request.getStatus() != null) {
-                banner.setStatus(request.getStatus());
+        // Staff và Admin đều có thể cập nhật banner, không cần duyệt lại
+        if (request.getStatus() != null) {
+            banner.setStatus(request.getStatus());
+            if (request.getStatus()) {
                 banner.setPendingReview(Boolean.FALSE);
             }
+        } else if (!isAdmin) {
+            // Nếu staff không chỉ định status, giữ nguyên status hiện tại
+            // Không cần set về chờ duyệt vì banner đã được tự động duyệt khi tạo
         }
         // Staff khÃ´ng Ä‘Æ°á»£c phÃ©p thay Ä‘á»•i rejectionReason, chá»‰ ADMIN má»›i cÃ³ quyá»n nÃ y
         if (request.getRejectionReason() != null && isAdmin) {
@@ -184,7 +181,7 @@ public class BannerService {
     }
 
     @Transactional
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     public void deleteBanner(String bannerId) {
         Banner banner =
                 bannerRepository.findById(bannerId).orElseThrow(() -> new AppException(ErrorCode.BANNER_NOT_EXISTED));

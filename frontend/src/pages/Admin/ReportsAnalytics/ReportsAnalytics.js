@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import classNames from 'classnames/bind';
 import styles from './ReportsAnalytics.module.scss';
 import financialService from '~/services/financial';
@@ -43,11 +43,7 @@ function ReportsAnalytics() {
     // Top products
     const [topProducts, setTopProducts] = useState([]);
 
-    useEffect(() => {
-        fetchData();
-    }, [dateRange, timeMode, activeTab]);
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             setLoading(true);
             const { start, end } = dateRange;
@@ -76,7 +72,11 @@ function ReportsAnalytics() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [activeTab, dateRange, timeMode]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
 
     const formatPrice = (price) => {
         const value = Math.round(Number(price) || 0);
@@ -294,6 +294,90 @@ function ReportsAnalytics() {
 
                     <div className={cx('chartSection')}>
                         <RevenueChart data={revenueByDay} />
+                    </div>
+
+                    <div className={cx('reportSection')}>
+                        <h4>Chi tiết doanh thu theo {timeMode === TIME_MODES.DAY ? 'ngày' : timeMode === TIME_MODES.WEEK ? 'tuần' : 'tháng'}</h4>
+                        <div className={cx('tableWrapper')}>
+                            <table className={cx('table')}>
+                                <thead>
+                                    <tr>
+                                        <th>STT</th>
+                                        <th>Thời gian</th>
+                                        <th>Doanh thu</th>
+                                        <th>Tỷ lệ (%)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {revenueByDay.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="4" className={cx('empty')}>Không có dữ liệu</td>
+                                        </tr>
+                                    ) : (
+                                        (() => {
+                                            const totalRevenue = revenueByDay.reduce((sum, item) => sum + (item.total || 0), 0);
+                                            return revenueByDay.map((item, index) => {
+                                                const percentage = totalRevenue > 0 
+                                                    ? ((item.total || 0) / totalRevenue * 100).toFixed(2)
+                                                    : '0.00';
+                                                
+                                                // Format date label
+                                                let dateLabel = '-';
+                                                if (item.dateTime) {
+                                                    dateLabel = new Date(item.dateTime).toLocaleDateString('vi-VN', { 
+                                                        day: '2-digit', 
+                                                        month: '2-digit',
+                                                        year: 'numeric',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    });
+                                                } else if (item.date) {
+                                                    if (timeMode === TIME_MODES.MONTH) {
+                                                        dateLabel = new Date(item.date).toLocaleDateString('vi-VN', { 
+                                                            month: '2-digit',
+                                                            year: 'numeric'
+                                                        });
+                                                    } else if (timeMode === TIME_MODES.WEEK) {
+                                                        const date = new Date(item.date);
+                                                        const weekStart = new Date(date);
+                                                        weekStart.setDate(date.getDate() - date.getDay());
+                                                        const weekEnd = new Date(weekStart);
+                                                        weekEnd.setDate(weekStart.getDate() + 6);
+                                                        dateLabel = `${weekStart.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })} - ${weekEnd.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+                                                    } else {
+                                                        dateLabel = new Date(item.date).toLocaleDateString('vi-VN', { 
+                                                            day: '2-digit', 
+                                                            month: '2-digit',
+                                                            year: 'numeric'
+                                                        });
+                                                    }
+                                                }
+                                                
+                                                return (
+                                                    <tr key={index}>
+                                                        <td>{index + 1}</td>
+                                                        <td>{dateLabel}</td>
+                                                        <td className={cx('priceCell')}>{formatPrice(item.total || 0)}</td>
+                                                        <td>{percentage}%</td>
+                                                    </tr>
+                                                );
+                                            });
+                                        })()
+                                    )}
+                                </tbody>
+                                {revenueByDay.length > 0 && (
+                                    <tfoot>
+                                        <tr className={cx('totalRow')}>
+                                            <td colSpan="2"><strong>Tổng cộng</strong></td>
+                                            <td className={cx('priceCell')}>
+                                                <strong>{formatPrice(revenueByDay.reduce((sum, item) => sum + (item.total || 0), 0))}</strong>
+                                            </td>
+                                            <td><strong>100%</strong></td>
+                                        </tr>
+                                    </tfoot>
+                                )}
+                            </table>
+                        </div>
                     </div>
 
                     <div className={cx('reportSection')}>

@@ -1,5 +1,4 @@
 import { API_BASE_URL, STORAGE_KEYS } from './config';
-import { storage } from './utils';
 
 // API Client wrapper
 class ApiClient {
@@ -112,8 +111,29 @@ class ApiClient {
                 });
             }
             
-            // Thay thế "Uncategorized error" bằng message rõ ràng hơn
-            if (message === 'Uncategorized error' || message.includes('Uncategorized error') || !message || message === '') {
+            // Dịch các message tiếng Anh phổ biến sang tiếng Việt
+            const messageTranslations = {
+                'You do not have permission': 'Bạn không có quyền thực hiện thao tác này.',
+                'Access Denied': 'Bạn không có quyền truy cập.',
+                'Forbidden': 'Bạn không có quyền thực hiện thao tác này.',
+                'Unauthorized': 'Phiên đăng nhập đã hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.',
+            };
+            
+            // Kiểm tra và dịch message nếu cần
+            for (const [en, vi] of Object.entries(messageTranslations)) {
+                if (message && message.includes(en)) {
+                    message = vi;
+                    break;
+                }
+            }
+            
+            // Thay thế "Uncategorized error" hoặc message rỗng bằng message rõ ràng hơn
+            if (
+                !message ||
+                message === '' ||
+                message === 'Uncategorized error' ||
+                message.includes('Uncategorized error')
+            ) {
                 switch (response.status) {
                     case 400:
                         message = 'Dữ liệu đầu vào không hợp lệ. Vui lòng kiểm tra lại các trường bắt buộc.';
@@ -122,7 +142,7 @@ class ApiClient {
                         message = 'Phiên đăng nhập đã hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.';
                         break;
                     case 403:
-                        message = 'Bạn không có quyền thực hiện thao tác này.';
+                        message = 'Bạn không có quyền thực hiện thao tác này. Vui lòng kiểm tra lại quyền truy cập của tài khoản.';
                         break;
                     case 404:
                         message = 'Không tìm thấy tài nguyên.';
