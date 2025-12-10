@@ -20,7 +20,7 @@ const TABS = [
   { id: 'highlights', label: 'Review' },
 ];
 
-const REVIEW_STARS = [1, 2, 3, 4, 5];
+
 
 const cx = classNames.bind(styles);
 

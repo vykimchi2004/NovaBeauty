@@ -10,13 +10,11 @@ import ProductDetailPage from './components/ProductDetail/ProductDetailPage';
 import { getMyProducts, createProduct, updateProduct } from '~/services/product';
 import { uploadProductMedia } from '~/services/media';
 import notify from '~/utils/notification';
-import { createStatusHelpers } from '~/utils/statusHelpers';
 import { STAFF_PRODUCT_ERRORS, STAFF_PRODUCT_MESSAGES } from './messages';
 import { storage } from '~/services/utils';
 import { STORAGE_KEYS } from '~/services/config';
 import {
   addStaffNotification,
-  detectStatusNotifications,
   detectDeletionNotifications,
 } from '~/utils/staffNotifications';
 import {
@@ -31,17 +29,8 @@ import { useCategories } from '~/hooks';
 import fallbackImage from '~/assets/images/products/image1.jpg';
 
 const cx = classNames.bind(styles);
-
 export const MAX_MEDIA_ITEMS = 6;
 
-const STATUS_CONFIG = {
-  DA_DUYET: { label: 'Đã duyệt', class: 'approved' },
-  CHO_DUYET: { label: 'Chờ duyệt', class: 'pending' },
-  TU_CHOI: { label: 'Bị từ chối', class: 'rejected' },
-};
-
-const { normalizeStatus, getNormalizedProductStatus, formatStatusDisplay } =
-  createStatusHelpers(STATUS_CONFIG);
 
 const getInitialFormData = (overrides = {}) => ({
   productId: '',
@@ -112,7 +101,6 @@ function StaffProducts() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [editingProduct, setEditingProduct] = useState(null);
   const [viewingProduct, setViewingProduct] = useState(null);
   
@@ -152,7 +140,7 @@ function StaffProducts() {
   useEffect(() => {
     filterProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, selectedDate, statusFilter, products]);
+  }, [searchTerm, selectedDate, products]);
 
   // Helper function để tính tổng tồn kho của một sản phẩm
   const calculateTotalStock = (product) => {
@@ -177,7 +165,6 @@ function StaffProducts() {
       const list = data || [];
       setProducts(list);
       setFilteredProducts(list);
-      handleProductStatusNotifications(list);
       handleDeletedProductNotifications(list);
       
       // Kiểm tra và thông báo sản phẩm hết hàng (tồn kho = 0) và sắp hết (tồn kho < 50)
@@ -302,42 +289,6 @@ function StaffProducts() {
     }
   };
 
-  const handleProductStatusNotifications = (productList = []) => {
-    const userId = currentUserRef.current?.id;
-    if (!userId || !Array.isArray(productList)) return;
-
-    const notifications = detectStatusNotifications({
-      categoryKey: 'PRODUCTS',
-      userId,
-      items: productList,
-      getItemId: (item) => item?.id,
-      getStatus: (item) => getNormalizedProductStatus(item),
-      buildNotification: (item, status) => {
-        if (status === 'DA_DUYET') {
-          return {
-            title: 'Sản phẩm đã được duyệt',
-            message: `Sản phẩm "${item.name || item.id}" đã được admin phê duyệt.`,
-            type: 'success',
-            targetPath: '/staff/products',
-          };
-        }
-        if (status === 'TU_CHOI') {
-          const reason = item.rejectionReason ? ` Lý do: ${item.rejectionReason}` : '';
-          return {
-            title: 'Sản phẩm bị từ chối',
-            message: `Sản phẩm "${item.name || item.id}" bị từ chối.${reason}`,
-            type: 'warning',
-            targetPath: '/staff/products',
-          };
-        }
-        return null;
-      },
-    });
-
-    notifications.forEach((notification) => {
-      addStaffNotification(userId, notification);
-    });
-  };
 
   const handleDeletedProductNotifications = (productList = []) => {
     const userId = currentUserRef.current?.id;
@@ -381,11 +332,7 @@ function StaffProducts() {
         return productDate === filterDate;
       });
     }
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(
-        (product) => getNormalizedProductStatus(product) === statusFilter,
-      );
-    }
+
     setFilteredProducts(filtered);
   };
 
@@ -1089,15 +1036,6 @@ function StaffProducts() {
     );
   };
 
-  const getStatusBadge = (status, product) => {
-    const normalized = getNormalizedProductStatus(product || { status });
-    const statusInfo =
-      STATUS_CONFIG[normalized] || {
-        label: formatStatusDisplay(status),
-        class: 'default',
-      };
-    return <span className={`statusBadge ${statusInfo.class}`}>{statusInfo.label}</span>;
-  };
 
 
   if (loading) {
@@ -1363,8 +1301,6 @@ function StaffProducts() {
         open={Boolean(viewingProduct)}
         product={viewingProduct}
         formatPrice={formatPrice}
-        getStatusBadge={(status) => getStatusBadge(status, viewingProduct)}
-        getNormalizedStatus={getNormalizedProductStatus}
         onClose={handleCloseViewDetail}
         onEdit={(product) => {
           handleCloseViewDetail();

@@ -33,20 +33,22 @@ function BestSellers() {
         
         // Sắp xếp products theo quantitySold (giảm dần) để lấy best sellers
         // Nếu quantitySold bằng null hoặc 0, sắp xếp theo createdAt (mới nhất)
-        const sortedProducts = (data || []).sort((a, b) => {
-          const aSold = a.quantitySold || 0;
-          const bSold = b.quantitySold || 0;
-          
-          // Ưu tiên sắp xếp theo quantitySold
-          if (aSold !== bSold) {
-            return bSold - aSold; // Giảm dần
-          }
-          
-          // Nếu quantitySold bằng nhau, sắp xếp theo createdAt (mới nhất trước)
-          const aDate = a.createdAt ? new Date(a.createdAt) : new Date(0);
-          const bDate = b.createdAt ? new Date(b.createdAt) : new Date(0);
-          return bDate - aDate;
-        });
+// Lấy chỉ những sản phẩm đã bán (best sellers thật sự)
+const filtered = (data || []).filter(p => (p.quantitySold || 0) > 0);
+
+// Sắp xếp giảm dần theo quantitySold
+const sortedProducts = filtered.sort((a, b) => {
+  const aSold = a.quantitySold || 0;
+  const bSold = b.quantitySold || 0;
+
+  if (aSold !== bSold) return bSold - aSold;
+
+  // Nếu bằng nhau thì sort theo createdAt
+  const aDate = a.createdAt ? new Date(a.createdAt) : new Date(0);
+  const bDate = b.createdAt ? new Date(b.createdAt) : new Date(0);
+  return bDate - aDate;
+});
+
         
         setAllProducts(sortedProducts);
       } catch (error) {
