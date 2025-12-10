@@ -6,8 +6,6 @@ import {
   faPhone,
   faCalendarAlt,
   faTimes,
-  faEye,
-  faEdit,
   faMapMarkerAlt,
   faUser
 } from '@fortawesome/free-solid-svg-icons';

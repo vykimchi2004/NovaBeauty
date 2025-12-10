@@ -70,7 +70,22 @@ export async function updateBannerOrder(bannerId, orderIndex) {
 // Delete banner (requires authentication)
 export async function deleteBanner(bannerId) {
     try {
-        return await apiClient.delete(API_ENDPOINTS.BANNERS.DELETE(bannerId));
+        // Validate bannerId
+        if (!bannerId || typeof bannerId !== 'string' || bannerId.trim() === '') {
+            throw new Error('Banner ID is required and must be a non-empty string');
+        }
+        
+        // Encode bannerId to handle special characters
+        const encodedId = encodeURIComponent(bannerId);
+        const endpoint = API_ENDPOINTS.BANNERS.DELETE(encodedId);
+        
+        console.log('[Banner Service] Deleting banner:', {
+            originalId: bannerId,
+            encodedId: encodedId,
+            endpoint: endpoint
+        });
+        
+        return await apiClient.delete(endpoint);
     } catch (error) {
         console.error('[Banner Service] deleteBanner error:', error);
         throw error;

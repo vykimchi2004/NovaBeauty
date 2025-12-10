@@ -99,14 +99,14 @@ function AdminPage() {
         <aside className={cx('sidebar')}>
           <h3 className={cx('title')}>ADMIN PANEL</h3>
           <nav className={cx('menu')}>
-            <NavLink to="/admin/staff" className={({ isActive }) => cx('menuBtn', { active: isActive })}>QL Tài khoản nhân viên</NavLink>
-            <NavLink to="/admin/customers" className={({ isActive }) => cx('menuBtn', { active: isActive })}>QL Tài khoản khách hàng</NavLink>
-            <NavLink to="/admin/products" className={({ isActive }) => cx('menuBtn', { active: isActive })}>QL Sản phẩm</NavLink>
-            <NavLink to="/admin/categories" className={({ isActive }) => cx('menuBtn', { active: isActive })}>QL Danh mục</NavLink>
-            <NavLink to="/admin/orders" className={({ isActive }) => cx('menuBtn', { active: isActive })}>QL Đơn hàng</NavLink>
+            <NavLink to="/admin/staff" className={({ isActive }) => cx('menuBtn', { active: isActive })}>Quản lí Tài khoản nhân viên</NavLink>
+            <NavLink to="/admin/customers" className={({ isActive }) => cx('menuBtn', { active: isActive })}>Quản lí Tài khoản khách hàng</NavLink>
+            <NavLink to="/admin/products" className={({ isActive }) => cx('menuBtn', { active: isActive })}>Quản lí Sản phẩm</NavLink>
+            <NavLink to="/admin/categories" className={({ isActive }) => cx('menuBtn', { active: isActive })}>Quản lí Danh mục</NavLink>
+            <NavLink to="/admin/orders" className={({ isActive }) => cx('menuBtn', { active: isActive })}>Quản lí Đơn hàng</NavLink>
             <NavLink to="/admin/vouchers" className={({ isActive }) => cx('menuBtn', { active: isActive })}>Voucher & Khuyến mãi</NavLink>
-            <NavLink to="/admin/complaints" className={({ isActive }) => cx('menuBtn', { active: isActive })}>QL Khiếu nại</NavLink>
-            <NavLink to="/admin/content" className={({ isActive }) => cx('menuBtn', { active: isActive })}>QL Nội dung</NavLink>
+            <NavLink to="/admin/complaints" className={({ isActive }) => cx('menuBtn', { active: isActive })}>Quản lí Khiếu nại</NavLink>
+            <NavLink to="/admin/content" className={({ isActive }) => cx('menuBtn', { active: isActive })}>Quản lí Nội dung</NavLink>
             <NavLink to="/admin/reports" className={({ isActive }) => cx('menuBtn', { active: isActive })}>Báo cáo & Thống kê</NavLink>
           </nav>
           <button className={cx('logoutBtn')} onClick={handleLogoutClick}>Đăng xuất</button>

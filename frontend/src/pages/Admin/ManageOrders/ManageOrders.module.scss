@@ -1,44 +1,64 @@
+// Theme colors
+$primary: #e5677d;
+$primary-600: #e5677d;
+$primary-700: #e5677d;
+$primary-50: #fff0f6;
+$border-soft: #ffd1e4;
+$text-dark: #212529;
+$white: #fff;
+
 .page {
+    width: 100%;
+    max-width: 95%;
+    margin: 0;
     padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    background-color: #f5f7fb;
-    min-height: 100%;
+    background: #f8f9fa;
+    min-height: 100vh;
 }
 
 .header {
     display: flex;
-    align-items: center;
     justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
 
     h1 {
         font-size: 28px;
-        margin: 0;
         font-weight: 700;
-        color: #1a3c5a;
+        color: black;
+        margin: 0;
     }
 }
 
 .tabs {
     display: inline-flex;
     gap: 12px;
+    margin-bottom: 24px;
 }
 
 .tab {
-    border: 1px solid #ccd5e3;
-    background: #fff;
-    color: #1a3c5a;
     padding: 10px 20px;
-    border-radius: 999px;
+    border: 1px solid #ddd;
+    background: white;
+    color: $text-dark;
+    border-radius: 8px;
     font-weight: 600;
+    font-size: 14px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s;
 
     &.active {
-        background: #1a3c5a;
-        color: #fff;
-        border-color: #1a3c5a;
+        background: $primary;
+        color: $white;
+        border-color: $primary;
+        box-shadow: 0 2px 8px rgba(229, 103, 125, 0.3);
+    }
+
+    &:hover:not(.active) {
+        border-color: $primary;
+        color: $primary;
     }
 }
 
@@ -46,31 +66,32 @@
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
+    align-items: center;
+    margin-bottom: 24px;
     padding: 16px;
-    background: #fff;
+    background: white;
     border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-    border: 1px solid rgba(26, 60, 90, 0.16);
-
-    input,
-    button,
-    select {
-        height: 44px;
-    }
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .searchInput {
     flex: 1;
     min-width: 240px;
-    padding: 0 14px;
-    border-radius: 10px;
-    border: 1px solid #c9d4e5;
-    font-size: 15px;
-    outline: none;
+    padding: 12px 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    background: white;
+    transition: border-color 0.2s, box-shadow 0.2s;
 
     &:focus {
-        border-color: #1a3c5a;
-        box-shadow: 0 0 0 3px rgba(26, 60, 90, 0.15);
+        outline: none;
+        border-color: $primary;
+        box-shadow: 0 0 0 3px rgba(255, 128, 181, 0.15);
+    }
+
+    &::placeholder {
+        color: #999;
     }
 }
 
@@ -78,152 +99,214 @@
     display: flex;
     align-items: center;
     padding: 0 12px;
-    border-radius: 10px;
-    border: 1px solid #c9d4e5;
-    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background: white;
+    height: 44px;
 }
 
 .dateInput {
     border: none;
     outline: none;
-    font-size: 15px;
+    font-size: 14px;
     background: transparent;
+    padding: 0 8px;
+    color: $text-dark;
+
+    &:focus {
+        outline: none;
+    }
 }
 
 .searchButton {
-    background-color: #1a3c5a;
-    color: #fff;
+    padding: 12px 24px;
+    background: $primary;
+    color: white;
     border: none;
-    padding: 0 20px;
-    border-radius: 10px;
+    border-radius: 8px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    height: 44px;
+
+    &:hover {
+        box-shadow: 0 4px 12px rgba(255, 84, 155, 0.3);
+    }
+
+    &:active {
+        transform: translateY(1px);
+    }
 }
 
 .statusFilter {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #1a3c5a;
 
     label {
-        font-weight: 600;
+        font-size: 14px;
+        color: black;
+        font-weight: 500;
+        white-space: nowrap;
     }
 
     select {
-        border-radius: 10px;
-        border: 1px solid #c9d4e5;
-        padding: 0 12px;
+        padding: 12px 16px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+        background: white;
+        cursor: pointer;
+        transition: border-color 0.2s;
         min-width: 180px;
+        height: 44px;
+
+        &:focus {
+            outline: none;
+            border-color: $primary;
+            box-shadow: 0 0 0 3px rgba(255, 128, 181, 0.15);
+        }
     }
 }
 
 .stateCard {
-    background: #fff;
+    background: white;
     border-radius: 12px;
     padding: 32px;
     text-align: center;
-    color: #1a3c5a;
+    color: $text-dark;
     font-weight: 500;
-    border: 1px solid rgba(26, 60, 90, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 
     &.error {
-        color: #c62828;
+        color: #e03131;
     }
 
     button {
         margin-top: 12px;
-        background: #1a3c5a;
-        color: #fff;
+        padding: 10px 20px;
+        background: $primary;
+        color: white;
         border: none;
         border-radius: 8px;
-        padding: 10px 16px;
+        font-weight: 600;
         cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+            box-shadow: 0 4px 12px rgba(255, 84, 155, 0.3);
+        }
     }
 }
 
 .tableWrapper {
-    background: #fff;
-    border-radius: 16px;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     overflow: hidden;
-    border: 1px solid rgba(26, 60, 90, 0.15);
+    overflow-x: auto;
 }
 
 .table {
     width: 100%;
     border-collapse: collapse;
+    min-width: 800px;
 
-    th,
-    td {
-        padding: 16px;
-        text-align: left;
-        border-bottom: 1px solid #eef2f8;
-        font-size: 15px;
+    thead {
+        background: $primary-700;
+        color: $white;
+
+        th {
+            padding: 16px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            white-space: nowrap;
+        }
     }
 
-    th {
-        background: #1a3c5a;
-        color: #fff;
-        font-weight: 600;
-    }
+    tbody {
+        tr {
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s;
 
-    tbody tr:hover {
-        background: rgba(26, 60, 90, 0.05);
+            &:hover {
+                background-color: $primary-50;
+            }
+
+            &:last-child {
+                border-bottom: none;
+            }
+        }
+
+        td {
+            padding: 16px 12px;
+            font-size: 14px;
+            color: $text-dark;
+            vertical-align: middle;
+        }
     }
 }
 
 .statusBadge {
-    display: inline-flex;
-    align-items: center;
+    display: inline-block;
     padding: 6px 12px;
-    border-radius: 999px;
-    font-size: 13px;
+    border-radius: 12px;
+    font-size: 12px;
     font-weight: 600;
 
     &.pending {
-        background: #fff4e2;
-        color: #c77800;
+        background: rgba(255, 193, 7, 0.1);
+        color: #f59f00;
     }
     &.processing,
     &.shipping {
-        background: #dfe8f4;
-        color: #1a3c5a;
+        background: rgba(28, 126, 214, 0.1);
+        color: #1c7ed6;
     }
     &.delivered {
-        background: #e6f7ed;
-        color: #1b5e20;
+        background: #d4edda;
+        color: #155724;
     }
     &.cancelled {
-        background: #fde8e8;
-        color: #c62828;
+        background: rgba(224, 49, 49, 0.1);
+        color: #e03131;
     }
     &.return-requested {
-        background: #fff4e2;
-        color: #c77800;
+        background: rgba(255, 193, 7, 0.1);
+        color: #f59f00;
     }
     &.refunded {
-        background: #e6f7ed;
-        color: #1b5e20;
+        background: #d4edda;
+        color: #155724;
     }
     &.return-rejected {
-        background: #fde8e8;
-        color: #c62828;
+        background: rgba(224, 49, 49, 0.1);
+        color: #e03131;
     }
 }
 
 .detailButton {
-    background: #1a3c5a;
-    color: #fff;
+    padding: 8px 16px;
+    background: $primary;
+    color: white;
     border: none;
     border-radius: 8px;
-    padding: 10px 18px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
-    transition: opacity 0.2s ease;
+    transition: all 0.2s;
+    white-space: nowrap;
 
     &:hover {
-        opacity: 0.85;
+        box-shadow: 0 2px 8px rgba(255, 84, 155, 0.3);
+        transform: translateY(-1px);
+    }
+
+    &:active {
+        transform: translateY(0);
     }
 }
 
@@ -238,13 +321,14 @@
 .paginationBtn {
     min-width: 96px;
     height: 40px;
-    border-radius: 999px;
-    border: 1px solid #ccd5e3;
-    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    background: white;
     font-weight: 600;
-    color: #1a3c5a;
+    color: $text-dark;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s;
+    font-size: 14px;
 
     &:disabled {
         opacity: 0.4;
@@ -252,13 +336,90 @@
     }
 
     &:not(:disabled):hover {
-        background: #1a3c5a;
-        color: #fff;
-        border-color: #1a3c5a;
+        background: $primary;
+        color: $white;
+        border-color: $primary;
+        box-shadow: 0 2px 8px rgba(255, 84, 155, 0.3);
     }
 }
 
 .paginationInfo {
     font-weight: 600;
-    color: #1a3c5a;
+    color: $text-dark;
+    font-size: 14px;
+}
+
+.empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+    font-size: 14px;
+}
+
+.loading {
+    text-align: center;
+    padding: 60px 20px;
+    font-size: 16px;
+    color: #666;
+}
+
+@media (max-width: 992px) {
+    .page {
+        padding: 16px;
+    }
+
+    .filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .searchInput {
+        width: 100%;
+        min-width: 100%;
+    }
+
+    .statusFilter {
+        width: 100%;
+        justify-content: space-between;
+
+        select {
+            flex: 1;
+        }
+    }
+
+    .searchButton {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .tableWrapper {
+        overflow-x: auto;
+    }
+}
+
+@media (max-width: 640px) {
+    .header h1 {
+        font-size: 22px;
+    }
+
+    .tab {
+        font-size: 13px;
+        padding: 8px 16px;
+    }
+
+    .searchButton {
+        font-size: 13px;
+        padding: 10px 16px;
+    }
+
+    .table th,
+    .table td {
+        padding: 12px 8px;
+        font-size: 13px;
+    }
+
+    .detailButton {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
 }

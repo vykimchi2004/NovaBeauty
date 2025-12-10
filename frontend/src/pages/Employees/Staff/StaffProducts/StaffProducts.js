@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faSearch, faArrowLeft, faCalendarAlt, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faSearch, faArrowLeft, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from './StaffProducts.module.scss';
 import AddProductPage from './components/AddProduct/AddProductPage';
@@ -25,7 +25,8 @@ import {
   buildVariantPayload,
   serializeVariantPayload,
   normalizeVariantRecords,
-} from '~/utils/colorVariants';
+  getVariantLabel,
+} from '~/utils/productVariants';
 import { useCategories } from '~/hooks';
 import fallbackImage from '~/assets/images/products/image1.jpg';
 
@@ -55,6 +56,9 @@ const getInitialFormData = (overrides = {}) => ({
   ingredients: '',
   uses: '',
   usageInstructions: '',
+  length: '',
+  width: '',
+  height: '',
   weight: '',
   price: '',
   purchasePrice: '',
@@ -64,6 +68,8 @@ const getInitialFormData = (overrides = {}) => ({
   stockQuantity: '',
   hasColorVariants: false,
   colorVariants: [],
+  variantSamePrice: true, // Mặc định cùng giá
+  variantLabel: 'Mã màu', // Tiêu đề mặc định
   ...overrides,
 });
 
@@ -174,22 +180,119 @@ function StaffProducts() {
       handleProductStatusNotifications(list);
       handleDeletedProductNotifications(list);
       
-      // Kiểm tra và thông báo sản phẩm sắp hết (tồn kho < 50)
-      const lowStockProducts = list.filter((product) => {
+      // Kiểm tra và thông báo sản phẩm hết hàng (tồn kho = 0) và sắp hết (tồn kho < 50)
+      // Bao gồm cả kiểm tra từng mã màu nếu có
+      const outOfStockProducts = [];
+      const lowStockProducts = [];
+      const outOfStockVariants = [];
+      const lowStockVariants = [];
+      
+      list.forEach((product) => {
         const totalStock = calculateTotalStock(product);
-        return totalStock > 0 && totalStock < 50;
+        
+        // Kiểm tra sản phẩm không có variants
+        if (!product.manufacturingLocation) {
+          if (totalStock === 0) {
+            outOfStockProducts.push(product);
+          } else if (totalStock > 0 && totalStock < 50) {
+            lowStockProducts.push(product);
+          }
+        } else {
+          // Kiểm tra từng mã màu
+          const variants = normalizeVariantRecords(product.manufacturingLocation);
+          variants.forEach((variant) => {
+            const stock = variant.stockQuantity !== null && variant.stockQuantity !== undefined 
+              ? Number(variant.stockQuantity) 
+              : 0;
+            const variantName = variant.name || variant.code || 'Mã màu';
+            const variantCode = variant.code || '';
+            const displayName = variantCode ? `${variantName} (${variantCode})` : variantName;
+            
+            if (stock === 0) {
+              outOfStockVariants.push({
+                productName: product.name || product.id,
+                variantName: displayName,
+              });
+            } else if (stock > 0 && stock < 50) {
+              lowStockVariants.push({
+                productName: product.name || product.id,
+                variantName: displayName,
+                stock,
+              });
+            }
+          });
+          
+          // Nếu tất cả mã màu đều hết hàng, thêm vào danh sách sản phẩm hết hàng
+          if (totalStock === 0 && variants.length > 0) {
+            outOfStockProducts.push(product);
+          } else if (totalStock > 0 && totalStock < 50 && variants.length > 0) {
+            lowStockProducts.push(product);
+          }
+        }
       });
       
-      if (lowStockProducts.length > 0) {
-        const productNames = lowStockProducts
-          .slice(0, 3)
-          .map((p) => p.name || p.id)
-          .join(', ');
-        const moreCount = lowStockProducts.length > 3 ? ` và ${lowStockProducts.length - 3} sản phẩm khác` : '';
-        notify.warning(
-          `⚠️ Cảnh báo: Có ${lowStockProducts.length} sản phẩm sắp hết (tồn kho < 50): ${productNames}${moreCount}. Vui lòng kiểm tra và nhập thêm hàng.`,
-          { duration: 6000 }
-        );
+      // Thêm thông báo vào hệ thống notification của staff thay vì popup
+      const userId = currentUserRef.current?.id;
+      if (userId) {
+        // Thông báo mã màu hết hàng (ưu tiên cao nhất)
+        if (outOfStockVariants.length > 0) {
+          const variantInfo = outOfStockVariants
+            .slice(0, 3)
+            .map((v) => `${v.productName} - ${v.variantName}`)
+            .join(', ');
+          const moreCount = outOfStockVariants.length > 3 ? ` và ${outOfStockVariants.length - 3} mã màu khác` : '';
+          addStaffNotification(userId, {
+            title: 'Cảnh báo: Mã màu hết hàng',
+            message: `Có ${outOfStockVariants.length} mã màu đã hết hàng: ${variantInfo}${moreCount}. Vui lòng nhập hàng ngay!`,
+            type: 'error',
+            targetPath: '/staff/products',
+          });
+        }
+        
+        // Thông báo sản phẩm hết hàng (ưu tiên)
+        if (outOfStockProducts.length > 0) {
+          const productNames = outOfStockProducts
+            .slice(0, 3)
+            .map((p) => p.name || p.id)
+            .join(', ');
+          const moreCount = outOfStockProducts.length > 3 ? ` và ${outOfStockProducts.length - 3} sản phẩm khác` : '';
+          addStaffNotification(userId, {
+            title: 'Cảnh báo: Sản phẩm hết hàng',
+            message: `Có ${outOfStockProducts.length} sản phẩm đã hết hàng (tồn kho = 0): ${productNames}${moreCount}. Vui lòng nhập hàng ngay!`,
+            type: 'error',
+            targetPath: '/staff/products',
+          });
+        }
+        
+        // Thông báo mã màu sắp hết
+        if (lowStockVariants.length > 0) {
+          const variantInfo = lowStockVariants
+            .slice(0, 3)
+            .map((v) => `${v.productName} - ${v.variantName} (${v.stock})`)
+            .join(', ');
+          const moreCount = lowStockVariants.length > 3 ? ` và ${lowStockVariants.length - 3} mã màu khác` : '';
+          addStaffNotification(userId, {
+            title: 'Cảnh báo: Mã màu sắp hết',
+            message: `Có ${lowStockVariants.length} mã màu sắp hết (tồn kho < 50): ${variantInfo}${moreCount}. Vui lòng kiểm tra và nhập thêm hàng.`,
+            type: 'warning',
+            targetPath: '/staff/products',
+          });
+        }
+        
+        // Thông báo sản phẩm sắp hết
+        if (lowStockProducts.length > 0) {
+          const productNames = lowStockProducts
+            .slice(0, 3)
+            .map((p) => p.name || p.id)
+            .join(', ');
+          const moreCount = lowStockProducts.length > 3 ? ` và ${lowStockProducts.length - 3} sản phẩm khác` : '';
+          addStaffNotification(userId, {
+            title: 'Cảnh báo: Sản phẩm sắp hết',
+            message: `Có ${lowStockProducts.length} sản phẩm sắp hết (tồn kho < 50): ${productNames}${moreCount}. Vui lòng kiểm tra và nhập thêm hàng.`,
+            type: 'warning',
+            targetPath: '/staff/products',
+          });
+        }
       }
     } catch (err) {
       console.error('Error fetching products:', err);
@@ -315,6 +418,30 @@ function StaffProducts() {
 
     const variantForms = mapVariantsToFormState(product.manufacturingLocation);
     const hasVariants = variantForms.length > 0;
+    
+    // Lấy variantLabel từ manufacturingLocation
+    const variantLabel = getVariantLabel(product.manufacturingLocation);
+    
+    // Kiểm tra xem có variant nào có giá riêng không
+    const hasVariantPrices = variantForms.some(v => v.price && parseFloat(v.price) > 0);
+    const variantSamePrice = !hasVariantPrices; // Nếu không có variant nào có giá riêng thì cùng giá
+
+    // Nếu khác giá, lấy giá từ variant đầu tiên để hiển thị
+    let displayPrice = '';
+    let displayPurchasePrice = '';
+    if (hasVariants && !variantSamePrice && variantForms.length > 0) {
+      displayPrice = variantForms[0].price || '';
+      displayPurchasePrice = variantForms[0].purchasePrice || '';
+    } else {
+      displayPrice =
+        product.unitPrice?.toString() ||
+        (product.price && product.tax
+          ? (product.price / (1 + product.tax)).toFixed(0)
+          : product.price
+          ? (product.price / 1.08).toFixed(0)
+          : '');
+      displayPurchasePrice = product.purchasePrice?.toString() || '';
+    }
 
     resetFormState(
       {
@@ -333,20 +460,16 @@ function StaffProducts() {
         width: product.width?.toString() || '',
         height: product.height?.toString() || '',
         weight: product.weight?.toString() || '',
-        price:
-          product.unitPrice?.toString() ||
-          (product.price && product.tax
-            ? (product.price / (1 + product.tax)).toFixed(0)
-            : product.price
-            ? (product.price / 1.08).toFixed(0)
-            : ''),
-        purchasePrice: product.purchasePrice?.toString() || '',
+        price: displayPrice,
+        purchasePrice: displayPurchasePrice,
         tax: product.tax ? (product.tax * 100).toString() : '8',
         publicationDate: product.publicationDate || new Date().toISOString().split('T')[0],
         categoryId: product.categoryId || product.category?.id || '',
         stockQuantity: hasVariants ? '' : product.stockQuantity?.toString() || '',
         hasColorVariants: hasVariants,
         colorVariants: hasVariants ? variantForms : [],
+        variantSamePrice: variantSamePrice,
+        variantLabel: variantLabel, // Lấy variantLabel từ JSON
       },
       existingMedia,
     );
@@ -526,6 +649,15 @@ function StaffProducts() {
         validateAllVariantCodes(variants);
       }
 
+      // Nếu khác giá và đang thay đổi giá của variant đầu tiên, tự động cập nhật giá ở trên
+      if (prev.hasColorVariants && prev.variantSamePrice === false && index === 0) {
+        if (field === 'price') {
+          // Không cập nhật formData.price vì nó sẽ được hiển thị từ variant[0].price
+        } else if (field === 'purchasePrice') {
+          // Không cập nhật formData.purchasePrice vì nó sẽ được hiển thị từ variant[0].purchasePrice
+        }
+      }
+
       return {
         ...prev,
         colorVariants: variants,
@@ -536,6 +668,13 @@ function StaffProducts() {
   const handleVariantStockChange = (index, value) => {
     if (value === '' || /^\d+$/.test(value)) {
       handleVariantChange(index, 'stockQuantity', value);
+    }
+  };
+
+  const handleVariantPriceChange = (index, field, value) => {
+    // Chỉ cho phép số nguyên (không có dấu thập phân)
+    if (value === '' || /^\d+$/.test(value)) {
+      handleVariantChange(index, field, value);
     }
   };
 
@@ -609,8 +748,24 @@ function StaffProducts() {
     if (imageCount === 0) {
       errors.mediaFiles = STAFF_PRODUCT_ERRORS.mediaRequired;
     }
+    // Kiểm tra giá sản phẩm: phải > 0, trừ khi có variants với giá riêng
+    if (formData.hasColorVariants && formData.variantSamePrice === false) {
+      // Nếu khác giá, không cần kiểm tra giá ở trên (giá sẽ lấy từ variants)
+      // Nhưng vẫn cần kiểm tra variants có giá > 0 (đã kiểm tra ở dưới)
+    } else {
+      // Nếu cùng giá hoặc không có variants, giá sản phẩm phải > 0
     if (!formData.price || parseFloat(formData.price) <= 0) {
       errors.price = STAFF_PRODUCT_ERRORS.price;
+      } else {
+        // Kiểm tra giá nhập không được lớn hơn giá niêm yết
+        if (formData.purchasePrice && parseFloat(formData.purchasePrice) > 0) {
+          const unitPrice = parseFloat(formData.price);
+          const purchasePrice = parseFloat(formData.purchasePrice);
+          if (purchasePrice > unitPrice) {
+            errors.purchasePrice = 'Giá nhập không được lớn hơn giá niêm yết.';
+          }
+        }
+      }
     }
     if (!formData.categoryId) errors.categoryId = STAFF_PRODUCT_ERRORS.category;
 
@@ -649,8 +804,9 @@ function StaffProducts() {
     }
 
     if (formData.hasColorVariants) {
+      const variantLabel = formData.variantLabel || 'Mã màu';
       if (!formData.colorVariants || formData.colorVariants.length === 0) {
-        errors.colorVariants = 'Vui lòng thêm ít nhất một mã màu.';
+        errors.colorVariants = `Vui lòng thêm ít nhất một ${variantLabel.toLowerCase()}.`;
       } else {
         // Kiểm tra mã màu không được trùng nhau trong cùng một sản phẩm
         const colorCodes = [];
@@ -658,10 +814,11 @@ function StaffProducts() {
 
         for (let i = 0; i < formData.colorVariants.length; i += 1) {
           const variant = formData.colorVariants[i];
-          const displayName = variant.name || variant.code || `Mã màu ${i + 1}`;
+          const variantLabel = formData.variantLabel || 'Mã màu';
+          const displayName = variant.name || variant.code || `${variantLabel} ${i + 1}`;
 
           if (!variant.name?.trim() && !variant.code?.trim()) {
-            errors.colorVariants = `Mã màu thứ ${i + 1} cần tên hoặc mã màu.`;
+            errors.colorVariants = `${variantLabel} thứ ${i + 1} cần tên hoặc mã.`;
             break;
           }
 
@@ -685,6 +842,29 @@ function StaffProducts() {
             errors.colorVariants = `Tồn kho của ${displayName} phải là số nguyên không âm.`;
             break;
           }
+          
+          // Nếu khác giá, kiểm tra giá và giá nhập
+          if (formData.variantSamePrice === false) {
+            // Giá niêm yết phải > 0
+            if (!variant.price || parseFloat(variant.price) <= 0) {
+              errors.colorVariants = `Vui lòng nhập giá niêm yết lớn hơn 0 cho ${displayName}.`;
+              break;
+            }
+            // Giá nhập là optional, nhưng nếu có thì phải > 0 và không được lớn hơn giá niêm yết
+            if (variant.purchasePrice) {
+              const purchasePrice = parseFloat(variant.purchasePrice);
+              if (purchasePrice <= 0) {
+                errors.colorVariants = `Giá nhập của ${displayName} phải lớn hơn 0.`;
+                break;
+              }
+              const unitPrice = parseFloat(variant.price);
+              if (purchasePrice > unitPrice) {
+                errors.colorVariants = `Giá nhập của ${displayName} không được lớn hơn giá niêm yết.`;
+                break;
+              }
+            }
+          }
+          
           if (!variant.imageUrl && !variant.imageFile) {
             errors.colorVariants = `Vui lòng chọn ảnh cho ${displayName}.`;
             break;
@@ -693,7 +873,8 @@ function StaffProducts() {
 
         // Hiển thị lỗi nếu có mã màu trùng
         if (duplicateCodes.length > 0 && !errors.colorVariants) {
-          errors.colorVariants = `Mã màu "${duplicateCodes.join('", "')}" bị trùng lặp. Vui lòng sử dụng mã khác.`;
+          const variantLabel = formData.variantLabel || 'Mã màu';
+          errors.colorVariants = `${variantLabel} "${duplicateCodes.join('", "')}" bị trùng lặp. Vui lòng sử dụng mã khác.`;
         }
       }
     }
@@ -779,6 +960,20 @@ function StaffProducts() {
       let updatedVariants = formData.colorVariants || [];
       if (formData.hasColorVariants) {
         updatedVariants = await uploadVariantImages(updatedVariants);
+        
+        // Nếu cùng giá, xóa giá riêng và kích thước/trọng lượng riêng của từng variant (dùng chung của sản phẩm)
+        if (formData.variantSamePrice !== false) {
+          updatedVariants = updatedVariants.map(variant => ({
+            ...variant,
+            price: '',
+            purchasePrice: '',
+            length: '',
+            width: '',
+            height: '',
+            weight: '',
+          }));
+        }
+        
         setFormData((prev) => ({
           ...prev,
           colorVariants: updatedVariants,
@@ -787,12 +982,30 @@ function StaffProducts() {
       const variantPayload = formData.hasColorVariants ? buildVariantPayload(updatedVariants) : [];
       const manufacturingLocation =
         formData.hasColorVariants && variantPayload.length > 0
-          ? serializeVariantPayload(variantPayload)
+          ? serializeVariantPayload(variantPayload, formData.variantLabel)
           : null;
       const stockQuantity =
         formData.hasColorVariants || !formData.stockQuantity
           ? null
           : parseInt(formData.stockQuantity, 10);
+
+      // Xác định giá sản phẩm: nếu khác giá, lấy giá từ variant đầu tiên
+      let productUnitPrice = 0;
+      let productPurchasePrice = null;
+      
+      if (formData.hasColorVariants && formData.variantSamePrice === false) {
+        // Khác giá: lấy giá từ variant đầu tiên (nếu có)
+        if (updatedVariants.length > 0 && updatedVariants[0].price) {
+          productUnitPrice = parseFloat(updatedVariants[0].price);
+        }
+        if (updatedVariants.length > 0 && updatedVariants[0].purchasePrice) {
+          productPurchasePrice = parseFloat(updatedVariants[0].purchasePrice);
+        }
+      } else {
+        // Cùng giá hoặc không có variants: dùng giá sản phẩm
+        productUnitPrice = parseFloat(formData.price);
+        productPurchasePrice = formData.purchasePrice ? parseFloat(formData.purchasePrice) : null;
+      }
 
       const submitData = {
         id: formData.productId.trim(),
@@ -810,10 +1023,13 @@ function StaffProducts() {
         uses: formData.uses?.trim() || null,
         usageInstructions: formData.usageInstructions?.trim() || null,
         weight: formData.weight ? parseFloat(formData.weight) : null,
+        length: formData.length ? parseFloat(formData.length) : null,
+        width: formData.width ? parseFloat(formData.width) : null,
+        height: formData.height ? parseFloat(formData.height) : null,
         stockQuantity,
         manufacturingLocation,
-        unitPrice: parseFloat(formData.price),
-        purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : null,
+        unitPrice: productUnitPrice,
+        purchasePrice: productPurchasePrice,
         tax: formData.tax ? parseFloat(formData.tax) / 100 : 0.08,
         publicationDate: formData.publicationDate || null,
         categoryId: formData.categoryId,
@@ -988,33 +1204,87 @@ function StaffProducts() {
                   </td>
                   <td className={cx('stockCell')}>
                     {(() => {
-                      let totalStock = 0;
-                      // Nếu có color variants, tính tổng tồn kho từ các variants
+                      // Nếu có color variants, hiển thị từng mã màu với tồn kho
                       if (product.manufacturingLocation) {
                         const variants = normalizeVariantRecords(product.manufacturingLocation);
                         if (variants.length > 0) {
-                          totalStock = variants.reduce((sum, variant) => {
+                          const totalStock = variants.reduce((sum, variant) => {
                             const stock = variant.stockQuantity;
                             return sum + (stock !== null && stock !== undefined ? Number(stock) : 0);
                           }, 0);
+                          
+                          return (
+                            <div className={cx('stockDisplay', 'variantStockDisplay')}>
+                              <div className={cx('variantStockList')}>
+                                {variants.map((variant, idx) => {
+                                  const stock = variant.stockQuantity !== null && variant.stockQuantity !== undefined 
+                                    ? Number(variant.stockQuantity) 
+                                    : 0;
+                                  const variantName = variant.name || variant.code || `Mã màu ${idx + 1}`;
+                                  const variantCode = variant.code || '';
+                                  const displayName = variantCode ? `${variantName} (${variantCode})` : variantName;
+                                  const isOutOfStock = stock === 0;
+                                  const isLowStock = stock > 0 && stock < 50;
+                                  
+                                  return (
+                                    <div 
+                                      key={idx} 
+                                      className={cx('variantStockItem', { 
+                                        lowStock: isLowStock, 
+                                        outOfStock: isOutOfStock 
+                                      })}
+                                    >
+                                      <span className={cx('variantStockLabel')}>{displayName}:</span>
+                                      <span className={cx('variantStockValue')}>
+                                        {stock.toLocaleString('vi-VN')}
+                                      </span>
+                                      {isOutOfStock && (
+                                        <span className={cx('outOfStockBadge', 'small')} title="Mã màu đã hết hàng">
+                                          Hết
+                                        </span>
+                                      )}
+                                      {isLowStock && !isOutOfStock && (
+                                        <span className={cx('lowStockBadge', 'small')} title="Mã màu sắp hết">
+                                          Sắp hết
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <div className={cx('totalStockSummary')}>
+                                <span className={cx('totalStockLabel')}>Tổng:</span>
+                                <span className={cx('totalStockValue', {
+                                  lowStock: totalStock > 0 && totalStock < 50,
+                                  outOfStock: totalStock === 0
+                                })}>
+                                  {totalStock.toLocaleString('vi-VN')}
+                                </span>
+                              </div>
+                            </div>
+                          );
                         }
-                      } else {
-                        // Nếu không có variants, lấy stockQuantity của product
-                        totalStock = product.stockQuantity !== null && product.stockQuantity !== undefined 
-                          ? Number(product.stockQuantity) 
-                          : 0;
                       }
                       
-                      // Hiển thị số lượng với cảnh báo nếu < 50
-                      const displayStock = totalStock > 0 ? totalStock.toLocaleString('vi-VN') : '-';
+                      // Nếu không có variants, hiển thị tồn kho của product
+                      const totalStock = product.stockQuantity !== null && product.stockQuantity !== undefined 
+                        ? Number(product.stockQuantity) 
+                        : 0;
+                      const displayStock = totalStock > 0 ? totalStock.toLocaleString('vi-VN') : '0';
+                      const isOutOfStock = totalStock === 0;
                       const isLowStock = totalStock > 0 && totalStock < 50;
                       
                       return (
-                        <div className={cx('stockDisplay', { lowStock: isLowStock })}>
+                        <div className={cx('stockDisplay', { lowStock: isLowStock, outOfStock: isOutOfStock })}>
                           <span>{displayStock}</span>
-                          {isLowStock && (
+                          {isOutOfStock && (
+                            <span className={cx('outOfStockBadge')} title="Sản phẩm đã hết hàng">
+                              Hết hàng
+                            </span>
+                          )}
+                          {isLowStock && !isOutOfStock && (
                             <span className={cx('lowStockBadge')} title="Sản phẩm sắp hết">
-                              ⚠️ Sắp hết
+                              Sắp hết
                             </span>
                           )}
                         </div>
@@ -1061,6 +1331,7 @@ function StaffProducts() {
       onVariantChange={handleVariantChange}
       onVariantStockChange={handleVariantStockChange}
       onVariantImageChange={handleVariantImageChange}
+      onVariantPriceChange={handleVariantPriceChange}
         mediaFiles={mediaFiles}
       />
       <UpdateProductPage
@@ -1085,6 +1356,7 @@ function StaffProducts() {
       onVariantChange={handleVariantChange}
       onVariantStockChange={handleVariantStockChange}
       onVariantImageChange={handleVariantImageChange}
+      onVariantPriceChange={handleVariantPriceChange}
         mediaFiles={mediaFiles}
       />
       <ProductDetailPage

@@ -216,11 +216,6 @@ $white: #fff;
   }
 }
 
-.detailStatus {
-  display: flex;
-  justify-content: flex-end;
-}
-
 .detailInfoList {
   border: 1px solid #f1f3f5;
   border-radius: 12px;
@@ -401,36 +396,6 @@ $white: #fff;
 .priceCell {
   font-weight: 600;
   color: $primary;
-}
-
-.statusBadge {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-  background: rgba(224, 49, 49, 0.1);
-  color: #e03131;
-
-  &.active {
-    background: #d4edda;
-    color: #155724;
-  }
-
-  &.pending {
-    background: rgba(255, 193, 7, 0.1);
-    color: #f59f00;
-  }
-
-  &.rejected {
-    background: rgba(224, 49, 49, 0.1);
-    color: #e03131;
-  }
-
-  &.default {
-    background: rgba(108, 117, 125, 0.1);
-    color: #6c757d;
-  }
 }
 
 .actions {

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import classNames from 'classnames/bind';
 import styles from './StaffBanners.module.scss';
 import { useNavigate } from 'react-router-dom';
@@ -31,33 +31,26 @@ const DEFAULT_BANNER_FORM = {
 };
 
 const getDefaultStartDate = () => {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  return tomorrow.toISOString().split('T')[0];
+  const today = new Date();
+  return today.toISOString().split('T')[0];
 };
 
 function StaffBanners() {
   const navigate = useNavigate();
   
-  // Get current user to check role
+  // Get current user to check role and token
   const currentUser = storage.get(STORAGE_KEYS.USER);
   const userRole = currentUser?.role?.name?.toUpperCase() || '';
-  const isAdmin = userRole === 'ADMIN';
-  
-  // Check if banner is approved
-  const isBannerApproved = (banner) => {
-    return banner.status === true && banner.pendingReview === false;
-  };
+  const hasDeletePermission = userRole === 'ADMIN' || userRole === 'STAFF';
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
 
   const [bannerList, setBannerList] = useState([]);
   const [bannerLoading, setBannerLoading] = useState(false);
 
   // Use hooks
-  const { products, loading: productsLoading } = useProducts({
+  const { products } = useProducts({
     categoryId: null,
     autoLoad: true,
   });
@@ -129,13 +122,15 @@ function StaffBanners() {
   };
 
   const mapBannerStatusToPromotionStatus = (banner) => {
-    if (banner.pendingReview === true) return 'PENDING_APPROVAL';
+    // Banner được tạo tự động được duyệt (status = true, pendingReview = false)
     if (banner.status === true && banner.pendingReview === false) return 'APPROVED';
     if (banner.status === false && banner.rejectionReason) return 'REJECTED';
-    return 'PENDING_APPROVAL';
+    if (banner.status === false) return 'DISABLED';
+    // Mặc định là đã duyệt vì banner mới tạo tự động được duyệt
+    return 'APPROVED';
   };
 
-  const matchesFilters = (item) => {
+  const matchesFilters = useCallback((item) => {
     const term = searchTerm.trim().toLowerCase();
     if (term) {
       const title = item.title?.toLowerCase() || '';
@@ -146,28 +141,13 @@ function StaffBanners() {
       const start = item.startDate ? item.startDate.split('T')[0] : '';
       if (start !== selectedDate) return false;
     }
-    const mappedStatus = mapBannerStatusToPromotionStatus(item);
-    if (statusFilter !== 'all' && mappedStatus !== statusFilter) return false;
     return true;
-  };
+  }, [searchTerm, selectedDate]);
 
   const filteredBanners = useMemo(
     () => bannerList.filter(matchesFilters),
-    [bannerList, searchTerm, selectedDate, statusFilter],
+    [bannerList, matchesFilters],
   );
-
-  const renderStatusBadge = (banner) => {
-    const status = mapBannerStatusToPromotionStatus(banner);
-    const map = {
-      PENDING_APPROVAL: { label: 'Chờ duyệt', className: 'pending' },
-      APPROVED: { label: 'Đã duyệt', className: 'approved' },
-      REJECTED: { label: 'Không duyệt', className: 'rejected' },
-      EXPIRED: { label: 'Hết hạn', className: 'expired' },
-      DISABLED: { label: 'Tạm dừng', className: 'expired' },
-    };
-    const info = map[status] || map.PENDING_APPROVAL;
-    return info;
-  };
 
   const openAddBanner = () => {
     setBannerForm({
@@ -185,21 +165,9 @@ function StaffBanners() {
   };
 
   const openEditBanner = (banner) => {
-    if (banner.status === true && banner.pendingReview === false) {
-      notify.warning('Không thể sửa banner đã được duyệt');
-      return;
-    }
+    // Staff và Admin đều có thể sửa banner, không cần kiểm tra trạng thái duyệt
     
-    let startDate = banner.startDate ? banner.startDate.split('T')[0] : getDefaultStartDate();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const startDateObj = new Date(startDate);
-    startDateObj.setHours(0, 0, 0, 0);
-    
-    if (startDateObj <= today) {
-      startDate = getDefaultStartDate();
-    }
-    
+    const startDate = banner.startDate ? banner.startDate.split('T')[0] : getDefaultStartDate();
     const derivedSelection = deriveSelectionFromProductIds(banner.productIds || []);
 
     setBannerForm({
@@ -496,8 +464,8 @@ function StaffBanners() {
       today.setHours(0, 0, 0, 0);
       const startDateObj = new Date(bannerForm.startDate);
       startDateObj.setHours(0, 0, 0, 0);
-      if (startDateObj <= today) {
-        errors.startDate = 'Ngày bắt đầu phải là ngày trong tương lai';
+      if (startDateObj < today) {
+        errors.startDate = 'Ngày bắt đầu phải từ hôm nay trở đi';
       }
     }
     if (!bannerForm.endDate) {
@@ -567,7 +535,7 @@ function StaffBanners() {
         notify.success('Cập nhật banner thành công!');
       } else {
         await createBanner(payload);
-        notify.success('Thêm banner thành công!');
+        notify.success('Thêm banner thành công! Banner đã được tự động kích hoạt.');
       }
 
       closeBannerModal();
@@ -579,6 +547,19 @@ function StaffBanners() {
   };
 
   const handleDelete = async (bannerId) => {
+    // Kiểm tra quyền trước khi xóa
+    if (!hasDeletePermission) {
+      notify.error('Bạn không có quyền xóa banner. Vui lòng liên hệ admin.');
+      return;
+    }
+
+    // Kiểm tra token
+    const token = storage.get(STORAGE_KEYS.TOKEN);
+    if (!token) {
+      notify.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      return;
+    }
+
     const confirmed = await notify.confirm(
       'Bạn có chắc chắn muốn xóa banner này?',
       'Xác nhận xóa banner',
@@ -597,14 +578,20 @@ function StaffBanners() {
       }
     } catch (error) {
       console.error('Error deleting banner:', error);
-      notify.error('Không thể xóa banner. Vui lòng thử lại.');
+      
+      // Xử lý lỗi chi tiết hơn
+      let errorMessage = 'Không thể xóa banner. Vui lòng thử lại.';
+      
+      if (error.status === 403 || error.message?.includes('permission') || error.message?.includes('quyền') || error.message?.includes('You do not have permission')) {
+        errorMessage = 'Bạn không có quyền xóa banner này. Vui lòng kiểm tra lại quyền truy cập của tài khoản hoặc liên hệ admin.';
+      } else if (error.status === 401) {
+        errorMessage = 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      notify.error(errorMessage);
     }
-  };
-
-  const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedDate('');
-    setStatusFilter('all');
   };
 
   const brandOptions = useMemo(() => {
@@ -657,16 +644,6 @@ function StaffBanners() {
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
           />
-          <select
-            className={cx('selectInput')}
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">Tất cả trạng thái</option>
-            <option value="PENDING_APPROVAL">Chờ duyệt</option>
-            <option value="APPROVED">Đã duyệt</option>
-            <option value="REJECTED">Không duyệt</option>
-          </select>
           <button type="button" className={cx('addBtn')} onClick={openAddBanner}>
             <FontAwesomeIcon icon={faPlus} />
             Thêm banner
@@ -687,7 +664,6 @@ function StaffBanners() {
                 <th>Ngày tạo</th>
                 <th>Ngày bắt đầu</th>
                 <th>Ngày kết thúc</th>
-                <th>Trạng thái</th>
                 <th>Sản phẩm</th>
                 <th>Thao tác</th>
               </tr>
@@ -695,13 +671,12 @@ function StaffBanners() {
             <tbody>
               {filteredBanners.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className={cx('empty')}>
+                  <td colSpan="8" className={cx('empty')}>
                     Không có banner nào
                   </td>
                 </tr>
               ) : (
                 filteredBanners.map((banner) => {
-                  const statusInfo = renderStatusBadge(banner);
                   return (
                     <tr key={banner.id}>
                       <td>
@@ -727,11 +702,6 @@ function StaffBanners() {
                       <td>{formatDate(banner.startDate)}</td>
                       <td>{formatDate(banner.endDate)}</td>
                       <td>
-                        <span className={cx('statusBadge', statusInfo.className)}>
-                          {statusInfo.label}
-                        </span>
-                      </td>
-                      <td>
                         {banner.productNames && banner.productNames.length > 0 ? (
                           <span title={banner.productNames.join(', ')}>
                             {banner.productNames.length} sản phẩm
@@ -754,21 +724,18 @@ function StaffBanners() {
                             type="button"
                             className={cx('actionBtn', 'editBtn')}
                             onClick={() => openEditBanner(banner)}
-                            disabled={isBannerApproved(banner)}
-                            title={isBannerApproved(banner) ? 'Không thể sửa banner đã được duyệt' : 'Sửa'}
+                            title="Sửa"
                           >
                             <FontAwesomeIcon icon={faEdit} />
                           </button>
-                          {isAdmin && (
-                            <button
-                              type="button"
-                              className={cx('actionBtn', 'deleteBtn')}
-                              onClick={() => handleDelete(banner.id)}
-                              title="Xóa"
-                            >
-                              <FontAwesomeIcon icon={faTrash} />
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            className={cx('actionBtn', 'deleteBtn')}
+                            onClick={() => handleDelete(banner.id)}
+                            title="Xóa"
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -842,12 +809,6 @@ function StaffBanners() {
                 <div className={cx('detailRow')}>
                   <strong>Ngày kết thúc:</strong>
                   <span>{formatDate(detailItem.endDate)}</span>
-                </div>
-                <div className={cx('detailRow')}>
-                  <strong>Trạng thái:</strong>
-                  <span className={cx('statusBadge', renderStatusBadge(detailItem).className)}>
-                    {renderStatusBadge(detailItem).label}
-                  </span>
                 </div>
                 {detailItem.productNames && detailItem.productNames.length > 0 && (
                   <div className={cx('detailRow')}>

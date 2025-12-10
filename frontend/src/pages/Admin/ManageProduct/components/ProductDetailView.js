@@ -1,10 +1,10 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronLeft, faXmark, faCheck, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faChevronLeft } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from '../ManageProduct.module.scss';
 import fallbackImage from '~/assets/images/products/image1.jpg';
-import { normalizeVariantRecords } from '~/utils/colorVariants';
+import { normalizeVariantRecords, getVariantLabel } from '~/utils/productVariants';
 
 const cx = classNames.bind(styles);
 
@@ -37,6 +37,12 @@ function ProductDetailView({
     [product?.manufacturingLocation]
   );
 
+  // Lấy variantLabel từ manufacturingLocation
+  const variantLabel = React.useMemo(
+    () => getVariantLabel(product?.manufacturingLocation),
+    [product?.manufacturingLocation]
+  );
+
   const handleVariantImageClick = (imageUrl) => {
     if (!imageUrl || !mediaList || !mediaList.length || !onSelectImage) return;
     const index = mediaList.findIndex((url) => url === imageUrl);
@@ -49,6 +55,23 @@ function ProductDetailView({
     if (!value) return '-';
     return new Date(value).toLocaleString('vi-VN');
   };
+
+  // Lấy các giá trị trọng lượng khác nhau từ variants
+  const getVariantWeights = () => {
+    if (!colorVariants || colorVariants.length === 0) return null;
+    
+    const weights = new Set();
+    
+    colorVariants.forEach((variant) => {
+      if (variant.weight !== null && variant.weight !== undefined && variant.weight !== '') {
+        weights.add(Number(variant.weight));
+      }
+    });
+    
+    return weights.size > 0 ? Array.from(weights).sort((a, b) => a - b) : null;
+  };
+
+  const variantWeights = getVariantWeights();
 
   const formatPriceWithTax = (unitPrice, finalPrice) => {
     if (!unitPrice && !finalPrice) return '-';
@@ -91,10 +114,21 @@ function ProductDetailView({
     infoRows.push({ label: 'Kích thước / Quy cách', value: product.size });
   }
 
+  // Hiển thị trọng lượng: nếu có variant với trọng lượng khác nhau, hiển thị tất cả
+  const displayWeight = () => {
+    if (variantWeights && variantWeights.length > 0) {
+      // Có variant với trọng lượng riêng
+      const weightValues = variantWeights.map(w => `${w} g`).join(' & ');
+      return weightValues;
+    }
+    // Dùng trọng lượng chính của sản phẩm
+    return formatWeight(product.weight);
+  };
+
   infoRows.push(
     { label: 'Giá niêm yết', value: formatPriceWithTax(product.unitPrice, product.price) },
     { label: 'Thuế', value: '8%' },
-    { label: 'Trọng lượng', value: formatWeight(product.weight) },
+    { label: 'Trọng lượng', value: displayWeight() },
     { label: 'Kết cấu', value: textureInfo || 'Chưa cập nhật' },
     { label: 'Loại da', value: skinTypeInfo || 'Chưa cập nhật' },
     { label: 'Ngày gửi', value: formatDateTime(product.createdAt) }
@@ -166,7 +200,6 @@ function ProductDetailView({
         <div className={cx('detailRight')}>
           <div className={cx('detailHeaderBlock')}>
             <h3>Chi tiết sản phẩm</h3>
-            <div className={cx('detailStatus')}>{getStatusBadge(product.status)}</div>
           </div>
 
           <div className={cx('detailInfoList')}>
@@ -206,7 +239,7 @@ function ProductDetailView({
 
           {colorVariants.length > 0 && (
             <div className={cx('detailTextGroup')}>
-              <span className={cx('detailInfoLabel')}>Mã màu & tồn kho</span>
+              <span className={cx('detailInfoLabel')}>{variantLabel} & tồn kho</span>
               <div className={cx('variantDetailList')}>
                 {colorVariants.map((variant, index) => (
                   <div
@@ -227,20 +260,30 @@ function ProductDetailView({
                       }}
                     >
                       {variant.imageUrl ? (
-                        <img src={variant.imageUrl} alt={variant.name || variant.code || `Mã màu ${index + 1}`} />
+                        <img src={variant.imageUrl} alt={variant.name || variant.code || `${variantLabel} ${index + 1}`} />
                       ) : (
                         <span>Không có ảnh</span>
                       )}
                     </div>
                     <div className={cx('variantDetailInfo')}>
-                      <strong>{variant.name || variant.code || `Mã màu ${index + 1}`}</strong>
+                      <strong>{variant.name || variant.code || `${variantLabel} ${index + 1}`}</strong>
                       <span>Mã: {variant.code || 'Chưa cập nhật'}</span>
                       <span>
                         Tồn kho:{' '}
                         {variant.stockQuantity !== null && variant.stockQuantity !== undefined
                           ? variant.stockQuantity
                           : 'Chưa cập nhật'}
-                  </span>
+                      </span>
+                      {variant.price && parseFloat(variant.price) > 0 && (
+                        <span>
+                          Giá niêm yết: {new Intl.NumberFormat('vi-VN').format(parseFloat(variant.price))} ₫
+                        </span>
+                      )}
+                      {variant.purchasePrice && parseFloat(variant.purchasePrice) > 0 && (
+                        <span>
+                          Giá nhập: {new Intl.NumberFormat('vi-VN').format(parseFloat(variant.purchasePrice))} ₫
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}

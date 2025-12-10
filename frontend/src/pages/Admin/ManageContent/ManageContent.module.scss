@@ -25,24 +25,6 @@
   font-size: 13px;
 }
 
-.statusBadge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-
-  &.active {
-    background: #d4edda;
-    color: #155724;
-  }
-
-  &.inactive {
-    background: #f8d7da;
-    color: #721c24;
-  }
-}
-
 .imageUploadSection {
   margin-top: 8px;
 }

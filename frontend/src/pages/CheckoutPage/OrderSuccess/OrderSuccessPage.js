@@ -5,6 +5,7 @@ import { faCheckCircle } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from '../CheckoutPage.module.scss';
 import orderService from '~/services/order';
+import { consumePendingVoucher, getStoredUserId, markVoucherUsed } from '~/utils/voucherUsage';
 
 const cx = classNames.bind(styles);
 
@@ -21,6 +22,24 @@ function OrderSuccessPage() {
   // Kiểm tra nếu có orderId từ MoMo redirect (query params)
   const orderIdFromMoMo = searchParams.get('orderId');
   const resultCode = searchParams.get('resultCode');
+
+  // Ghi nhận voucher đã sử dụng khi thanh toán thành công (COD và MoMo)
+  useEffect(() => {
+    const uid = getStoredUserId();
+    if (!uid) return;
+
+    if (state?.voucherCode) {
+      markVoucherUsed(uid, state.voucherCode);
+    }
+
+    const pendingCode = consumePendingVoucher(uid);
+    if (pendingCode && (!resultCode || resultCode === '0')) {
+      markVoucherUsed(uid, pendingCode);
+    } else if (resultCode && resultCode !== '0' && pendingCode) {
+      // Thanh toán thất bại, giải phóng voucher đang chờ
+      consumePendingVoucher(uid);
+    }
+  }, [state, resultCode]);
 
   useEffect(() => {
     // Nếu có orderId từ MoMo redirect và chưa có order data từ state
@@ -81,12 +100,8 @@ function OrderSuccessPage() {
   };
 
   const handleViewOrders = () => {
-    navigate('/profile', { 
-      state: { 
-        section: 'orders',
-        orderTab: 'pending' // Mở tab "Chờ xác nhận"
-      } 
-    });
+    // Navigate đến profile với section orders và tab pending (Chờ xác nhận)
+    navigate('/profile?section=orders&tab=pending');
   };
 
   // Dispatch event để cập nhật cart count trong header sau khi đặt hàng thành công

@@ -261,6 +261,16 @@
   color: #e5677d;
 }
 
+.totalRow {
+  background: #f8f9fa;
+  border-top: 2px solid #dee2e6;
+
+  td {
+    padding: 16px;
+    font-size: 15px;
+  }
+}
+
 .empty {
   text-align: center;
   padding: 40px;

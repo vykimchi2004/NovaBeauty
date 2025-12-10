@@ -19,8 +19,6 @@ function Cart() {
     setCartItems,
     loading,
     isUnauthenticated,
-    subtotal,
-    total,
     appliedDiscount,
     appliedVoucherCode,
     loadCart,

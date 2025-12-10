@@ -31,6 +31,7 @@ function ProductFormModal({
   onVariantChange,
   onVariantStockChange,
   onVariantImageChange,
+  onVariantPriceChange,
 }) {
   if (!open) return null;
 
@@ -128,12 +129,14 @@ function ProductFormModal({
             </div>
           </div>
 
+          {/* Chỉ hiển thị trường giá khi cùng giá hoặc không có variants */}
+          {!(formData.hasColorVariants && formData.variantSamePrice === false) && (
           <div className={cx('formRow')}>
             <div className={cx('formGroup', { error: formErrors.price })}>
               <label>Giá niêm yết (đồng) *</label>
               <input
                 type="number"
-                min="0"
+                  min="1"
                 step="1"
                 value={formData.price}
                 onChange={(e) => {
@@ -177,7 +180,10 @@ function ProductFormModal({
               {renderError('purchasePrice')}
             </div>
           </div>
+          )}
 
+          {/* Chỉ hiển thị giá hiển thị khi cùng giá hoặc không có variants */}
+          {!(formData.hasColorVariants && formData.variantSamePrice === false) && (
           <div className={cx('formRow')}>
             <div className={cx('formGroup')}>
               <label>Giá hiển thị (tự động tính)</label>
@@ -185,16 +191,22 @@ function ProductFormModal({
                 type="text"
                 readOnly
                 value={
-                  formData.price
-                    ? new Intl.NumberFormat('vi-VN', {
+                    (() => {
+                      const taxPercent = parseFloat(formData.tax || 8);
+                      const taxDecimal = taxPercent / 100; // Convert từ phần trăm sang decimal (8% -> 0.08)
+                      
+                      // Tính từ giá sản phẩm
+                      if (formData.price) {
+                        const unitPrice = parseFloat(formData.price || 0);
+                        // Công thức: unitPrice * (1 + tax) - giống backend
+                        const displayPrice = unitPrice * (1 + taxDecimal);
+                        return new Intl.NumberFormat('vi-VN', {
                         minimumFractionDigits: 0,
                         maximumFractionDigits: 0,
-                      }).format(
-                        Math.round(
-                          parseFloat(formData.price || 0) * (1 + parseFloat(formData.tax || 8) / 100)
-                        )
-                      ) + ' ₫'
-                    : '0 ₫'
+                        }).format(Math.round(displayPrice)) + ' ₫';
+                      }
+                      return '0 ₫';
+                    })()
                 }
                 className={cx('readOnlyInput')}
               />
@@ -203,6 +215,7 @@ function ProductFormModal({
               </small>
             </div>
           </div>
+          )}
 
           <div className={cx('formGroup', { error: formErrors.tax })}>
             <label>Thuế (%) *</label>
@@ -214,18 +227,26 @@ function ProductFormModal({
               value={formData.tax}
               onChange={(e) => {
                 const value = e.target.value;
-                if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                // Chỉ cho phép số từ 0-100
+                if (value === '') {
                   onFormDataChange('tax', value);
+                } else if (/^\d*\.?\d*$/.test(value)) {
+                  const numValue = parseFloat(value);
+                  if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
+                  onFormDataChange('tax', value);
+                  }
                 }
               }}
               placeholder="VD: 8, 10, 12.5..."
             />
             {renderError('tax')}
             <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-              Nhập phần trăm thuế (ví dụ: 8 cho 8%, 10 cho 10%). Mặc định: 8%
+              Nhập phần trăm thuế từ 0 đến 100 (ví dụ: 8 cho 8%, 10 cho 10%). Mặc định: 8%
             </small>
           </div>
 
+          {/* Chỉ hiển thị kích thước/trọng lượng chính nếu không có variant hoặc variant cùng giá */}
+          {(!formData.hasColorVariants || formData.variantSamePrice !== false) && (
           <div className={cx('formGroup')}>
             <label>Kích thước (cm) & Trọng lượng</label>
             <div className={cx('dimensionRow')}>
@@ -302,6 +323,7 @@ function ProductFormModal({
               Ví dụ kích thước: <strong>19.8 × 12.9 × 1.5 cm</strong> - Giúp hệ thống tự tính phí vận chuyển GHN
             </small>
           </div>
+          )}
           
           <div className={cx('formGroup', { error: formErrors.mediaFiles })}>
             <label>Ảnh / video sản phẩm *</label>
@@ -468,10 +490,62 @@ function ProductFormModal({
 
           {formData.hasColorVariants && (
             <div className={cx('variantSection')}>
+              {/* Tiêu đề và tùy chọn cùng giá/khác giá */}
+              <div className={cx('variantSectionHeader')}>
+                <div className={cx('formGroup')} style={{ marginBottom: '12px' }}>
+                  <label>Tiêu đề hiển thị</label>
+                  <input
+                    type="text"
+                    value={formData.variantLabel || 'Mã màu'}
+                    onChange={(e) => onFormDataChange('variantLabel', e.target.value)}
+                    placeholder="VD: Mã màu, Dung lượng, Mùi..."
+                    style={{ maxWidth: '300px' }}
+                  />
+                  <small style={{ color: '#666', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                    Tiêu đề này sẽ hiển thị thay cho "Mã màu" (VD: "Dung lượng 1", "Mùi 1"...)
+                  </small>
+                </div>
+                <div className={cx('variantToggleRow')} style={{ marginBottom: '16px' }}>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={formData.variantSamePrice !== false}
+                      onChange={(e) => {
+                        const isSamePrice = e.target.checked;
+                        onFormDataChange('variantSamePrice', isSamePrice);
+                        
+                        // Nếu chuyển sang "khác giá" và có variant đầu tiên, lấy giá từ variant đó
+                        if (!isSamePrice && formData.colorVariants && formData.colorVariants.length > 0) {
+                          const firstVariant = formData.colorVariants[0];
+                          if (firstVariant.price) {
+                            onFormDataChange('price', firstVariant.price);
+                          }
+                          if (firstVariant.purchasePrice) {
+                            onFormDataChange('purchasePrice', firstVariant.purchasePrice);
+                          }
+                        }
+                        // Nếu chuyển sang "cùng giá", giữ nguyên giá hiện tại (hoặc có thể lấy từ variant đầu tiên nếu có)
+                        else if (isSamePrice && formData.colorVariants && formData.colorVariants.length > 0) {
+                          const firstVariant = formData.colorVariants[0];
+                          // Nếu variant đầu tiên có giá, có thể dùng giá đó làm giá chung
+                          // Nhưng để đơn giản, giữ nguyên giá hiện tại
+                        }
+                      }}
+                    />
+                    <span>Cùng giá cho tất cả {formData.variantLabel || 'mã màu'}</span>
+                  </label>
+                  <p className={cx('variantHint')}>
+                    {formData.variantSamePrice !== false
+                      ? `Tất cả ${formData.variantLabel || 'mã màu'} sẽ dùng chung giá niêm yết và giá nhập của sản phẩm.`
+                      : `Mỗi ${formData.variantLabel || 'mã màu'} có thể có giá và giá nhập riêng. Giá ở trên sẽ tự động hiển thị từ ${formData.variantLabel || 'mã màu'} đầu tiên.`}
+                  </p>
+                </div>
+              </div>
+
               {(formData.colorVariants || []).map((variant, index) => (
                 <div className={cx('variantCard')} key={variant.id || index}>
                   <div className={cx('variantCardHeader')}>
-                    <strong>Mã màu {index + 1}</strong>
+                    <strong>{formData.variantLabel || 'Mã màu'} {index + 1}</strong>
                     <button
                       type="button"
                       className={cx('variantRemoveBtn')}
@@ -491,7 +565,7 @@ function ProductFormModal({
                       />
                     </div>
                     <div className={cx('formGroup')}>
-                      <label>Mã màu</label>
+                      <label>{formData.variantLabel || 'Mã màu'}</label>
                       <input
                         type="text"
                         value={variant.code}
@@ -514,6 +588,141 @@ function ProductFormModal({
                         placeholder="VD: 50"
                       />
                     </div>
+                    {formData.variantSamePrice === false && (
+                      <>
+                        <div className={cx('formGroup')}>
+                          <label>Giá niêm yết (đồng)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={variant.price || ''}
+                            onChange={(e) => onVariantPriceChange(index, 'price', e.target.value)}
+                            placeholder="VD: 100000"
+                          />
+                          {variant.price && (
+                            <small style={{ color: '#666', fontSize: '11px', marginTop: '4px', display: 'block' }}>
+                              {new Intl.NumberFormat('vi-VN').format(parseFloat(variant.price || 0))} ₫
+                            </small>
+                          )}
+                        </div>
+                        <div className={cx('formGroup')}>
+                          <label>Giá nhập (đồng)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={variant.purchasePrice || ''}
+                            onChange={(e) => onVariantPriceChange(index, 'purchasePrice', e.target.value)}
+                            placeholder="VD: 80000"
+                          />
+                          {variant.purchasePrice && (
+                            <small style={{ color: '#666', fontSize: '11px', marginTop: '4px', display: 'block' }}>
+                              {new Intl.NumberFormat('vi-VN').format(parseFloat(variant.purchasePrice || 0))} ₫
+                            </small>
+                          )}
+                        </div>
+                        <div className={cx('formGroup')}>
+                          <label>Giá hiển thị (tự động tính)</label>
+                          <input
+                            type="text"
+                            readOnly
+                            value={
+                              (() => {
+                                const variantPrice = parseFloat(variant.price || 0);
+                                if (variantPrice > 0) {
+                                  const taxPercent = parseFloat(formData.tax || 8);
+                                  const taxDecimal = taxPercent / 100;
+                                  const displayPrice = variantPrice * (1 + taxDecimal);
+                                  return new Intl.NumberFormat('vi-VN', {
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 0,
+                                  }).format(Math.round(displayPrice)) + ' ₫';
+                                }
+                                return 'Chưa có giá niêm yết';
+                              })()
+                            }
+                            className={cx('readOnlyInput')}
+                            style={{ backgroundColor: '#f9fafb', cursor: 'not-allowed' }}
+                          />
+                          <small style={{ color: '#666', fontSize: '11px', marginTop: '4px', display: 'block' }}>
+                            Giá hiển thị = Giá niêm yết × (1 + {formData.tax || 8}%)
+                          </small>
+                        </div>
+                        <div className={cx('formGroup')}>
+                          <label>Kích thước (cm) & Trọng lượng (gram)</label>
+                          <div className={cx('dimensionRow')}>
+                            <div className={cx('formGroup')}>
+                              <label>Chiều dài (cm)</label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={variant.length || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                    onVariantChange(index, 'length', value);
+                                  }
+                                }}
+                                placeholder="VD: 19.8"
+                              />
+                            </div>
+                            <div className={cx('formGroup')}>
+                              <label>Chiều rộng (cm)</label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={variant.width || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                    onVariantChange(index, 'width', value);
+                                  }
+                                }}
+                                placeholder="VD: 12.9"
+                              />
+                            </div>
+                            <div className={cx('formGroup')}>
+                              <label>Chiều cao (cm)</label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={variant.height || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                    onVariantChange(index, 'height', value);
+                                  }
+                                }}
+                                placeholder="VD: 1.5"
+                              />
+                            </div>
+                            <div className={cx('formGroup')}>
+                              <label>Trọng lượng (gram)</label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={variant.weight || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                    onVariantChange(index, 'weight', value);
+                                  }
+                                }}
+                                placeholder="VD: 500"
+                              />
+                            </div>
+                          </div>
+                          <small style={{ color: '#666', fontSize: '11px', marginTop: '4px', display: 'block' }}>
+                            Kích thước và trọng lượng riêng cho {formData.variantLabel || 'mã màu'} này để tính phí ship chính xác
+                          </small>
+                        </div>
+                      </>
+                    )}
                   </div>
                   <div className={cx('variantMediaRow')}>
                     <div className={cx('variantImagePreview')}>
@@ -535,7 +744,7 @@ function ProductFormModal({
                 </div>
               ))}
               <button type="button" className={cx('variantAddBtn')} onClick={onAddVariant}>
-                + Thêm mã màu
+                + Thêm {formData.variantLabel || 'mã màu'}
               </button>
               {formErrors.colorVariants && (
                 <div className={cx('errorText')} style={{ marginTop: '8px' }}>

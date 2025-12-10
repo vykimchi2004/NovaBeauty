@@ -4,6 +4,7 @@ import java.util.List;
 
 import jakarta.validation.Valid;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.nova_beauty.backend.dto.request.ApiResponse;
@@ -108,6 +109,7 @@ public class ProductController {
     }
 
     @PostMapping("/approve")
+    @PreAuthorize("hasRole('ADMIN')")
     ApiResponse<ProductResponse> approveProduct(@RequestBody @Valid ApproveProductRequest request) {
         log.info("Controller: approve/reject Product");
         return ApiResponse.<ProductResponse>builder()
@@ -127,6 +129,7 @@ public class ProductController {
 
     // ========== DELETE ENDPOINTS ==========
     @DeleteMapping("/{productId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
     ApiResponse<String> deleteProduct(@PathVariable String productId) {
         productService.deleteProduct(productId);
         return ApiResponse.<String>builder().result("Product has been deleted").build();
