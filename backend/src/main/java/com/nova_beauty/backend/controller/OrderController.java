@@ -278,6 +278,17 @@ public class OrderController {
                 .paid(order.getPaid())
                 .paymentReference(order.getPaymentReference())
                 .items(items)
+                // Refund/Return request information
+                .refundReasonType(order.getRefundReasonType())
+                .refundDescription(order.getRefundDescription())
+                .refundEmail(order.getRefundEmail())
+                .refundReturnAddress(order.getRefundReturnAddress())
+                .refundMethod(order.getRefundMethod())
+                .refundBank(order.getRefundBank())
+                .refundAccountNumber(order.getRefundAccountNumber())
+                .refundAccountHolder(order.getRefundAccountHolder())
+                .refundAmount(order.getRefundAmount())
+                .refundReturnFee(order.getRefundReturnFee())
                 .build();
     }
 
