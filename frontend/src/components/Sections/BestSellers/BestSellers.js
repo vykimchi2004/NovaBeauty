@@ -14,28 +14,47 @@ function BestSellers() {
   const trackRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+useEffect(() => {
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const data = await getActiveProducts();
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const data = await getActiveProducts();
-        // Đảm bảo data là array
-        const productsList = Array.isArray(data) ? data : (data?.result && Array.isArray(data.result) ? data.result : []);
-        // Lọc các sản phẩm hợp lệ (có id và price)
-        const validProducts = productsList.filter(p => p && p.id && (p.price !== null && p.price !== undefined));
-        
-        setProducts(validProducts);
-      } catch (error) {
-        console.error('Error fetching approved products:', error);
-        setProducts([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+      const productsList = Array.isArray(data)
+        ? data
+        : (data?.result && Array.isArray(data.result) ? data.result : []);
 
-    fetchProducts();
-  }, []);
+      // Lọc các sản phẩm hợp lệ
+      const validProducts = productsList.filter(
+        p => p && p.id && (p.price !== null && p.price !== undefined)
+      );
+
+      // 💥 Lọc sản phẩm bán chạy: quantitySold > 0
+      const soldProducts = validProducts.filter(
+        p => (p.quantitySold || 0) > 0
+      );
+
+      // 💥 Sắp xếp giảm dần theo số lượng bán
+      const sortedProducts = soldProducts.sort((a, b) => {
+        const aSold = a.quantitySold || 0;
+        const bSold = b.quantitySold || 0;
+        return bSold - aSold; // giảm dần
+      });
+
+      // 💥 Lấy top 8
+      setProducts(sortedProducts.slice(0, 8));
+
+    } catch (error) {
+      console.error("Error fetching best sellers:", error);
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchProducts();
+}, []);
+
 
   const formatPrice = (price) => {
     if (price === null || price === undefined || price === '') return '0 ₫';

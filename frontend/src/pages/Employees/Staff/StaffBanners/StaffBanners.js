@@ -121,15 +121,6 @@ function StaffBanners() {
     }
   };
 
-  const mapBannerStatusToPromotionStatus = (banner) => {
-    // Banner được tạo tự động được duyệt (status = true, pendingReview = false)
-    if (banner.status === true && banner.pendingReview === false) return 'APPROVED';
-    if (banner.status === false && banner.rejectionReason) return 'REJECTED';
-    if (banner.status === false) return 'DISABLED';
-    // Mặc định là đã duyệt vì banner mới tạo tự động được duyệt
-    return 'APPROVED';
-  };
-
   const matchesFilters = useCallback((item) => {
     const term = searchTerm.trim().toLowerCase();
     if (term) {
@@ -525,7 +516,7 @@ function StaffBanners() {
         imageUrl: finalImageUrl,
         startDate: bannerForm.startDate,
         endDate: bannerForm.endDate,
-        status: bannerForm.status,
+        status: true,
         productIds: bannerForm.productIds.length > 0 ? bannerForm.productIds : null,
         linkUrl: buildBannerLinkUrl(bannerForm),
       };
