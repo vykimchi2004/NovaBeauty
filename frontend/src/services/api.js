@@ -37,7 +37,7 @@ class ApiClient {
                 return t.trim() || null;
             };
 
-            // Thử lấy từ sessionStorage trước (giống NovaBeauty)
+
             const fromSession = pick(sessionStorage.getItem(STORAGE_KEYS.TOKEN));
             if (fromSession) return fromSession;
 

@@ -1,8 +1,6 @@
 package com.nova_beauty.backend.service;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Comparator;
@@ -75,6 +73,7 @@ public class ProductService {
     ReviewRepository reviewRepository;
     InventoryRepository inventoryRepository;
     ProductMapper productMapper;
+    FileStorageService fileStorageService;
 
     // ========== CREATE OPERATIONS ==========
     @Transactional
@@ -880,54 +879,8 @@ public class ProductService {
     }
 
     private void deletePhysicalFileByUrl(String url) {
-        if (url == null || url.isBlank()) return;
-        try {
-            String filename = null;
-            try {
-                java.net.URI uri = java.net.URI.create(url);
-                String path = uri.getPath();
-                if (path != null && !path.isBlank()) {
-                    int lastSlash = path.lastIndexOf('/');
-                    if (lastSlash >= 0 && lastSlash < path.length() - 1) {
-                        filename = path.substring(lastSlash + 1);
-                    }
-                }
-            } catch (IllegalArgumentException ignored) { }
-
-            if (filename == null) {
-                String path = url;
-                if (path.startsWith("/")) path = path.substring(1);
-                if (path.startsWith("uploads/product_media/")) {
-                    filename = path.substring("uploads/product_media/".length());
-                } else if (path.startsWith("product_media/")) {
-                    filename = path.substring("product_media/".length());
-                }
-            }
-
-            if (filename == null && !url.contains("/")) {
-                filename = url;
-            }
-
-            if (filename == null || filename.isBlank()) return;
-
-
-            Path targetDir = Paths.get("uploads", "product_media");
-            Path filePath = targetDir.resolve(filename);
-            boolean deleted = Files.deleteIfExists(filePath);
-
-            if (!deleted) {
-                Path legacyDir = Paths.get("product_media");
-                Path legacyPath = legacyDir.resolve(filename);
-                deleted = Files.deleteIfExists(legacyPath);
-                if (deleted) {
-                    log.info("Deleted media file from legacy folder: {}", legacyPath.toAbsolutePath());
-                }
-            } else {
-                log.info("Deleted media file: {}", filePath.toAbsolutePath());
-            }
-        } catch (Exception e) {
-            log.warn("Could not delete media file for url {}: {}", url, e.getMessage());
-        }
+        // Xóa file từ Cloudinary thay vì local storage
+        fileStorageService.deleteFileFromCloudinary(url);
     }
 
     /**

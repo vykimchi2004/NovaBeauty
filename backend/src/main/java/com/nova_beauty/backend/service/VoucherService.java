@@ -1,8 +1,6 @@
 package com.nova_beauty.backend.service;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -50,6 +48,7 @@ public class VoucherService {
     CategoryRepository categoryRepository;
     ProductRepository productRepository;
     VoucherMapper voucherMapper;
+    FileStorageService fileStorageService;
 
     @Transactional
     public VoucherResponse createVoucher(VoucherCreationRequest request) {
@@ -162,7 +161,8 @@ public class VoucherService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        if (request.getCode() != null && !request.getCode().equals(voucher.getCode()) && voucherRepository.existsByCode(request.getCode())) {
+        if (request.getCode() != null && !request.getCode().equals(voucher.getCode())
+                && voucherRepository.existsByCode(request.getCode())) {
             throw new AppException(ErrorCode.VOUCHER_CODE_ALREADY_EXISTS);
         }
 
@@ -174,7 +174,6 @@ public class VoucherService {
             voucher.setApplyScope(scope);
         }
 
-        // Náº¿u staff cáº­p nháº­t voucher bá»‹ tá»« chá»‘i, tá»± Ä‘á»™ng chuyá»ƒn vá» chá» duyá»‡t
         if (!isAdmin && voucher.getStatus() == VoucherStatus.REJECTED) {
             voucher.setStatus(VoucherStatus.PENDING_APPROVAL);
             voucher.setRejectionReason(null); // XÃ³a lÃ½ do tá»« chá»‘i khi gá»­i láº¡i
@@ -298,81 +297,8 @@ public class VoucherService {
     }
 
     private void deletePhysicalFileByUrl(String url) {
-        if (url == null || url.isBlank()) return;
-        try {
-            String filename = null;
-            try {
-                java.net.URI uri = java.net.URI.create(url);
-                String path = uri.getPath();
-                if (path != null && !path.isBlank()) {
-                    // Loáº¡i bá» context path náº¿u cÃ³ (vÃ­ dá»¥: /nova_beauty)
-                    if (path.startsWith("/nova_beauty")) {
-                        path = path.substring("/nova_beauty".length());
-                    }
-                    // TÃ¬m pháº§n path sau /voucher_media/ hoáº·c legacy /vouchers/
-                    if (path.contains("/voucher_media/")) {
-                        int vouchersIndex = path.indexOf("/voucher_media/");
-                        filename = path.substring(vouchersIndex + "/voucher_media/".length());
-                    } else if (path.contains("/vouchers/")) {
-                        int vouchersIndex = path.indexOf("/vouchers/");
-                        filename = path.substring(vouchersIndex + "/vouchers/".length());
-                    } else {
-                        // Náº¿u khÃ´ng cÃ³ /vouchers/, láº¥y filename tá»« cuá»‘i path
-                        int lastSlash = path.lastIndexOf('/');
-                        if (lastSlash >= 0 && lastSlash < path.length() - 1) {
-                            filename = path.substring(lastSlash + 1);
-                        }
-                    }
-                }
-            } catch (IllegalArgumentException ignored) { }
-
-            if (filename == null) {
-                String path = url;
-                // Loáº¡i bá» protocol vÃ  domain náº¿u cÃ³
-                if (path.startsWith("http://") || path.startsWith("https://")) {
-                    try {
-                        java.net.URI uri = java.net.URI.create(path);
-                        path = uri.getPath();
-                    } catch (Exception ignored) { }
-                }
-                // Loáº¡i bá» context path náº¿u cÃ³
-                if (path.startsWith("/nova_beauty")) {
-                    path = path.substring("/nova_beauty".length());
-                }
-                if (path.startsWith("/")) path = path.substring(1);
-                if (path.startsWith("uploads/vouchers/")) {
-                    filename = path.substring("uploads/vouchers/".length());
-                } else if (path.startsWith("voucher_media/")) {
-                    filename = path.substring("voucher_media/".length());
-                } else if (path.startsWith("vouchers/")) {
-                    filename = path.substring("vouchers/".length());
-                }
-            }
-
-            if (filename == null && !url.contains("/")) {
-                filename = url;
-            }
-
-            if (filename == null || filename.isBlank()) return;
-
-            // XÃ¡c Ä‘á»‹nh thÆ° má»¥c dá»±a trÃªn URL (máº·c Ä‘á»‹nh lÃ  uploads/vouchers)
-            Path targetDir = Paths.get("uploads", "vouchers");
-            Path filePath = targetDir.resolve(filename);
-            boolean deleted = Files.deleteIfExists(filePath);
-
-            if (!deleted) {
-                Path legacyDir = Paths.get("vouchers");
-                Path legacyPath = legacyDir.resolve(filename);
-                deleted = Files.deleteIfExists(legacyPath);
-                // if (deleted) {
-                //     log.info("Deleted media file from legacy folder: {}", legacyPath.toAbsolutePath());
-                // }
-            } else {
-                log.info("Deleted media file: {}", filePath.toAbsolutePath());
-            }
-        } catch (Exception e) {
-            log.warn("Could not delete media file for url {}: {}", url, e.getMessage());
-        }
+        // Xóa file từ Cloudinary thay vì local storage
+        fileStorageService.deleteFileFromCloudinary(url);
     }
 }
 

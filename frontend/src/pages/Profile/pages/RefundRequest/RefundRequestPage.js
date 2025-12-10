@@ -505,11 +505,11 @@ export default function RefundRequestPage() {
             // Upload files mới nếu có
             if (attachedFiles.length > 0) {
                 try {
-                    const { ok, urls, message } = await uploadProductMedia(attachedFiles, token);
-                    if (!ok || !urls || urls.length === 0) {
-                        throw new Error(message || 'Upload ảnh/video thất bại');
+                    const uploadedUrls = await uploadProductMedia(attachedFiles);
+                    if (!uploadedUrls || uploadedUrls.length === 0) {
+                        throw new Error('Upload ảnh/video thất bại');
                     }
-                    mediaUrls = [...existingMediaUrls, ...urls]; // Merge existing và new URLs
+                    mediaUrls = [...existingMediaUrls, ...uploadedUrls]; // Merge existing và new URLs
                 } catch (uploadError) {
                     console.error('Error uploading media:', uploadError);
                     throw new Error('Không thể upload ảnh/video. Vui lòng thử lại.');

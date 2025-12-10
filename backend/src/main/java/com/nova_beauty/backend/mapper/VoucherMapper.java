@@ -10,7 +10,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.NullValuePropertyMappingStrategy;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
 
 import com.nova_beauty.backend.dto.request.VoucherCreationRequest;
 import com.nova_beauty.backend.dto.request.VoucherUpdateRequest;
@@ -82,41 +82,17 @@ public interface VoucherMapper {
 
     @Named("mapProductListToNames")
     default List<String> mapProductListToNames(Set<Product> products) {
-        if (products == null) return null;
-        return products.stream().map(Product::getName).filter(name -> name != null && !name.isBlank()).collect(Collectors.toList());
+        if (products == null)
+            return null;
+        return products.stream().map(Product::getName)
+                .filter(name -> name != null && !name.isBlank()).collect(Collectors.toList());
     }
 
     @Named("normalizeImageUrl")
     default String normalizeImageUrl(String url) {
-        if (url == null || url.isBlank()) return url;
-        // Náº¿u URL Ä‘Ã£ lÃ  absolute, giá»¯ nguyÃªn
-        String lower = url.toLowerCase();
-        if (lower.startsWith("http://") || lower.startsWith("https://")) {
-            return replaceLegacyVoucherPath(url);
-        }
-        // Náº¿u URL báº¯t Ä‘áº§u vá»›i /voucher_media, thÃªm context path
-        if (url.startsWith("/voucher_media")) {
-            String base = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
-            return base + url;
-        }
-        // Legacy path support: /vouchers
-        if (url.startsWith("/vouchers")) {
-            String base = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
-            String converted = url.replaceFirst("/vouchers", "/voucher_media");
-            return base + converted;
-        }
-        // Náº¿u URL khÃ´ng pháº£i lÃ  absolute vÃ  khÃ´ng báº¯t Ä‘áº§u vá»›i /vouchers, mount dÆ°á»›i /vouchers/
-        String base = ServletUriComponentsBuilder.fromCurrentContextPath().path("/voucher_media/").build().toUriString();
-        if (base.endsWith("/")) return base + url;
-        return base + "/" + url;
-    }
-
-    private String replaceLegacyVoucherPath(String url) {
-        if (url == null) return null;
-        if (url.contains("/vouchers/") && !url.contains("/voucher_media/")) {
-            return url.replace("/vouchers/", "/voucher_media/");
-        }
-        return url;
+        if (url == null || url.isBlank()) return null;
+        // Cloudinary URLs are already absolute; return as-is
+        return url.trim();
     }
 }
 

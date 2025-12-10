@@ -53,6 +53,15 @@ public class MediaController {
                 .collect(Collectors.toList());
         return ApiResponse.<List<String>>builder().result(urls).build();
     }
+
+    @PostMapping(value = "/upload-banner", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<List<String>> uploadBannerMedia(@RequestPart("files") List<MultipartFile> files) {
+        List<String> urls = files.stream()
+                .map(fileStorageService::storeBannerMedia)
+                .collect(Collectors.toList());
+        return ApiResponse.<List<String>>builder().result(urls).build();
+    }
+
 }
 
 

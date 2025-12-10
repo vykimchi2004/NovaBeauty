@@ -100,6 +100,9 @@ export const API_ENDPOINTS = {
     MEDIA: {
         UPLOAD_PRODUCT: '/media/upload-product',
         UPLOAD_PROFILE: '/media/upload',
+        UPLOAD_VOUCHER: '/media/upload-voucher',
+        UPLOAD_PROMOTION: '/media/upload-promotion',
+        UPLOAD_BANNER: '/media/upload-banner',
     },
     // Cart
     CART: {

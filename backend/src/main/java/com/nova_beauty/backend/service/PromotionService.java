@@ -1,9 +1,5 @@
 package com.nova_beauty.backend.service;
 
-import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -54,6 +50,7 @@ public class PromotionService {
     CategoryRepository categoryRepository;
     ProductRepository productRepository;
     PromotionMapper promotionMapper;
+    FileStorageService fileStorageService;
 
     @Transactional
     public PromotionResponse createPromotion(PromotionCreationRequest request) {
@@ -605,80 +602,7 @@ public class PromotionService {
     }
 
     private void deletePhysicalFileByUrl(String url) {
-        if (url == null || url.isBlank()) return;
-        try {
-            String filename = null;
-            try {
-                URI uri = URI.create(url);
-                String path = uri.getPath();
-                if (path != null && !path.isBlank()) {
-                    // Loáº¡i bá» context path náº¿u cÃ³ (vÃ­ dá»¥: /nova_beauty)
-                    if (path.startsWith("/nova_beauty")) {
-                        path = path.substring("/nova_beauty".length());
-                    }
-                    // TÃ¬m pháº§n path sau /promotion_media/ hoáº·c legacy /promotions/
-                    if (path.contains("/promotion_media/")) {
-                        int promotionsIndex = path.indexOf("/promotion_media/");
-                        filename = path.substring(promotionsIndex + "/promotion_media/".length());
-                    } else if (path.contains("/promotions/")) {
-                        int promotionsIndex = path.indexOf("/promotions/");
-                        filename = path.substring(promotionsIndex + "/promotions/".length());
-                    } else {
-                        // Náº¿u khÃ´ng cÃ³ /promotions/, láº¥y filename tá»« cuá»‘i path
-                        int lastSlash = path.lastIndexOf('/');
-                        if (lastSlash >= 0 && lastSlash < path.length() - 1) {
-                            filename = path.substring(lastSlash + 1);
-                        }
-                    }
-                }
-            } catch (IllegalArgumentException ignored) { }
-
-            if (filename == null) {
-                String path = url;
-                // Loáº¡i bá» protocol vÃ  domain náº¿u cÃ³
-                if (path.startsWith("http://") || path.startsWith("https://")) {
-                    try {
-                        java.net.URI uri = java.net.URI.create(path);
-                        path = uri.getPath();
-                    } catch (Exception ignored) { }
-                }
-                // Loáº¡i bá» context path náº¿u cÃ³
-                if (path.startsWith("/nova_beauty")) {
-                    path = path.substring("/nova_beauty".length());
-                }
-                if (path.startsWith("/")) path = path.substring(1);
-                if (path.startsWith("uploads/promotions/")) {
-                    filename = path.substring("uploads/promotions/".length());
-                } else if (path.startsWith("promotion_media/")) {
-                    filename = path.substring("promotion_media/".length());
-                } else if (path.startsWith("promotions/")) {
-                    filename = path.substring("promotions/".length());
-                }
-            }
-
-            if (filename == null && !url.contains("/")) {
-                filename = url;
-            }
-
-            if (filename == null || filename.isBlank()) return;
-
-            // XÃ¡c Ä‘á»‹nh thÆ° má»¥c dá»±a trÃªn URL (máº·c Ä‘á»‹nh lÃ  uploads/promotions)
-            Path targetDir = Paths.get("uploads", "promotions");
-            Path filePath = targetDir.resolve(filename);
-            boolean deleted = Files.deleteIfExists(filePath);
-
-            if (!deleted) {
-                Path legacyDir = Paths.get("promotions");
-                Path legacyPath = legacyDir.resolve(filename);
-                deleted = Files.deleteIfExists(legacyPath);
-                // if (deleted) {
-                //     log.info("Deleted media file from legacy folder: {}", legacyPath.toAbsolutePath());
-                // }
-            } else {
-                log.info("Deleted media file: {}", filePath.toAbsolutePath());
-            }
-        } catch (Exception e) {
-            log.warn("Could not delete media file for url {}: {}", url, e.getMessage());
-        }
+        // Xóa file từ Cloudinary thay vì local storage
+        fileStorageService.deleteFileFromCloudinary(url);
     }
 }

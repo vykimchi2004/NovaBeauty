@@ -7,7 +7,7 @@ import { faArrowLeft, faPlus, faEdit, faTrash, faEye } from '@fortawesome/free-s
 import BannerFormModal from './components/BannerFormModal';
 import notify from '~/utils/notification';
 import { getBanners, createBanner, updateBanner, deleteBanner } from '~/services/banner';
-import { uploadProductMedia } from '~/services/media';
+import { uploadBannerMedia } from '~/services/media';
 import { storage } from '~/services/utils';
 import { STORAGE_KEYS } from '~/services/config';
 import { addStaffNotification, detectDeletionNotifications } from '~/utils/staffNotifications';
@@ -503,7 +503,7 @@ function StaffBanners() {
       if (bannerImageFile) {
         setUploadingBannerImage(true);
         try {
-          const uploadResult = await uploadProductMedia([bannerImageFile]);
+          const uploadResult = await uploadBannerMedia([bannerImageFile]);
           if (uploadResult && uploadResult.length > 0) {
             finalImageUrl = uploadResult[0];
           } else {

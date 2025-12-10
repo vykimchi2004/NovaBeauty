@@ -10,7 +10,6 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 import org.mapstruct.NullValuePropertyMappingStrategy;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.nova_beauty.backend.dto.request.PromotionCreationRequest;
 import com.nova_beauty.backend.dto.request.PromotionUpdateRequest;
@@ -31,7 +30,7 @@ public interface PromotionMapper {
     @Mapping(target = "categoryNames", source = "categoryApply", qualifiedByName = "mapCategoryListToNames")
     @Mapping(target = "productIds", source = "productApply", qualifiedByName = "mapProductListToIds")
     @Mapping(target = "productNames", source = "productApply", qualifiedByName = "mapProductListToNames")
-    @Mapping(target = "imageUrl", source = "imageUrl", qualifiedByName = "normalizeImageUrl")
+
     PromotionResponse toResponse(Promotion promotion);
 
     // Request to Entity
@@ -85,40 +84,9 @@ public interface PromotionMapper {
 
     @Named("mapProductListToNames")
     default List<String> mapProductListToNames(Set<Product> products) {
-        if (products == null) return null;
-        return products.stream().map(Product::getName).filter(name -> name != null && !name.isBlank()).collect(Collectors.toList());
-    }
-
-    @Named("normalizeImageUrl")
-    default String normalizeImageUrl(String url) {
-        if (url == null || url.isBlank()) return url;
-        // Náº¿u URL Ä‘Ã£ lÃ  absolute, giá»¯ nguyÃªn nhÆ°ng Ä‘áº£m báº£o sá»­ dá»¥ng prefix má»›i
-        String lower = url.toLowerCase();
-        if (lower.startsWith("http://") || lower.startsWith("https://")) {
-            return replaceLegacyPromotionPath(url);
-        }
-        // Náº¿u URL báº¯t Ä‘áº§u vá»›i /promotion_media, thÃªm context path
-        if (url.startsWith("/promotion_media")) {
-            String base = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
-            return base + url;
-        }
-        // Legacy path support: /promotions
-        if (url.startsWith("/promotions")) {
-            String base = ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
-            String converted = url.replaceFirst("/promotions", "/promotion_media");
-            return base + converted;
-        }
-        // Náº¿u URL khÃ´ng pháº£i lÃ  absolute vÃ  khÃ´ng báº¯t Ä‘áº§u vá»›i /promotions, mount dÆ°á»›i /promotions/
-        String base = ServletUriComponentsBuilder.fromCurrentContextPath().path("/promotion_media/").build().toUriString();
-        if (base.endsWith("/")) return base + url;
-        return base + "/" + url;
-    }
-
-    private String replaceLegacyPromotionPath(String url) {
-        if (url == null) return null;
-        if (url.contains("/promotions/") && !url.contains("/promotion_media/")) {
-            return url.replace("/promotions/", "/promotion_media/");
-        }
-        return url;
+        if (products == null)
+            return null;
+        return products.stream().map(Product::getName)
+                .filter(name -> name != null && !name.isBlank()).collect(Collectors.toList());
     }
 }

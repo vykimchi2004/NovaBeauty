@@ -1,46 +1,53 @@
 import apiClient from './api';
 import { API_ENDPOINTS } from './config';
 
-export async function uploadProfileMedia(files = []) {
-    if (!files || files.length === 0) {
-        return [];
-    }
-
+const buildFormData = (files = [], prefix = 'upload') => {
     const formData = new FormData();
+
     files.forEach((file, index) => {
         if (file) {
-            const name = file.name || `profile-upload-${Date.now()}-${index}`;
+            const name = file.name || `${prefix}-${Date.now()}-${index}`;
             formData.append('files', file, name);
         }
     });
 
-    try {
-        return await apiClient.post(API_ENDPOINTS.MEDIA.UPLOAD_PROFILE, formData);
-    } catch (error) {
-        console.error('[Media Service] uploadProfileMedia error:', error);
-        throw error;
-    }
-}
+    return formData;
+};
 
-export async function uploadProductMedia(files = []) {
+const uploadMedia = async (files = [], endpoint, prefix) => {
     if (!files || files.length === 0) {
         return [];
     }
 
-    const formData = new FormData();
-    files.forEach((file, index) => {
-        if (file) {
-            const name = file.name || `upload-${Date.now()}-${index}`;
-            formData.append('files', file, name);
-        }
-    });
+    const formData = buildFormData(files, prefix);
 
     try {
-        return await apiClient.post(API_ENDPOINTS.MEDIA.UPLOAD_PRODUCT, formData);
+        return await apiClient.post(endpoint, formData);
     } catch (error) {
-        console.error('[Media Service] uploadProductMedia error:', error);
+        console.error(`[Media Service] uploadMedia error (${endpoint}):`, error);
         throw error;
     }
-}
+};
 
+export const uploadProfileMedia = (files = []) =>
+    uploadMedia(files, API_ENDPOINTS.MEDIA.UPLOAD_PROFILE, 'profile-upload');
 
+export const uploadProductMedia = (files = []) =>
+    uploadMedia(files, API_ENDPOINTS.MEDIA.UPLOAD_PRODUCT, 'product-upload');
+
+export const uploadVoucherMedia = (files = []) =>
+    uploadMedia(files, API_ENDPOINTS.MEDIA.UPLOAD_VOUCHER, 'voucher-upload');
+
+export const uploadPromotionMedia = (files = []) =>
+    uploadMedia(files, API_ENDPOINTS.MEDIA.UPLOAD_PROMOTION, 'promotion-upload');
+
+export const uploadBannerMedia = (files = []) =>
+    uploadMedia(files, API_ENDPOINTS.MEDIA.UPLOAD_BANNER, 'banner-upload');
+
+export default {
+    uploadProfileMedia,
+    uploadProductMedia,
+    uploadVoucherMedia,
+    uploadPromotionMedia,
+    uploadBannerMedia,
+};
