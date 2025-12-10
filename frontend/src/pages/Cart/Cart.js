@@ -48,21 +48,9 @@ function Cart() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]); // Chỉ depend vào location.pathname để reload khi navigate đến trang này
 
-  // Tự động xóa voucher khi user rời khỏi trang giỏ hàng (component unmount)
-  useEffect(() => {
-    return () => {
-      // Chỉ xóa voucher nếu có voucher đang được áp dụng
-      if (appliedVoucherCode) {
-        console.log('[Cart] Clearing voucher on unmount:', appliedVoucherCode);
-        clearVoucher().catch(error => {
-          // Không hiển thị lỗi nếu user đã đăng xuất hoặc có lỗi network
-          if (error.code !== 401 && error.code !== 403 && error.status !== 401 && error.status !== 403) {
-            console.error('[Cart] Error clearing voucher on unmount:', error);
-          }
-        });
-      }
-    };
-  }, [appliedVoucherCode, clearVoucher]);
+  // KHÔNG tự động xóa voucher khi unmount (giống LuminaBook)
+  // Voucher sẽ được giữ lại khi navigate đến checkout
+  // Chỉ xóa voucher khi user chủ động click "Hủy mã" hoặc khi không còn sản phẩm được chọn
 
   const formatPrice = (price) => {
     const value = Math.round(Number(price) || 0);
