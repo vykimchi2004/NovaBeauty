@@ -73,7 +73,7 @@ const financialService = {
     async getOrderStatistics(start, end) {
         try {
             const params = new URLSearchParams({ start, end });
-            return await apiClient.get(`/api/orders/statistics?${params}`);
+            return await apiClient.get(`/orders/statistics?${params}`);
         } catch (error) {
             console.error('[Financial Service] getOrderStatistics error:', error);
             throw error;

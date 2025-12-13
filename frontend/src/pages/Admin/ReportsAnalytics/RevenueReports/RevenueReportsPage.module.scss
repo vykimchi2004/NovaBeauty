@@ -1,0 +1,213 @@
+@import '../../ReportsAnalytics/ReportsAnalytics.module.scss';
+
+.tabContent {
+  .tabHeader {
+    margin-bottom: 24px;
+
+    .tabTitle {
+      margin: 0 0 8px 0;
+      font-size: 24px;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+
+    .tabSubtitle {
+      margin: 0;
+      font-size: 14px;
+      color: #666;
+    }
+  }
+}
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.kpiCard {
+  background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e9ecef;
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  }
+
+  .kpiContent {
+    .kpiTitle {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .kpiValue {
+      font-size: 24px;
+      font-weight: 700;
+      color: #1a1a1a;
+      line-height: 1.2;
+    }
+  }
+}
+
+.chartSection {
+  margin-bottom: 32px;
+  padding: 20px;
+  background: #fafafa;
+  border-radius: 12px;
+}
+
+.chartContainer {
+  width: 100%;
+  overflow-x: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.chart {
+  display: block;
+}
+
+.chartEmpty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+
+  p {
+    margin: 0;
+    font-size: 16px;
+  }
+}
+
+.reportSection {
+  margin-top: 32px;
+
+  h4 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+
+  thead {
+    background: #f8f9fa;
+
+    th {
+      padding: 14px 16px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 14px;
+      color: #495057;
+      border-bottom: 2px solid #dee2e6;
+      white-space: nowrap;
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid #f0f0f0;
+      transition: background-color 0.2s;
+
+      &:hover {
+        background: #fff0f6;
+      }
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+
+    td {
+      padding: 14px 16px;
+      font-size: 14px;
+      color: #333;
+    }
+  }
+}
+
+.priceCell {
+  font-weight: 600;
+  color: #e5677d;
+}
+
+.totalRow {
+  background: #f8f9fa;
+  border-top: 2px solid #dee2e6;
+
+  td {
+    padding: 16px;
+    font-size: 15px;
+  }
+}
+
+.empty {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+  font-style: italic;
+}
+
+.loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+  font-size: 16px;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 60px 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 2px dashed #dee2e6;
+
+  .emptyMessage {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #495057;
+  }
+
+  .emptyHint {
+    margin: 0;
+    font-size: 14px;
+    color: #6c757d;
+    line-height: 1.6;
+    text-align: left;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .kpiGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .chartContainer {
+    justify-content: flex-start;
+  }
+
+  .chart {
+    min-width: 600px;
+  }
+}
+
