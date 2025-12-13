@@ -706,8 +706,11 @@ function StaffProducts() {
     if (!formData.price || parseFloat(formData.price) <= 0) {
       errors.price = STAFF_PRODUCT_ERRORS.price;
       } else {
+        // Kiểm tra giá nhập bắt buộc phải có và > 0
+        if (!formData.purchasePrice || parseFloat(formData.purchasePrice) <= 0) {
+          errors.purchasePrice = 'Vui lòng nhập giá nhập (bắt buộc).';
+      } else {
         // Kiểm tra giá nhập không được lớn hơn giá niêm yết
-        if (formData.purchasePrice && parseFloat(formData.purchasePrice) > 0) {
           const unitPrice = parseFloat(formData.price);
           const purchasePrice = parseFloat(formData.purchasePrice);
           if (purchasePrice > unitPrice) {
@@ -799,18 +802,17 @@ function StaffProducts() {
               errors.colorVariants = `Vui lòng nhập giá niêm yết lớn hơn 0 cho ${displayName}.`;
               break;
             }
-            // Giá nhập là optional, nhưng nếu có thì phải > 0 và không được lớn hơn giá niêm yết
-            if (variant.purchasePrice) {
-              const purchasePrice = parseFloat(variant.purchasePrice);
-              if (purchasePrice <= 0) {
-                errors.colorVariants = `Giá nhập của ${displayName} phải lớn hơn 0.`;
+            // Giá nhập bắt buộc phải có và > 0
+            if (!variant.purchasePrice || parseFloat(variant.purchasePrice) <= 0) {
+              errors.colorVariants = `Vui lòng nhập giá nhập (bắt buộc) cho ${displayName}.`;
                 break;
               }
+            // Kiểm tra giá nhập không được lớn hơn giá niêm yết
+            const purchasePrice = parseFloat(variant.purchasePrice);
               const unitPrice = parseFloat(variant.price);
               if (purchasePrice > unitPrice) {
                 errors.colorVariants = `Giá nhập của ${displayName} không được lớn hơn giá niêm yết.`;
                 break;
-              }
             }
           }
           
@@ -1036,7 +1038,7 @@ function StaffProducts() {
   };
 
   const handleStockUpdateSuccess = async () => {
-    await fetchProducts();
+      await fetchProducts();
   };
 
   const canCurrentUserDelete = () => {

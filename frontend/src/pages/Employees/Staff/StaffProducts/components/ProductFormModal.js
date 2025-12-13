@@ -157,10 +157,10 @@ function ProductFormModal({
             </div>
 
             <div className={cx('formGroup', { error: formErrors.purchasePrice })}>
-              <label>Giá nhập (đồng)</label>
+              <label>Giá nhập (đồng) *</label>
               <input
                 type="number"
-                min="0"
+                min="1"
                 step="1"
                 value={formData.purchasePrice}
                 onChange={(e) => {
@@ -607,10 +607,10 @@ function ProductFormModal({
                           )}
                         </div>
                         <div className={cx('formGroup')}>
-                          <label>Giá nhập (đồng)</label>
+                          <label>Giá nhập (đồng) *</label>
                           <input
                             type="number"
-                            min="0"
+                            min="1"
                             step="1"
                             value={variant.purchasePrice || ''}
                             onChange={(e) => onVariantPriceChange(index, 'purchasePrice', e.target.value)}

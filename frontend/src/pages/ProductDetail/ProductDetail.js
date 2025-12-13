@@ -621,6 +621,8 @@ function ProductDetail() {
   );
 
   // Tính giá hiển thị: nếu đã chọn mã màu và variant có giá riêng, dùng giá variant
+  // Áp dụng discount từ promotion cho variant nếu có - TẤT CẢ VARIANT GIẢM CÙNG MỘT TỶ LỆ
+  // Logic giống backend: discount được tính từ unitPrice * (1 + tax), sau đó áp dụng cùng tỷ lệ cho variant
   const displayPrice = useMemo(() => {
     if (!product) return 0;
     // Nếu đã chọn mã màu và variant có giá riêng
@@ -631,6 +633,30 @@ function ProductDetail() {
         const variantPrice = parseFloat(selectedOption.price);
         const tax = product.tax != null ? product.tax : 0.08; // Tax là decimal (0.08 = 8%)
         const priceWithTax = variantPrice * (1 + tax);
+        
+        // Áp dụng discount từ promotion nếu có - TÍNH THEO TỶ LỆ ĐỂ TẤT CẢ VARIANT GIẢM CÙNG MỨC
+        if (product.promotionId && product.discountValue && product.discountValue > 0 && product.unitPrice) {
+          // Backend tính: priceWithTax = unitPrice * (1 + tax)
+          // Backend tính: discountValue = calculateDiscountAmount(promotion, priceWithTax)
+          // Backend tính: finalPrice = priceWithTax - discountValue
+          // Vậy: discountValue / (unitPrice * (1 + tax)) = tỷ lệ discount thực tế đã được áp dụng
+          
+          const productUnitPrice = parseFloat(product.unitPrice) || 0;
+          const productTax = product.tax != null ? product.tax : 0.08;
+          const originalProductPriceWithTax = productUnitPrice * (1 + productTax);
+          
+          // Tính tỷ lệ discount thực tế đã được áp dụng (có thể đã bị giới hạn bởi maxDiscountValue)
+          // Đây là tỷ lệ discount thực tế, không phải tỷ lệ gốc từ promotion
+          const discountRate = originalProductPriceWithTax > 0 
+            ? product.discountValue / originalProductPriceWithTax 
+            : 0;
+          
+          // Áp dụng cùng tỷ lệ discount cho variant (giống như backend đã làm cho sản phẩm)
+          const variantDiscount = priceWithTax * discountRate;
+          const finalPrice = Math.max(0, priceWithTax - variantDiscount);
+          return Math.round(finalPrice);
+        }
+        
         return Math.round(priceWithTax);
       }
     }
@@ -774,11 +800,17 @@ function ProductDetail() {
       // Only show old price if product has valid promotion
       if (!product.promotionId || !product.promotionName) return null;
       if (!product.discountValue || product.discountValue <= 0) return null;
-      // Nếu đang dùng giá variant, không hiển thị oldPrice
+      // Nếu đang dùng giá variant, tính oldPrice từ variant
       if (selectedColorCode && colorOptions.length > 0) {
         const selectedOption = colorOptions.find(opt => opt.code === selectedColorCode);
         if (selectedOption && selectedOption.price && parseFloat(selectedOption.price) > 0) {
-          return null; // Không hiển thị oldPrice khi dùng giá variant
+          // Tính oldPrice từ variant (giá variant + thuế, trước khi giảm)
+          const variantPrice = parseFloat(selectedOption.price);
+          const tax = product.tax != null ? product.tax : 0.08;
+          const priceWithTax = variantPrice * (1 + tax);
+          
+          // Chỉ hiển thị oldPrice nếu có discount
+          return Math.round(priceWithTax);
         }
       }
       if (!product.price || product.price <= 0) return null;
@@ -924,7 +956,21 @@ function ProductDetail() {
           <div className={cx('price-section')}>
             <div className={cx('current-price')}>{Math.round(displayProduct.price).toLocaleString('vi-VN')}đ</div>
             {displayProduct.oldPrice && product.promotionId && product.promotionName && (() => {
-              const discountPercent = Math.round((product.discountValue / displayProduct.oldPrice) * 100);
+              // Tính discount percent từ tỷ lệ discount thực tế (giống như trong displayPrice)
+              let discountPercent = 0;
+              if (product.unitPrice && product.discountValue && product.discountValue > 0) {
+                const productUnitPrice = parseFloat(product.unitPrice) || 0;
+                const productTax = product.tax != null ? product.tax : 0.08;
+                const originalProductPriceWithTax = productUnitPrice * (1 + productTax);
+                // Tính tỷ lệ discount thực tế đã được áp dụng
+                const discountRate = originalProductPriceWithTax > 0 
+                  ? product.discountValue / originalProductPriceWithTax 
+                  : 0;
+                discountPercent = Math.round(discountRate * 100);
+              } else {
+                // Fallback: tính từ oldPrice nếu không có unitPrice
+                discountPercent = Math.round((product.discountValue / displayProduct.oldPrice) * 100);
+              }
               // Only show if discount percentage is greater than 0
               if (discountPercent <= 0) return null;
               return (

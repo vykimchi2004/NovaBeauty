@@ -4,7 +4,7 @@ import styles from './ReportsAnalytics.module.scss';
 import RevenueReportsPage from './RevenueReports';
 import OrderReportsPage from './OrderReports';
 import FinancialReportsPage from './FinancialReports';
-import TopSellingPage from './TopSelling';
+import TopSellingPage from './TopSelling/TopSellingPage';
 
 const cx = classNames.bind(styles);
 
