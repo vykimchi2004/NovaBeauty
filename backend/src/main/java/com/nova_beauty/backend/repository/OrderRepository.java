@@ -102,11 +102,11 @@ public interface OrderRepository extends JpaRepository<Order, String> {
     // Tìm các đơn hàng trong khoảng thời gian, sắp xếp theo orderDateTime DESC (không phân trang)
     List<Order> findByOrderDateTimeBetween(LocalDateTime start, LocalDateTime end);
 
-    // Đếm số đơn hàng trong khoảng thời gian
+    // Đếm số đơn hàng đã giao (DELIVERED) trong khoảng thời gian
     // Kiểm tra cả orderDateTime và orderDate (fallback nếu orderDateTime là NULL)
-    @Query("SELECT COUNT(o) FROM Order o WHERE " +
-           "(o.orderDateTime IS NOT NULL AND o.orderDateTime BETWEEN :start AND :end) OR " +
-           "(o.orderDateTime IS NULL AND o.orderDate IS NOT NULL AND o.orderDate BETWEEN :startDate AND :endDate)")
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.status = 'DELIVERED' AND " +
+           "((o.orderDateTime IS NOT NULL AND o.orderDateTime BETWEEN :start AND :end) OR " +
+           "(o.orderDateTime IS NULL AND o.orderDate IS NOT NULL AND o.orderDate BETWEEN :startDate AND :endDate))")
     Long countByOrderDateTimeBetween(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,

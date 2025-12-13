@@ -11,7 +11,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from './ManageCustomerAccounts.module.scss';
-import { getUsers, updateUser } from '~/services/user';
+import { getUsers, updateUser, getUserById } from '~/services/user';
 import notify from '~/utils/notification';
 
 const cx = classNames.bind(styles);
@@ -103,24 +103,51 @@ function ManageCustomerAccounts() {
     }
   };
 
-  const handleViewDetail = (customer) => {
-    setViewingCustomer(customer);
+  const handleViewDetail = async (customer) => {
+    // Load lại thông tin mới nhất từ API để đảm bảo có data cập nhật
+    try {
+      const freshCustomer = await getUserById(customer.id);
+      setViewingCustomer(freshCustomer);
+      // Cập nhật customer trong danh sách để đồng bộ
+      setCustomers(prev => prev.map(c => c.id === customer.id ? freshCustomer : c));
+    } catch (err) {
+      console.error('Error loading customer details:', err);
+      // Nếu lỗi, vẫn hiển thị thông tin từ danh sách
+      setViewingCustomer(customer);
+    }
   };
 
   const handleCloseDetail = () => {
     setViewingCustomer(null);
   };
 
-  const handleEditFromDetail = () => {
+  const handleEditFromDetail = async () => {
     if (!viewingCustomer) return;
-    setEditingCustomer(viewingCustomer);
-    setEditForm({
-      fullName: viewingCustomer.fullName || '',
-      email: viewingCustomer.email || '',
-      phoneNumber: viewingCustomer.phoneNumber || '',
-      address: viewingCustomer.address || '',
-      isActive: viewingCustomer.isActive !== undefined ? viewingCustomer.isActive : true
-    });
+    // Load lại thông tin mới nhất trước khi edit để đảm bảo có data cập nhật
+    try {
+      const freshCustomer = await getUserById(viewingCustomer.id);
+      setEditingCustomer(freshCustomer);
+      setEditForm({
+        fullName: freshCustomer.fullName || '',
+        email: freshCustomer.email || '',
+        phoneNumber: freshCustomer.phoneNumber || '',
+        address: freshCustomer.address || '',
+        isActive: freshCustomer.isActive !== undefined ? freshCustomer.isActive : true
+      });
+      // Cập nhật customer trong danh sách để đồng bộ
+      setCustomers(prev => prev.map(c => c.id === viewingCustomer.id ? freshCustomer : c));
+    } catch (err) {
+      console.error('Error loading customer details for edit:', err);
+      // Nếu lỗi, vẫn dùng thông tin hiện tại
+      setEditingCustomer(viewingCustomer);
+      setEditForm({
+        fullName: viewingCustomer.fullName || '',
+        email: viewingCustomer.email || '',
+        phoneNumber: viewingCustomer.phoneNumber || '',
+        address: viewingCustomer.address || '',
+        isActive: viewingCustomer.isActive !== undefined ? viewingCustomer.isActive : true
+      });
+    }
     setViewingCustomer(null); // Đóng modal chi tiết
   };
 
