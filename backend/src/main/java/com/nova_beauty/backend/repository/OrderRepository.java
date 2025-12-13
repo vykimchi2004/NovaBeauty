@@ -18,8 +18,8 @@ public interface OrderRepository extends JpaRepository<Order, String> {
 
     /**
      * Tìm các đơn hàng theo email của user (subject của JWT).
-     * Chỉ trả về đơn hàng đã thanh toán thành công hoặc đơn COD (không cần thanh toán trước).
-     * Loại bỏ đơn hàng MoMo chưa thanh toán (paymentStatus = PENDING, FAILED, CANCELLED và paymentMethod = MOMO).
+     * Hiển thị tất cả đơn hàng của user, bao gồm cả đơn MoMo đang chờ thanh toán (PENDING)
+     * để user có thể theo dõi trạng thái thanh toán.
      */
     @EntityGraph(
             attributePaths = {
@@ -30,7 +30,6 @@ public interface OrderRepository extends JpaRepository<Order, String> {
             })
     @Query(
             "SELECT o FROM Order o WHERE o.user.email = :email "
-                    + "AND (o.paymentMethod != 'MOMO' OR o.paymentStatus = 'PAID') "
                     + "ORDER BY o.orderDateTime DESC")
     List<Order> findByUserEmail(@Param("email") String email);
 

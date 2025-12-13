@@ -2208,4 +2208,41 @@
   }
 }
 
+// Pagination styles
+.pagination {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.pagination-btn {
+  min-width: 96px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid #e9ecef;
+  background: #fff;
+  font-weight: 600;
+  color: #e5677d;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &:not(:disabled):hover {
+    background: #e5677d;
+    color: #fff;
+    border-color: #e5677d;
+  }
+}
+
+.pagination-info {
+  font-weight: 600;
+  color: #e5677d;
+}
+
 

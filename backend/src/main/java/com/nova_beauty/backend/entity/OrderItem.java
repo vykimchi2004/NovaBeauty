@@ -30,5 +30,8 @@ public class OrderItem {
     Integer quantity;
     Double unitPrice;
     Double finalPrice;
+    
+    @Column(name = "color_code")
+    String colorCode; // Mã màu đã chọn (nếu có)
 }
 

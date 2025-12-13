@@ -51,7 +51,8 @@ public class FinancialService {
 
     // Lọc các đơn hàng đã thanh toán thành công trong khoảng thời gian
     // - COD: chỉ tính khi đơn hàng đã được giao thành công (status = DELIVERED)
-    // - MoMo: chỉ tính khi khách hàng đã thanh toán thành công và nhân viên xác nhận đơn (status = CONFIRMED)
+    // - MoMo: chỉ tính khi đơn hàng đã được giao thành công (status = DELIVERED)
+    // Tất cả các phương thức thanh toán đều phải có status = DELIVERED mới được tính vào báo cáo
     private List<Order> getPaidOrdersInRange(LocalDateTime start, LocalDateTime end) {
         List<Order> allOrders = orderRepository.findByOrderDateTimeBetween(start, end);
         return allOrders.stream()
@@ -65,20 +66,10 @@ public class FinancialService {
                                 return false;
                             }
 
-                            // Kiểm tra điều kiện theo phương thức thanh toán
-                            PaymentMethod paymentMethod = order.getPaymentMethod();
-                            if (paymentMethod == PaymentMethod.COD) {
-                                // COD: chỉ tính khi đơn hàng đã được giao thành công (khách hàng đã trả
-                                // tiền)
-                                return order.getStatus() == OrderStatus.DELIVERED;
-                            } else if (paymentMethod == PaymentMethod.MOMO) {
-                                // MoMo: chỉ tính khi khách hàng đã thanh toán thành công và nhân viên xác
-                                // nhận đơn
-                                return order.getStatus() == OrderStatus.CONFIRMED;
-                            }
-
-                            // Các phương thức thanh toán khác: giữ nguyên logic cũ
-                            return true;
+                            // Tất cả các phương thức thanh toán (COD, MoMo, và các phương thức khác)
+                            // đều phải có status = DELIVERED mới được tính vào báo cáo
+                            // Lý do: chỉ tính các đơn đã giao thành công để đảm bảo tính chính xác của báo cáo
+                            return order.getStatus() == OrderStatus.DELIVERED;
                         })
                 .toList();
     }

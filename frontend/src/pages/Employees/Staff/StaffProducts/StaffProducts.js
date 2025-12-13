@@ -104,6 +104,8 @@ function StaffProducts() {
   const [selectedDate, setSelectedDate] = useState('');
   const [editingProduct, setEditingProduct] = useState(null);
   const [viewingProduct, setViewingProduct] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 4;
   
   // Sử dụng useCategories hook để tái sử dụng logic
   const { categories: allCategories, loading: loadingCategories } = useCategories({
@@ -143,6 +145,17 @@ function StaffProducts() {
     filterProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, selectedDate, products]);
+
+  // Reset về trang 1 khi filter thay đổi
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedDate]);
+
+  // Tính toán pagination
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
 
   // Helper function để tính tổng tồn kho của một sản phẩm
   const calculateTotalStock = (product) => {
@@ -1167,14 +1180,14 @@ function StaffProducts() {
             </tr>
           </thead>
           <tbody>
-            {filteredProducts.length === 0 ? (
+            {paginatedProducts.length === 0 ? (
               <tr>
                 <td colSpan="6" className={cx('empty')}>
                   Không có sản phẩm nào
                 </td>
               </tr>
             ) : (
-              filteredProducts.map((product) => (
+              paginatedProducts.map((product) => (
                 <tr key={product.id}>
                   <td className={cx('imageCell')}>
                     {product.defaultMediaUrl || (product.mediaUrls && product.mediaUrls.length > 0) ? (
@@ -1325,6 +1338,31 @@ function StaffProducts() {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className={cx('pagination')}>
+          <button
+            type="button"
+            className={cx('pagination-btn')}
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+          >
+            Trước
+          </button>
+          <span className={cx('pagination-info')}>
+            Trang {currentPage}/{totalPages}
+          </span>
+          <button
+            type="button"
+            className={cx('pagination-btn')}
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+          >
+            Tiếp
+          </button>
+        </div>
+      )}
 
       <AddProductPage
         open={isAddModalOpen}

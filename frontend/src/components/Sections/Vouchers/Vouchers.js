@@ -114,6 +114,17 @@ function Banner() {
   const slides = approvedPromos.length > 0 ? approvedPromos : PLACEHOLDER_IMAGES.map((img, idx) => ({ imageUrl: img, _placeholder: true, id: `placeholder-${idx}` }));
   const sideBanners = slides.slice(1, 3);
 
+  // Tự động chuyển slide
+  useEffect(() => {
+    if (slides.length <= 1) return; // Không tự động nếu chỉ có 1 slide
+    
+    const interval = setInterval(() => {
+      setCurrent((prev) => (prev + 1) % slides.length);
+    }, 4000); // Chuyển slide mỗi 4 giây
+
+    return () => clearInterval(interval);
+  }, [slides.length]);
+
   const handlePrev = () => {
     setCurrent((prev) => (prev - 1 + slides.length) % slides.length);
   };
@@ -129,11 +140,9 @@ function Banner() {
           <div className={cx('voucher-slider')}>
             {slides.map((slide, index) => (
               <div className={index === current ? cx('slide', 'active') : cx('slide')} key={slide.id || index}>
-                {index === current && (
-                  <Link to={buildProductLink(slide)} className={cx('slide-link')}>
-                    <img src={getImage(slide, index)} alt={`voucher-banner-${index}`} />
-                  </Link>
-                )}
+                <Link to={buildProductLink(slide)} className={cx('slide-link')}>
+                  <img src={getImage(slide, index)} alt={`voucher-banner-${index}`} />
+                </Link>
               </div>
             ))}
 
