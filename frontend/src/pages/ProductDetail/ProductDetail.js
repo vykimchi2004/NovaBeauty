@@ -916,6 +916,9 @@ function ProductDetail() {
             <span className={cx('reviews')}>({displayProduct.reviews})</span>
             <span className={cx('origin')}>Xuất xứ: {displayProduct.origin}</span>
             <span className={cx('sku')}>SKU: {displayProduct.sku}</span>
+            {product.quantitySold !== undefined && product.quantitySold !== null && (
+              <span className={cx('sold-count')}>Đã bán: {product.quantitySold.toLocaleString('vi-VN')}</span>
+            )}
           </div>
 
           <div className={cx('price-section')}>

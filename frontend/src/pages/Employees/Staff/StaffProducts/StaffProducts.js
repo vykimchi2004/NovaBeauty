@@ -7,7 +7,8 @@ import styles from './StaffProducts.module.scss';
 import AddProductPage from './components/AddProduct/AddProductPage';
 import UpdateProductPage from './components/UpdateProduct/UpdateProductPage';
 import ProductDetailPage from './components/ProductDetail/ProductDetailPage';
-import { getMyProducts, createProduct, updateProduct } from '~/services/product';
+import UpdateInventoryModal from './components/UpdateInventory/UpdateInventoryModal';
+import { getMyProducts, createProduct, updateProduct, deleteProduct } from '~/services/product';
 import { uploadProductMedia } from '~/services/media';
 import notify from '~/utils/notification';
 import { STAFF_PRODUCT_ERRORS, STAFF_PRODUCT_MESSAGES } from './messages';
@@ -130,6 +131,7 @@ function StaffProducts() {
   const fileInputRef = useRef(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [stockUpdateProduct, setStockUpdateProduct] = useState(null);
 
   useEffect(() => {
     fetchProducts();
@@ -1025,6 +1027,63 @@ function StaffProducts() {
     setViewingProduct(null);
   };
 
+  const handleOpenStockUpdateModal = (product) => {
+    setStockUpdateProduct(product);
+  };
+
+  const handleCloseStockUpdateModal = () => {
+    setStockUpdateProduct(null);
+  };
+
+  const handleStockUpdateSuccess = async () => {
+    await fetchProducts();
+  };
+
+  const canCurrentUserDelete = () => {
+    const user = currentUserRef.current;
+    if (!user) return false;
+    const role = user.role;
+    if (role && typeof role === 'string') {
+      const r = role.toUpperCase();
+      if (r === 'ADMIN' || r === 'STAFF') return true;
+    }
+    const roles = user.roles;
+    if (Array.isArray(roles)) {
+      const upper = roles.map((x) => String(x).toUpperCase());
+      if (upper.includes('ADMIN') || upper.includes('STAFF')) return true;
+    } else if (typeof roles === 'string') {
+      const s = roles.toUpperCase();
+      if (s.includes('ADMIN') || s.includes('STAFF')) return true;
+    }
+    if (user.isAdmin || user.isStaff || user.is_employee) return true;
+    return false;
+  };
+
+  const handleDeleteProduct = async (product) => {
+    if (!product || !product.id) return;
+    
+    const confirmed = await notify.confirm(
+      `Bạn có chắc muốn xóa sản phẩm "${product.name || product.id}" không? Hành động này không thể hoàn tác.`,
+      'Xác nhận xóa sản phẩm',
+      'Xóa',
+      'Hủy'
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      setLoading(true);
+      await deleteProduct(product.id);
+      notify.success('Xóa sản phẩm thành công');
+      await fetchProducts();
+    } catch (err) {
+      console.error('[StaffProducts] deleteProduct error:', err);
+      notify.error(err?.message || 'Không thể xóa sản phẩm. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const formatPrice = (price) => {
     const value = Math.round(Number(price) || 0);
@@ -1238,6 +1297,24 @@ function StaffProducts() {
                       >
                         Xem chi tiết
                       </button>
+                      <button
+                        onClick={() => handleOpenStockUpdateModal(product)}
+                        className={cx('actionBtn', 'updateStockBtn')}
+                        title="Cập nhật tồn kho"
+                        style={{ marginLeft: 8 }}
+                      >
+                        Cập nhật tồn kho
+                      </button>
+                      {canCurrentUserDelete() && (
+                        <button
+                          onClick={() => handleDeleteProduct(product)}
+                          className={cx('actionBtn', 'deleteBtn')}
+                          title="Xóa sản phẩm"
+                          style={{ marginLeft: 8 }}
+                        >
+                          Xóa
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -1306,6 +1383,19 @@ function StaffProducts() {
           handleCloseViewDetail();
           handleEdit(product);
         }}
+        onDelete={async (product) => {
+          handleCloseViewDetail();
+          await handleDeleteProduct(product);
+        }}
+        canDelete={true}
+      />
+
+      {/* Modal Cập nhật tồn kho */}
+      <UpdateInventoryModal
+        open={Boolean(stockUpdateProduct)}
+        product={stockUpdateProduct}
+        onClose={handleCloseStockUpdateModal}
+        onSuccess={handleStockUpdateSuccess}
       />
     </div>
   );

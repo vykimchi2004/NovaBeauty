@@ -387,17 +387,24 @@ function ManageCategories() {
               <div className={cx('formRow')}>
                 <div className={cx('formGroup')}>
                   <label>Danh mục cha</label>
-                  <select
-                    value={formData.parentId}
-                    onChange={(e) => setFormData({ ...formData, parentId: e.target.value })}
-                  >
-                    <option value="">Không có (Danh mục gốc)</option>
-                    {categories
-                      .filter(cat => !editingCategory || cat.id !== editingCategory.id)
-                      .map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                      ))}
-                  </select>
+<select
+  value={formData.parentId}
+  onChange={(e) => setFormData({ ...formData, parentId: e.target.value })}
+>
+  <option value="">Không có (Danh mục gốc)</option>
+
+  {/* Chỉ cho phép chọn DANH MỤC CHA */}
+  {categories
+    .filter(cat => 
+      // Chỉ hiện danh mục gốc
+      !cat.parentId &&
+      // Nếu đang sửa → không cho chọn chính nó
+      (!editingCategory || cat.id !== editingCategory.id)
+    )
+    .map(cat => (
+      <option key={cat.id} value={cat.id}>{cat.name}</option>
+    ))}
+</select>
                 </div>
 
                 <div className={cx('formGroup')}>

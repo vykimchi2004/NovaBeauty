@@ -17,17 +17,13 @@ function ProductDetailView({
   selectedImageUrl,
   onBack,
   onClose,
-  onApprove,
-  onReject,
-  onDelete,
+
   processingApproval,
   processingRejection,
   processingDelete,
-  getStatusBadge,
-  getNormalizedStatus,
+
   formatPrice,
   formatWeight,
-  formatDate,
   textureInfo,
   skinTypeInfo,
   reviewHighlights

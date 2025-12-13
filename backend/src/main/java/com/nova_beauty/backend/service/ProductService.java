@@ -316,6 +316,7 @@ public class ProductService {
         // 7. Xóa Inventory liên quan đến product này
         inventoryRepository.findByProductId(productId).ifPresent(inventory -> {
             inventoryRepository.delete(inventory);
+            product.setInventory(null); // Clear reference to deleted inventory
             log.info("Deleted inventory for product: {}", productId);
         });
 
