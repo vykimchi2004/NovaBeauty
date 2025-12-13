@@ -100,7 +100,16 @@ public interface OrderRepository extends JpaRepository<Order, String> {
             Pageable pageable);
 
     // Tìm các đơn hàng trong khoảng thời gian, sắp xếp theo orderDateTime DESC (không phân trang)
-    List<Order> findByOrderDateTimeBetween(LocalDateTime start, LocalDateTime end);
+    // Có fallback cho orderDate nếu orderDateTime là NULL
+    @Query("SELECT o FROM Order o WHERE " +
+           "(o.orderDateTime IS NOT NULL AND o.orderDateTime BETWEEN :start AND :end) OR " +
+           "(o.orderDateTime IS NULL AND o.orderDate IS NOT NULL AND o.orderDate BETWEEN :startDate AND :endDate) " +
+           "ORDER BY o.orderDateTime DESC, o.orderDate DESC")
+    List<Order> findByOrderDateTimeBetween(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
 
     // Đếm số đơn hàng trong khoảng thời gian
     // Kiểm tra cả orderDateTime và orderDate (fallback nếu orderDateTime là NULL)

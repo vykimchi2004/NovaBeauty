@@ -2,30 +2,21 @@ import React from 'react';
 import classNames from 'classnames/bind';
 import styles from './RevenueReportsPage.module.scss';
 import financialService from '~/services/financial';
+import { getDateRange } from '~/services/utils';
 
 const cx = classNames.bind(styles);
 
-const TIME_MODES = {
-    DAY: 'day',
-    WEEK: 'week',
-    MONTH: 'month',
-};
-
-function RevenueReportsPage({ dateRange, timeMode, loading, setLoading }) {
+function RevenueReportsPage({ timeMode = 'day', customDateRange = null }) {
     const [revenueSummary, setRevenueSummary] = React.useState(null);
     const [revenueByDay, setRevenueByDay] = React.useState([]);
     const [revenueByPayment, setRevenueByPayment] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
 
     React.useEffect(() => {
         const fetchData = async () => {
-            if (!dateRange || !dateRange.start || !dateRange.end) {
-                console.warn('RevenueReports: Missing dateRange', dateRange);
-                return;
-            }
-            
             try {
-                if (setLoading) setLoading(true);
-                const { start, end } = dateRange;
+                setLoading(true);
+                const { start, end } = getDateRange(timeMode, customDateRange);
                 console.log('RevenueReports: Fetching data', { start, end, timeMode });
                 
                 const [summary, byDay, byPayment] = await Promise.all([
@@ -56,12 +47,11 @@ function RevenueReportsPage({ dateRange, timeMode, loading, setLoading }) {
                 setRevenueByDay([]);
                 setRevenueByPayment([]);
             } finally {
-                if (setLoading) setLoading(false);
+                setLoading(false);
             }
         };
         fetchData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dateRange?.start, dateRange?.end, timeMode]);
+    }, [timeMode, customDateRange]);
 
     const formatPrice = (price) => {
         const value = Math.round(Number(price) || 0);
@@ -267,7 +257,7 @@ function RevenueReportsPage({ dateRange, timeMode, loading, setLoading }) {
                     <p className={cx('emptyHint')}>
                         <strong>Lưu ý:</strong> Hệ thống chỉ tính doanh thu từ các đơn hàng đã thanh toán thành công:
                         <br />- COD: Đơn hàng đã được giao thành công (DELIVERED)
-                        <br />- MoMo: Đơn hàng đã thanh toán và được xác nhận (CONFIRMED)
+                        <br />- MoMo: Đơn hàng đã thanh toán thành công (CREATED hoặc CONFIRMED)
                     </p>
                 </div>
             ) : (
@@ -292,7 +282,7 @@ function RevenueReportsPage({ dateRange, timeMode, loading, setLoading }) {
                     </div>
 
                     <div className={cx('reportSection')}>
-                        <h4>Chi tiết doanh thu theo {timeMode === TIME_MODES.DAY ? 'ngày' : timeMode === TIME_MODES.WEEK ? 'tuần' : 'tháng'}</h4>
+                        <h4>Chi tiết doanh thu theo {timeMode === 'day' ? 'ngày' : timeMode === 'week' ? 'tuần' : timeMode === 'month' ? 'tháng' : 'năm'}</h4>
                         <div className={cx('tableWrapper')}>
                             <table className={cx('table')}>
                                 <thead>
@@ -327,12 +317,12 @@ function RevenueReportsPage({ dateRange, timeMode, loading, setLoading }) {
                                                         minute: '2-digit'
                                                     });
                                                 } else if (item.date) {
-                                                    if (timeMode === TIME_MODES.MONTH) {
+                                                    if (timeMode === 'month') {
                                                         dateLabel = new Date(item.date).toLocaleDateString('vi-VN', { 
                                                             month: '2-digit',
                                                             year: 'numeric'
                                                         });
-                                                    } else if (timeMode === TIME_MODES.WEEK) {
+                                                    } else if (timeMode === 'week') {
                                                         const date = new Date(item.date);
                                                         const weekStart = new Date(date);
                                                         weekStart.setDate(date.getDate() - date.getDay());

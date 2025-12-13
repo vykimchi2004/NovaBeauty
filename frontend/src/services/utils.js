@@ -295,3 +295,72 @@ export const scrollToTop = (behavior = 'smooth') => {
     }
 };
 
+/**
+ * Tính date range dựa trên timeMode
+ * @param {string} timeMode - 'day' | 'week' | 'month' | 'year' | 'custom'
+ * @param {Object|null} customDateRange - { start: string, end: string } hoặc null
+ * @returns {Object} { start: string, end: string } - ISO date strings (YYYY-MM-DD)
+ */
+export const getDateRange = (timeMode = 'day', customDateRange = null) => {
+    // Nếu là custom, sử dụng date range từ props
+    if (timeMode === 'custom' && customDateRange) {
+        if (!customDateRange.start || !customDateRange.end) {
+            // Nếu chưa chọn đủ, trả về hôm nay
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+            return { start: todayStr, end: todayStr };
+        }
+        return {
+            start: customDateRange.start,
+            end: customDateRange.end,
+        };
+    }
+
+    const today = new Date();
+    const end = new Date(today);
+    const start = new Date(today);
+
+    switch (timeMode) {
+        case 'day':
+            // Chỉ hôm nay
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+            break;
+        case 'week':
+            // Tuần này (từ thứ 2 đến Chủ nhật)
+            const dayOfWeek = today.getDay(); // 0 = Chủ nhật, 1 = Thứ 2, ...
+            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Nếu CN thì lùi 6 ngày, nếu không thì tính offset về thứ 2
+            start.setDate(today.getDate() + mondayOffset);
+            start.setHours(0, 0, 0, 0);
+            // End là Chủ nhật của tuần này (thứ 2 + 6 ngày)
+            end.setDate(start.getDate() + 6);
+            end.setHours(23, 59, 59, 999);
+            break;
+        case 'month':
+            // Cả tháng hiện tại (từ ngày 1 đến ngày cuối tháng)
+            start.setDate(1); // Ngày đầu tháng
+            start.setHours(0, 0, 0, 0);
+            // End là ngày cuối cùng của tháng
+            end.setMonth(today.getMonth() + 1, 0); // Ngày 0 của tháng sau = ngày cuối tháng hiện tại
+            end.setHours(23, 59, 59, 999);
+            break;
+        case 'year':
+            // Cả năm hiện tại (từ tháng 1 đến tháng 12)
+            start.setMonth(0, 1); // Tháng 1, ngày 1
+            start.setHours(0, 0, 0, 0);
+            end.setMonth(11, 31); // Tháng 12, ngày 31
+            end.setHours(23, 59, 59, 999);
+            break;
+        default:
+            // Mặc định: hôm nay
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+            break;
+    }
+
+    return {
+        start: start.toISOString().split('T')[0],
+        end: end.toISOString().split('T')[0],
+    };
+};
+

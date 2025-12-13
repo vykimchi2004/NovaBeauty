@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import classNames from 'classnames/bind';
 import styles from './ReportsAnalytics.module.scss';
 import RevenueReportsPage from './RevenueReports';
@@ -19,63 +19,80 @@ const TIME_MODES = {
     DAY: 'day',
     WEEK: 'week',
     MONTH: 'month',
+    YEAR: 'year',
+    CUSTOM: 'custom',
 };
 
 function ReportsAnalytics() {
     const [activeTab, setActiveTab] = useState(TABS.REVENUE);
     const [timeMode, setTimeMode] = useState(TIME_MODES.DAY);
-    const [loading, setLoading] = useState(false);
-    
-    // Date range state
-    const [dateRange, setDateRange] = useState(() => {
-        const today = new Date();
-        const lastMonth = new Date();
-        lastMonth.setMonth(today.getMonth() - 1);
-        const start = lastMonth.toISOString().split('T')[0];
-        const end = today.toISOString().split('T')[0];
-        console.log('ReportsAnalytics: Initial dateRange', { start, end });
-        return { start, end };
+    const [customDateRange, setCustomDateRange] = useState({
+        start: '',
+        end: ''
     });
 
-    useEffect(() => {
-        console.log('ReportsAnalytics: dateRange changed', dateRange);
-    }, [dateRange]);
+    const handleTimeModeChange = (e) => {
+        setTimeMode(e.target.value);
+        // Reset custom date range khi đổi mode
+        if (e.target.value !== TIME_MODES.CUSTOM) {
+            setCustomDateRange({ start: '', end: '' });
+        }
+    };
 
     return (
         <div className={cx('wrapper')}>
             <div className={cx('header')}>
                 <h2 className={cx('title')}>Báo cáo và doanh thu</h2>
                 <div className={cx('filters')}>
-                    <div className={cx('filterGroup')}>
-                        <label>Thống kê theo:</label>
-                        <select
-                            value={timeMode}
-                            onChange={(e) => setTimeMode(e.target.value)}
-                            className={cx('select')}
-                        >
-                            <option value={TIME_MODES.DAY}>Theo ngày</option>
-                            <option value={TIME_MODES.WEEK}>Theo tuần</option>
-                            <option value={TIME_MODES.MONTH}>Theo tháng</option>
-                        </select>
-                    </div>
-                    <div className={cx('filterGroup')}>
-                        <label>Từ ngày:</label>
-                        <input
-                            type="date"
-                            value={dateRange.start}
-                            onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
-                            className={cx('dateInput')}
-                        />
-                    </div>
-                    <div className={cx('filterGroup')}>
-                        <label>Đến ngày:</label>
-                        <input
-                            type="date"
-                            value={dateRange.end}
-                            onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
-                            className={cx('dateInput')}
-                        />
-                    </div>
+                    <span>Thống kê theo:</span>
+                    <select
+                        className={cx('select')}
+                        value={timeMode}
+                        onChange={handleTimeModeChange}
+                    >
+                        <option value={TIME_MODES.DAY}>Theo ngày</option>
+                        <option value={TIME_MODES.WEEK}>Theo tuần</option>
+                        <option value={TIME_MODES.MONTH}>Theo tháng</option>
+                        <option value={TIME_MODES.YEAR}>Theo năm</option>
+                        <option value={TIME_MODES.CUSTOM}>Khoảng thời gian</option>
+                    </select>
+                    {timeMode === TIME_MODES.CUSTOM && (
+                        <div className={cx('dateRangePicker')}>
+                            <input
+                                type="date"
+                                className={cx('dateInput')}
+                                value={customDateRange.start}
+                                max={customDateRange.end || undefined}
+                                onChange={(e) => {
+                                    const newStart = e.target.value;
+                                    // Nếu ngày bắt đầu > ngày kết thúc, tự động điều chỉnh ngày kết thúc
+                                    if (customDateRange.end && newStart > customDateRange.end) {
+                                        setCustomDateRange({ start: newStart, end: newStart });
+                                    } else {
+                                        setCustomDateRange({ ...customDateRange, start: newStart });
+                                    }
+                                }}
+                                placeholder="Từ ngày"
+                            />
+                            <span className={cx('dateSeparator')}>đến</span>
+                            <input
+                                type="date"
+                                className={cx('dateInput')}
+                                value={customDateRange.end}
+                                min={customDateRange.start || undefined}
+                                onChange={(e) => {
+                                    const newEnd = e.target.value;
+                                    // Nếu ngày kết thúc < ngày bắt đầu, tự động điều chỉnh ngày bắt đầu
+                                    if (customDateRange.start && newEnd < customDateRange.start) {
+                                        setCustomDateRange({ start: newEnd, end: newEnd });
+                                    } else {
+                                        setCustomDateRange({ ...customDateRange, end: newEnd });
+                                    }
+                                }}
+                                placeholder="Đến ngày"
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -109,31 +126,26 @@ function ReportsAnalytics() {
             <div className={cx('content')}>
                 {activeTab === TABS.REVENUE && (
                     <RevenueReportsPage 
-                        dateRange={dateRange} 
-                        timeMode={timeMode} 
-                        loading={loading} 
-                        setLoading={setLoading} 
+                        timeMode={timeMode}
+                        customDateRange={timeMode === TIME_MODES.CUSTOM ? customDateRange : null}
                     />
                 )}
                 {activeTab === TABS.ORDERS && (
                     <OrderReportsPage 
-                        dateRange={dateRange} 
-                        loading={loading} 
-                        setLoading={setLoading} 
+                        timeMode={timeMode}
+                        customDateRange={timeMode === TIME_MODES.CUSTOM ? customDateRange : null}
                     />
                 )}
                 {activeTab === TABS.FINANCIAL && (
                     <FinancialReportsPage 
-                        dateRange={dateRange} 
-                        loading={loading} 
-                        setLoading={setLoading} 
+                        timeMode={timeMode}
+                        customDateRange={timeMode === TIME_MODES.CUSTOM ? customDateRange : null}
                     />
                 )}
                 {activeTab === TABS.TOP_SELLERS && (
                     <TopSellingPage 
-                        dateRange={dateRange} 
-                        loading={loading} 
-                        setLoading={setLoading} 
+                        timeMode={timeMode}
+                        customDateRange={timeMode === TIME_MODES.CUSTOM ? customDateRange : null}
                     />
                 )}
             </div>

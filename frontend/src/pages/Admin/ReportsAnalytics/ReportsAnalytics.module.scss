@@ -27,48 +27,47 @@
   gap: 20px;
   flex-wrap: wrap;
 
-  .filterGroup {
+  .select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    min-width: 140px;
+
+    &:focus {
+      border-color: #e5677d;
+      box-shadow: 0 0 0 3px rgba(229, 103, 125, 0.15);
+    }
+  }
+
+  .dateRangePicker {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
+  }
 
-    label {
-      font-size: 14px;
-      font-weight: 600;
-      color: #666;
-      white-space: nowrap;
+  .dateInput {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+
+    &:focus {
+      border-color: #e5677d;
+      box-shadow: 0 0 0 3px rgba(229, 103, 125, 0.15);
     }
+  }
 
-    .select {
-      padding: 8px 12px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      font-size: 14px;
-      outline: none;
-      background: #fff;
-      cursor: pointer;
-      transition: border-color 0.2s, box-shadow 0.2s;
-      min-width: 140px;
-
-      &:focus {
-        border-color: #e5677d;
-        box-shadow: 0 0 0 3px rgba(229, 103, 125, 0.15);
-      }
-    }
-
-    .dateInput {
-      padding: 8px 12px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-
-      &:focus {
-        border-color: #e5677d;
-        box-shadow: 0 0 0 3px rgba(229, 103, 125, 0.15);
-      }
-    }
+  .dateSeparator {
+    font-size: 14px;
+    color: #666;
+    white-space: nowrap;
   }
 }
 
@@ -122,18 +121,15 @@
     flex-direction: column;
     align-items: stretch;
 
-    .filterGroup {
+    .select,
+    .dateInput {
+      width: 100%;
+    }
+
+    .dateRangePicker {
       flex-direction: column;
       align-items: stretch;
-
-      label {
-        margin-bottom: 4px;
-      }
-
-      .select,
-      .dateInput {
-        width: 100%;
-      }
+      gap: 8px;
     }
   }
 

@@ -14,7 +14,7 @@ public interface FinancialRecordRepository extends JpaRepository<FinancialRecord
 
     // Tính doanh thu theo đơn hàng (group theo ngày)
     // COD: chỉ tính khi status = DELIVERED
-    // MoMo: chỉ tính khi status = CONFIRMED
+    // MoMo: tính khi status = CREATED hoặc CONFIRMED (vì đã thanh toán rồi)
     @Query(
             "select year(fr.occurredAt), month(fr.occurredAt), day(fr.occurredAt), "
                     + "fr.order.id as orderId, sum(fr.amount) as orderTotal "
@@ -24,7 +24,7 @@ public interface FinancialRecordRepository extends JpaRepository<FinancialRecord
                     + "and fr.order.paymentStatus = 'PAID' "
                     + "and fr.order.paid = true "
                     + "and ((fr.order.paymentMethod = 'COD' and fr.order.status = 'DELIVERED') "
-                    + "     or (fr.order.paymentMethod = 'MOMO' and fr.order.status = 'CONFIRMED') "
+                    + "     or (fr.order.paymentMethod = 'MOMO' and (fr.order.status = 'CREATED' or fr.order.status = 'CONFIRMED')) "
                     + "     or (fr.order.paymentMethod not in ('COD', 'MOMO'))) "
                     + "group by year(fr.occurredAt), month(fr.occurredAt), day(fr.occurredAt), fr.order.id "
                     + "order by year(fr.occurredAt), month(fr.occurredAt), day(fr.occurredAt)")
@@ -35,7 +35,7 @@ public interface FinancialRecordRepository extends JpaRepository<FinancialRecord
 
     // Tính doanh thu theo giờ (khi cùng 1 ngày)
     // COD: chỉ tính khi status = DELIVERED
-    // MoMo: chỉ tính khi status = CONFIRMED
+    // MoMo: tính khi status = CREATED hoặc CONFIRMED (vì đã thanh toán rồi)
     @Query(
             "select year(fr.occurredAt), month(fr.occurredAt), day(fr.occurredAt), hour(fr.occurredAt), "
                     + "fr.order.id as orderId, sum(fr.amount) as orderTotal "
@@ -45,7 +45,7 @@ public interface FinancialRecordRepository extends JpaRepository<FinancialRecord
                     + "and fr.order.paymentStatus = 'PAID' "
                     + "and fr.order.paid = true "
                     + "and ((fr.order.paymentMethod = 'COD' and fr.order.status = 'DELIVERED') "
-                    + "     or (fr.order.paymentMethod = 'MOMO' and fr.order.status = 'CONFIRMED') "
+                    + "     or (fr.order.paymentMethod = 'MOMO' and (fr.order.status = 'CREATED' or fr.order.status = 'CONFIRMED')) "
                     + "     or (fr.order.paymentMethod not in ('COD', 'MOMO'))) "
                     + "group by year(fr.occurredAt), month(fr.occurredAt), day(fr.occurredAt), hour(fr.occurredAt), fr.order.id "
                     + "order by year(fr.occurredAt), month(fr.occurredAt), day(fr.occurredAt), hour(fr.occurredAt)")
@@ -56,7 +56,7 @@ public interface FinancialRecordRepository extends JpaRepository<FinancialRecord
 
     // Tính doanh thu theo tháng (khi cùng 1 năm)
     // COD: chỉ tính khi status = DELIVERED
-    // MoMo: chỉ tính khi status = CONFIRMED
+    // MoMo: tính khi status = CREATED hoặc CONFIRMED (vì đã thanh toán rồi)
     @Query(
             "select year(fr.occurredAt), month(fr.occurredAt), "
                     + "fr.order.id as orderId, sum(fr.amount) as orderTotal "
@@ -66,7 +66,7 @@ public interface FinancialRecordRepository extends JpaRepository<FinancialRecord
                     + "and fr.order.paymentStatus = 'PAID' "
                     + "and fr.order.paid = true "
                     + "and ((fr.order.paymentMethod = 'COD' and fr.order.status = 'DELIVERED') "
-                    + "     or (fr.order.paymentMethod = 'MOMO' and fr.order.status = 'CONFIRMED') "
+                    + "     or (fr.order.paymentMethod = 'MOMO' and (fr.order.status = 'CREATED' or fr.order.status = 'CONFIRMED')) "
                     + "     or (fr.order.paymentMethod not in ('COD', 'MOMO'))) "
                     + "group by year(fr.occurredAt), month(fr.occurredAt), fr.order.id "
                     + "order by year(fr.occurredAt), month(fr.occurredAt)")
@@ -77,7 +77,7 @@ public interface FinancialRecordRepository extends JpaRepository<FinancialRecord
 
     // Tính doanh thu theo phương thức thanh toán
     // COD: chỉ tính khi status = DELIVERED
-    // MoMo: chỉ tính khi status = CONFIRMED
+    // MoMo: tính khi status = CREATED hoặc CONFIRMED (vì đã thanh toán rồi)
     @Query(
             "select fr.paymentMethod, sum(fr.amount) "
                     + "from FinancialRecord fr "
@@ -87,7 +87,7 @@ public interface FinancialRecordRepository extends JpaRepository<FinancialRecord
                     + "and fr.order.paymentStatus = 'PAID' "
                     + "and fr.order.paid = true "
                     + "and ((fr.order.paymentMethod = 'COD' and fr.order.status = 'DELIVERED') "
-                    + "     or (fr.order.paymentMethod = 'MOMO' and fr.order.status = 'CONFIRMED') "
+                    + "     or (fr.order.paymentMethod = 'MOMO' and (fr.order.status = 'CREATED' or fr.order.status = 'CONFIRMED')) "
                     + "     or (fr.order.paymentMethod not in ('COD', 'MOMO'))) "
                     + "group by fr.paymentMethod")
     List<Object[]> revenueByPayment(

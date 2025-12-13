@@ -2,22 +2,19 @@ import React from 'react';
 import classNames from 'classnames/bind';
 import styles from './OrderReportsPage.module.scss';
 import financialService from '~/services/financial';
+import { getDateRange } from '~/services/utils';
 
 const cx = classNames.bind(styles);
 
-function OrderReportsPage({ dateRange, loading, setLoading }) {
+function OrderReportsPage({ timeMode = 'day', customDateRange = null }) {
     const [orderStatistics, setOrderStatistics] = React.useState(null);
+    const [loading, setLoading] = React.useState(true);
 
     React.useEffect(() => {
         const fetchData = async () => {
-            if (!dateRange || !dateRange.start || !dateRange.end) {
-                console.warn('OrderReports: Missing dateRange', dateRange);
-                return;
-            }
-            
             try {
-                if (setLoading) setLoading(true);
-                const { start, end } = dateRange;
+                setLoading(true);
+                const { start, end } = getDateRange(timeMode, customDateRange);
                 console.log('OrderReports: Fetching data', { start, end });
                 
                 const stats = await financialService.getOrderStatistics(start, end);
@@ -28,12 +25,11 @@ function OrderReportsPage({ dateRange, loading, setLoading }) {
                 console.error('Error fetching order reports:', err);
                 setOrderStatistics({ totalOrders: 0, cancelledOrders: 0, refundedOrders: 0 });
             } finally {
-                if (setLoading) setLoading(false);
+                setLoading(false);
             }
         };
         fetchData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dateRange?.start, dateRange?.end]);
+    }, [timeMode, customDateRange]);
 
     const formatNumber = (num) => {
         return new Intl.NumberFormat('vi-VN').format(num || 0);

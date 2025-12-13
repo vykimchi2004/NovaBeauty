@@ -2,6 +2,7 @@ package com.nova_beauty.backend.controller;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -69,6 +70,17 @@ public class FinancialController {
             @RequestParam(defaultValue = "10") int limit) {
         return ApiResponse.<List<ProductRevenue>>builder()
                 .result(financialService.topProductsByRevenue(start, end, limit))
+                .build();
+    }
+
+    // Debug endpoint - tạm thời để kiểm tra
+    @GetMapping("/debug/orders")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<Map<String, Object>> debugOrders(
+            @RequestParam LocalDate start,
+            @RequestParam LocalDate end) {
+        return ApiResponse.<Map<String, Object>>builder()
+                .result(financialService.debugOrdersInRange(start, end))
                 .build();
     }
 }

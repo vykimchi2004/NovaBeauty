@@ -51,17 +51,41 @@ public class FinancialService {
 
     // Lọc các đơn hàng đã thanh toán thành công trong khoảng thời gian
     // - COD: chỉ tính khi đơn hàng đã được giao thành công (status = DELIVERED)
-    // - MoMo: chỉ tính khi khách hàng đã thanh toán thành công và nhân viên xác nhận đơn (status = CONFIRMED)
+    // - MoMo: tính khi đã thanh toán thành công (status = CREATED hoặc CONFIRMED) vì đã thanh toán rồi
     private List<Order> getPaidOrdersInRange(LocalDateTime start, LocalDateTime end) {
-        List<Order> allOrders = orderRepository.findByOrderDateTimeBetween(start, end);
-        return allOrders.stream()
+        // Lấy tất cả đơn hàng trong khoảng thời gian (có fallback cho orderDate)
+        LocalDate startDate = start.toLocalDate();
+        LocalDate endDate = end.toLocalDate();
+        List<Order> allOrders = orderRepository.findByOrderDateTimeBetween(start, end, startDate, endDate);
+        
+        log.info("Querying orders between {} and {}", start, end);
+        log.info("Found {} orders with orderDateTime in range", allOrders.size());
+        
+        // Log một vài đơn hàng để debug
+        if (!allOrders.isEmpty()) {
+            log.info("Sample orders: {}", allOrders.stream()
+                .limit(3)
+                .map(o -> String.format("id=%s, status=%s, paymentMethod=%s, paymentStatus=%s, paid=%s, orderDateTime=%s, orderDate=%s", 
+                    o.getId(), o.getStatus(), o.getPaymentMethod(), o.getPaymentStatus(), o.getPaid(), 
+                    o.getOrderDateTime(), o.getOrderDate()))
+                .collect(Collectors.joining("; ")));
+        }
+        
+        List<Order> paidOrders = allOrders.stream()
                 .filter(
                         order -> {
                             // Kiểm tra điều kiện cơ bản: đã thanh toán và có items
-                            if (order.getPaymentStatus() != PaymentStatus.PAID
-                                    || !Boolean.TRUE.equals(order.getPaid())
-                                    || order.getItems() == null
-                                    || order.getItems().isEmpty()) {
+                            if (order.getPaymentStatus() != PaymentStatus.PAID) {
+                                log.debug("Order {} filtered: paymentStatus != PAID ({})", 
+                                    order.getId(), order.getPaymentStatus());
+                                return false;
+                            }
+                            if (!Boolean.TRUE.equals(order.getPaid())) {
+                                log.debug("Order {} filtered: paid != true", order.getId());
+                                return false;
+                            }
+                            if (order.getItems() == null || order.getItems().isEmpty()) {
+                                log.debug("Order {} filtered: no items", order.getId());
                                 return false;
                             }
 
@@ -70,17 +94,31 @@ public class FinancialService {
                             if (paymentMethod == PaymentMethod.COD) {
                                 // COD: chỉ tính khi đơn hàng đã được giao thành công (khách hàng đã trả
                                 // tiền)
-                                return order.getStatus() == OrderStatus.DELIVERED;
+                                boolean matches = order.getStatus() == OrderStatus.DELIVERED;
+                                if (!matches) {
+                                    log.debug("Order {} filtered: COD but status != DELIVERED ({})", 
+                                        order.getId(), order.getStatus());
+                                }
+                                return matches;
                             } else if (paymentMethod == PaymentMethod.MOMO) {
-                                // MoMo: chỉ tính khi khách hàng đã thanh toán thành công và nhân viên xác
-                                // nhận đơn
-                                return order.getStatus() == OrderStatus.CONFIRMED;
+                                // MoMo: tính khi đã thanh toán thành công (CREATED hoặc CONFIRMED)
+                                // Vì đã thanh toán qua MoMo rồi nên có thể tính ngay, không cần chờ xác nhận
+                                boolean matches = order.getStatus() == OrderStatus.CREATED 
+                                    || order.getStatus() == OrderStatus.CONFIRMED;
+                                if (!matches) {
+                                    log.debug("Order {} filtered: MoMo but status not CREATED/CONFIRMED ({})", 
+                                        order.getId(), order.getStatus());
+                                }
+                                return matches;
                             }
 
                             // Các phương thức thanh toán khác: giữ nguyên logic cũ
                             return true;
                         })
                 .toList();
+        
+        log.info("Filtered to {} paid orders from {} total orders", paidOrders.size(), allOrders.size());
+        return paidOrders;
     }
 
     // Tính tổng doanh thu từ danh sách đơn hàng đã thanh toán
@@ -170,6 +208,9 @@ public class FinancialService {
     // Tính doanh thu theo đơn hàng theo timeMode
     public List<RevenuePoint> revenueByDay(LocalDate start, LocalDate end, String timeMode) {
         LocalDateTime[] range = toDateTimeRange(start, end);
+        
+        // Đảm bảo tất cả đơn hàng đã thanh toán đều có FinancialRecord
+        ensureAllPaidOrdersHaveRevenueRecords(range[0], range[1]);
 
         // Day mode: group theo giờ
         if ("day".equals(timeMode)) {
@@ -346,17 +387,86 @@ public class FinancialService {
     // Tính doanh thu theo phương thức thanh toán
     public List<PaymentRevenue> revenueByPayment(LocalDate start, LocalDate end) {
         LocalDateTime[] range = toDateTimeRange(start, end);
+        
+        // Đảm bảo tất cả đơn hàng đã thanh toán đều có FinancialRecord
+        ensureAllPaidOrdersHaveRevenueRecords(range[0], range[1]);
+        
         return financialRecordRepository
                 .revenueByPayment(FinancialRecordType.ORDER_PAYMENT, range[0], range[1])
                 .stream()
                 .map(r -> new PaymentRevenue((PaymentMethod) r[0], ((Number) r[1]).doubleValue()))
                 .toList();
     }
+    
+    // Đảm bảo tất cả đơn hàng đã thanh toán trong khoảng thời gian đều có FinancialRecord
+    @Transactional
+    private void ensureAllPaidOrdersHaveRevenueRecords(LocalDateTime start, LocalDateTime end) {
+        log.info("Ensuring revenue records for orders between {} and {}", start, end);
+        List<Order> paidOrders = getPaidOrdersInRange(start, end);
+        log.info("Found {} paid orders to check", paidOrders.size());
+        
+        int createdCount = 0;
+        int skippedCount = 0;
+        for (Order order : paidOrders) {
+            boolean hasRecord = hasRecordedRevenue(order.getId());
+            log.debug("Order {} has revenue record: {}", order.getId(), hasRecord);
+            
+            if (!hasRecord) {
+                log.info("Creating revenue records for order {} (status: {}, paymentMethod: {})", 
+                    order.getId(), order.getStatus(), order.getPaymentMethod());
+                
+                // Ghi nhận doanh thu cho từng sản phẩm trong đơn hàng
+                for (OrderItem item : order.getItems()) {
+                    if (item.getProduct() != null && item.getFinalPrice() != null && item.getFinalPrice() > 0) {
+                        try {
+                            // Sử dụng orderDateTime thay vì LocalDateTime.now() để giữ đúng thời gian
+                            LocalDateTime occurredAt = order.getOrderDateTime() != null 
+                                ? order.getOrderDateTime() 
+                                : (order.getOrderDate() != null 
+                                    ? order.getOrderDate().atStartOfDay() 
+                                    : LocalDateTime.now());
+                            
+                            FinancialRecord rec = FinancialRecord.builder()
+                                .order(order)
+                                .product(item.getProduct())
+                                .amount(item.getFinalPrice())
+                                .paymentMethod(order.getPaymentMethod())
+                                .recordType(FinancialRecordType.ORDER_PAYMENT)
+                                .occurredAt(occurredAt)
+                                .build();
+                            financialRecordRepository.save(rec);
+                            createdCount++;
+                            log.debug("Created revenue record for order {} item {}: amount {}", 
+                                order.getId(), item.getId(), item.getFinalPrice());
+                        } catch (Exception e) {
+                            log.error("Error creating revenue record for order {} item {}", 
+                                order.getId(), item.getId(), e);
+                        }
+                    } else {
+                        log.warn("Skipping order {} item {}: product={}, finalPrice={}", 
+                            order.getId(), item.getId(), 
+                            item.getProduct() != null, item.getFinalPrice());
+                    }
+                }
+            } else {
+                skippedCount++;
+            }
+        }
+        if (createdCount > 0) {
+            log.info("Created {} revenue records for {} orders ({} already had records)", 
+                createdCount, paidOrders.size(), skippedCount);
+        } else {
+            log.info("No new revenue records created. {} orders already had records", skippedCount);
+        }
+    }
 
     // Tổng doanh thu = tổng giá trị các sản phẩm bán ra (OrderItem.finalPrice), không bao gồm shipping
     // fee
     public RevenueSummary revenueSummary(LocalDate start, LocalDate end) {
         LocalDateTime[] range = toDateTimeRange(start, end);
+        
+        // Đảm bảo tất cả đơn hàng đã thanh toán đều có FinancialRecord
+        ensureAllPaidOrdersHaveRevenueRecords(range[0], range[1]);
 
         // Lọc các đơn hàng đã thanh toán thành công
         List<Order> paidOrders = getPaidOrdersInRange(range[0], range[1]);
@@ -396,6 +506,9 @@ public class FinancialService {
      */
     public FinancialSummary summary(LocalDate start, LocalDate end) {
         LocalDateTime[] range = toDateTimeRange(start, end);
+        
+        // Đảm bảo tất cả đơn hàng đã thanh toán đều có FinancialRecord
+        ensureAllPaidOrdersHaveRevenueRecords(range[0], range[1]);
 
         // Lọc các đơn hàng đã thanh toán thành công
         List<Order> paidOrders = getPaidOrdersInRange(range[0], range[1]);
@@ -506,6 +619,9 @@ public class FinancialService {
      */
     public List<ProductRevenue> topProductsByRevenue(LocalDate start, LocalDate end, int limit) {
         LocalDateTime[] range = toDateTimeRange(start, end);
+        
+        // Đảm bảo tất cả đơn hàng đã thanh toán đều có FinancialRecord
+        ensureAllPaidOrdersHaveRevenueRecords(range[0], range[1]);
 
         // Lọc các đơn hàng đã thanh toán thành công
         List<Order> paidOrders = getPaidOrdersInRange(range[0], range[1]);
@@ -570,5 +686,38 @@ public class FinancialService {
                 .quantity(totalQuantity)
                 .total(totalRevenue)
                 .build();
+    }
+
+    // Debug method - tạm thời để kiểm tra
+    public Map<String, Object> debugOrdersInRange(LocalDate start, LocalDate end) {
+        LocalDateTime[] range = toDateTimeRange(start, end);
+        List<Order> allOrders = orderRepository.findByOrderDateTimeBetween(range[0], range[1], start, end);
+        
+        List<Map<String, Object>> orderDetails = allOrders.stream()
+            .map(order -> {
+                Map<String, Object> detail = new java.util.HashMap<>();
+                detail.put("id", order.getId());
+                detail.put("code", order.getCode());
+                detail.put("status", order.getStatus() != null ? order.getStatus().name() : null);
+                detail.put("paymentMethod", order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null);
+                detail.put("paymentStatus", order.getPaymentStatus() != null ? order.getPaymentStatus().name() : null);
+                detail.put("paid", order.getPaid());
+                detail.put("orderDateTime", order.getOrderDateTime());
+                detail.put("orderDate", order.getOrderDate());
+                detail.put("totalAmount", order.getTotalAmount());
+                detail.put("itemsCount", order.getItems() != null ? order.getItems().size() : 0);
+                detail.put("hasRevenueRecord", hasRecordedRevenue(order.getId()));
+                return detail;
+            })
+            .collect(Collectors.toList());
+        
+        List<Order> paidOrders = getPaidOrdersInRange(range[0], range[1]);
+        
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("dateRange", Map.of("start", start, "end", end));
+        result.put("totalOrders", allOrders.size());
+        result.put("paidOrdersCount", paidOrders.size());
+        result.put("orders", orderDetails);
+        return result;
     }
 }

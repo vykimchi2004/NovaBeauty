@@ -2,22 +2,19 @@ import React from 'react';
 import classNames from 'classnames/bind';
 import styles from './TopSellingPage.module.scss';
 import financialService from '~/services/financial';
+import { getDateRange } from '~/services/utils';
 
 const cx = classNames.bind(styles);
 
-function TopSellingPage({ dateRange, loading, setLoading }) {
+function TopSellingPage({ timeMode = 'day', customDateRange = null }) {
     const [topProducts, setTopProducts] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
 
     React.useEffect(() => {
         const fetchData = async () => {
-            if (!dateRange || !dateRange.start || !dateRange.end) {
-                console.warn('TopSelling: Missing dateRange', dateRange);
-                return;
-            }
-            
             try {
-                if (setLoading) setLoading(true);
-                const { start, end } = dateRange;
+                setLoading(true);
+                const { start, end } = getDateRange(timeMode, customDateRange);
                 console.log('TopSelling: Fetching data', { start, end });
                 
                 const products = await financialService.getRevenueByProduct(start, end);
@@ -32,12 +29,11 @@ function TopSellingPage({ dateRange, loading, setLoading }) {
                 console.error('Error fetching top selling reports:', err);
                 setTopProducts([]);
             } finally {
-                if (setLoading) setLoading(false);
+                setLoading(false);
             }
         };
         fetchData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dateRange?.start, dateRange?.end]);
+    }, [timeMode, customDateRange]);
 
     const formatPrice = (price) => {
         const value = Math.round(Number(price) || 0);

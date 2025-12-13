@@ -2,22 +2,19 @@ import React from 'react';
 import classNames from 'classnames/bind';
 import styles from './FinancialReportsPage.module.scss';
 import financialService from '~/services/financial';
+import { getDateRange } from '~/services/utils';
 
 const cx = classNames.bind(styles);
 
-function FinancialReportsPage({ dateRange, loading, setLoading }) {
+function FinancialReportsPage({ timeMode = 'day', customDateRange = null }) {
     const [financialSummary, setFinancialSummary] = React.useState(null);
+    const [loading, setLoading] = React.useState(true);
 
     React.useEffect(() => {
         const fetchData = async () => {
-            if (!dateRange || !dateRange.start || !dateRange.end) {
-                console.warn('FinancialReports: Missing dateRange', dateRange);
-                return;
-            }
-            
             try {
-                if (setLoading) setLoading(true);
-                const { start, end } = dateRange;
+                setLoading(true);
+                const { start, end } = getDateRange(timeMode, customDateRange);
                 console.log('FinancialReports: Fetching data', { start, end });
                 
                 const summary = await financialService.getFinancialSummary(start, end);
@@ -32,12 +29,11 @@ function FinancialReportsPage({ dateRange, loading, setLoading }) {
                 console.error('Error fetching financial reports:', err);
                 setFinancialSummary(null);
             } finally {
-                if (setLoading) setLoading(false);
+                setLoading(false);
             }
         };
         fetchData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dateRange?.start, dateRange?.end]);
+    }, [timeMode, customDateRange]);
 
     const formatPrice = (price) => {
         const value = Math.round(Number(price) || 0);
