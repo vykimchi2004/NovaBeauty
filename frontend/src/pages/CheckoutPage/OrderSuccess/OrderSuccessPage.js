@@ -51,16 +51,56 @@ function OrderSuccessPage() {
   const fetchOrderFromMoMo = async (orderCode) => {
     try {
       setLoading(true);
-      // Tìm đơn hàng theo code
-      const orders = await orderService.getMyOrders();
-      const foundOrder = orders.find(o => o.code === orderCode || o.id === orderCode);
+      console.log('OrderSuccess: Fetching order from MoMo with code:', orderCode);
+      
+      let foundOrder = null;
+      
+      // Thử lấy order detail trực tiếp bằng ID trước
+      try {
+        foundOrder = await orderService.getOrderById(orderCode);
+        console.log('OrderSuccess: Found order by ID:', foundOrder);
+      } catch (err) {
+        console.log('OrderSuccess: Could not get order by ID, trying to find in list');
+      }
+      
+      // Nếu không tìm thấy, tìm trong danh sách orders
+      if (!foundOrder) {
+        const orders = await orderService.getMyOrders();
+        console.log('OrderSuccess: All orders:', orders);
+        foundOrder = orders.find(o => o.code === orderCode || o.id === orderCode);
+        console.log('OrderSuccess: Found order in list:', foundOrder);
+      }
       
       if (foundOrder) {
+        // Tính total từ items nếu totalAmount không có
+        let calculatedTotal = foundOrder.totalAmount;
+        if (!calculatedTotal && foundOrder.items && foundOrder.items.length > 0) {
+          calculatedTotal = foundOrder.items.reduce((sum, item) => {
+            return sum + (item.totalPrice || item.finalPrice || 0);
+          }, 0);
+          // Thêm shipping fee nếu có
+          if (foundOrder.shippingFee) {
+            calculatedTotal += foundOrder.shippingFee;
+          }
+        }
+        
+        const calculatedSubtotal = calculatedTotal 
+          ? (calculatedTotal - (foundOrder.shippingFee || 0))
+          : ((foundOrder.totalAmount || 0) - (foundOrder.shippingFee || 0));
+        
+        console.log('OrderSuccess: Calculated values', {
+          totalAmount: foundOrder.totalAmount,
+          calculatedTotal,
+          shippingFee: foundOrder.shippingFee,
+          calculatedSubtotal,
+          items: foundOrder.items
+        });
+        
         setOrderData({
           order: foundOrder,
           paymentMethod: 'momo',
-          total: foundOrder.totalAmount,
-          subtotal: (foundOrder.totalAmount || 0) - (foundOrder.shippingFee || 0),
+          total: calculatedTotal || foundOrder.totalAmount || 0,
+          subtotal: calculatedSubtotal,
           shippingFee: foundOrder.shippingFee || 0,
           voucherDiscount: 0, // Có thể cần tính lại từ order
           fullName: foundOrder.receiverName || foundOrder.customerName,
@@ -87,6 +127,13 @@ function OrderSuccessPage() {
     fullName,
     address,
   };
+
+  // Debug log
+  useEffect(() => {
+    console.log('OrderSuccess: displayData', displayData);
+    console.log('OrderSuccess: orderData', orderData);
+    console.log('OrderSuccess: state', state);
+  }, [displayData, orderData, state]);
 
   const formatPrice = (price) =>
     new Intl.NumberFormat('vi-VN', {

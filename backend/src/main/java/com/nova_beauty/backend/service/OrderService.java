@@ -921,13 +921,13 @@ public class OrderService {
         LocalDateTime endDateTime = end.atTime(23, 59, 59, 999999999);
 
         Long totalOrders =
-                orderRepository.countByOrderDateTimeBetween(startDateTime, endDateTime);
+                orderRepository.countByOrderDateTimeBetween(startDateTime, endDateTime, start, end);
         Long cancelledOrders =
                 orderRepository.countCancelledOrdersByOrderDateTimeBetween(
-                        startDateTime, endDateTime);
+                        startDateTime, endDateTime, start, end);
         Long refundedOrders =
                 orderRepository.countRefundedOrdersByOrderDateTimeBetween(
-                        startDateTime, endDateTime);
+                        startDateTime, endDateTime, start, end);
 
         return OrderStatistics.builder()
                 .totalOrders(totalOrders)
