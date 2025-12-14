@@ -299,23 +299,22 @@ export default function RefundManagementPage() {
                                             <td>{refund.customer}</td>
                                             <td>
                                                 <div className={cx('refund-reason-cell')}>
-                                                    {refund.refundReasonType ? (
-                                                        <>
-                                                            <div className={cx('refund-reason-title')}>
-                                                                {refund.refundReasonType === 'store' 
-                                                                    ? 'Sản phẩm gặp sự cố từ cửa hàng'
-                                                                    : refund.refundReasonType === 'customer'
-                                                                    ? 'Thay đổi nhu cầu / Mua nhầm'
-                                                                    : refund.refundReasonType}
-                                                            </div>
-                                                            {refund.refundDescription && (
-                                                                <div className={cx('refund-description')}>
-                                                                    {refund.refundDescription.length > 80 
-                                                                        ? `${refund.refundDescription.substring(0, 80)}...` 
-                                                                        : refund.refundDescription}
-                                                                </div>
-                                                            )}
-                                                        </>
+                                                    {refund.refundReasonType && (
+                                                        <div className={cx('refund-reason-type')}>
+                                                            <span className={cx('refund-reason-label')}>Loại lý do:</span>
+                                                            <span className={cx('refund-reason-value')}>
+                                                                {refund.refundReasonType === 'store' ? 'Cửa hàng' : 
+                                                                 refund.refundReasonType === 'customer' ? 'Khách hàng' : 
+                                                                 refund.refundReasonType}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {refund.refundDescription ? (
+                                                        <div className={cx('refund-description')}>
+                                                            {refund.refundDescription.length > 100 
+                                                                ? `${refund.refundDescription.substring(0, 100)}...` 
+                                                                : refund.refundDescription}
+                                                        </div>
                                                     ) : (
                                                         <div className={cx('refund-description', 'no-description')}>
                                                             Chưa có lý do

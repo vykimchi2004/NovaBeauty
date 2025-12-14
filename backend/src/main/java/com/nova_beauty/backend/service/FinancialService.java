@@ -562,4 +562,47 @@ public class FinancialService {
                 .total(totalRevenue)
                 .build();
     }
+
+    /**
+     * Debug method để kiểm tra thông tin đơn hàng trong khoảng thời gian
+     *
+     * @param start Ngày bắt đầu
+     * @param end Ngày kết thúc
+     * @return Map chứa thông tin debug về đơn hàng
+     */
+    public Map<String, Object> debugOrdersInRange(LocalDate start, LocalDate end) {
+        LocalDateTime[] range = toDateTimeRange(start, end);
+        
+        // Lấy tất cả đơn hàng trong khoảng thời gian
+        List<Order> allOrders = orderRepository.findByOrderDateTimeBetween(range[0], range[1]);
+        
+        // Lấy các đơn hàng đã thanh toán thành công
+        List<Order> paidOrders = getPaidOrdersInRange(range[0], range[1]);
+        
+        // Thống kê theo status
+        Map<OrderStatus, Long> statusCount = allOrders.stream()
+                .collect(Collectors.groupingBy(Order::getStatus, Collectors.counting()));
+        
+        // Thống kê theo payment status
+        Map<PaymentStatus, Long> paymentStatusCount = allOrders.stream()
+                .collect(Collectors.groupingBy(Order::getPaymentStatus, Collectors.counting()));
+        
+        // Thống kê theo payment method
+        Map<PaymentMethod, Long> paymentMethodCount = allOrders.stream()
+                .filter(order -> order.getPaymentMethod() != null)
+                .collect(Collectors.groupingBy(Order::getPaymentMethod, Collectors.counting()));
+        
+        // Tính tổng doanh thu từ các đơn đã thanh toán
+        double totalRevenue = calculateTotalRevenue(paidOrders);
+        
+        return Map.of(
+                "dateRange", Map.of("start", start.toString(), "end", end.toString()),
+                "totalOrders", allOrders.size(),
+                "paidOrdersCount", paidOrders.size(),
+                "totalRevenue", totalRevenue,
+                "statusBreakdown", statusCount,
+                "paymentStatusBreakdown", paymentStatusCount,
+                "paymentMethodBreakdown", paymentMethodCount
+        );
+    }
 }

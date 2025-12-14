@@ -23,10 +23,10 @@ public interface OrderRepository extends JpaRepository<Order, String> {
      */
     @EntityGraph(
             attributePaths = {
-                "items",
-                "items.product",
-                "items.product.defaultMedia",
-                "items.product.mediaList"
+                    "items",
+                    "items.product",
+                    "items.product.defaultMedia",
+                    "items.product.mediaList"
             })
     @Query(
             "SELECT o FROM Order o WHERE o.user.email = :email "
@@ -39,29 +39,29 @@ public interface OrderRepository extends JpaRepository<Order, String> {
      */
     @EntityGraph(
             attributePaths = {
-                "items",
-                "items.product",
-                "items.product.defaultMedia",
-                "items.product.mediaList"
+                    "items",
+                    "items.product",
+                    "items.product.defaultMedia",
+                    "items.product.mediaList"
             })
     Optional<Order> findByCartId(String cartId);
 
     @EntityGraph(
             attributePaths = {
-                "items",
-                "items.product",
-                "items.product.defaultMedia",
-                "items.product.mediaList"
+                    "items",
+                    "items.product",
+                    "items.product.defaultMedia",
+                    "items.product.mediaList"
             })
     Optional<Order> findByCode(String code);
 
     @Override
     @EntityGraph(
             attributePaths = {
-                "items",
-                "items.product",
-                "items.product.defaultMedia",
-                "items.product.mediaList"
+                    "items",
+                    "items.product",
+                    "items.product.defaultMedia",
+                    "items.product.mediaList"
             })
     Optional<Order> findById(String id);
 
@@ -71,11 +71,11 @@ public interface OrderRepository extends JpaRepository<Order, String> {
      */
     @EntityGraph(
             attributePaths = {
-                "items",
-                "items.product",
-                "items.product.defaultMedia",
-                "items.product.mediaList",
-                "user"
+                    "items",
+                    "items.product",
+                    "items.product.defaultMedia",
+                    "items.product.mediaList",
+                    "user"
             })
     @Query("SELECT o FROM Order o WHERE o.status IN :statuses ORDER BY o.orderDateTime DESC")
     List<Order> findByStatusIn(
@@ -86,11 +86,11 @@ public interface OrderRepository extends JpaRepository<Order, String> {
      */
     @EntityGraph(
             attributePaths = {
-                "items",
-                "items.product",
-                "items.product.defaultMedia",
-                "items.product.mediaList",
-                "user"
+                    "items",
+                    "items.product",
+                    "items.product.defaultMedia",
+                    "items.product.mediaList",
+                    "user"
             })
     @Query("SELECT o FROM Order o WHERE o.orderDateTime BETWEEN :start AND :end ORDER BY o.orderDateTime DESC")
     Page<Order> findByOrderDateTimeBetween(
@@ -99,22 +99,13 @@ public interface OrderRepository extends JpaRepository<Order, String> {
             Pageable pageable);
 
     // Tìm các đơn hàng trong khoảng thời gian, sắp xếp theo orderDateTime DESC (không phân trang)
-    // Có fallback cho orderDate nếu orderDateTime là NULL
-    @Query("SELECT o FROM Order o WHERE " +
-           "(o.orderDateTime IS NOT NULL AND o.orderDateTime BETWEEN :start AND :end) OR " +
-           "(o.orderDateTime IS NULL AND o.orderDate IS NOT NULL AND o.orderDate BETWEEN :startDate AND :endDate) " +
-           "ORDER BY o.orderDateTime DESC, o.orderDate DESC")
-    List<Order> findByOrderDateTimeBetween(
-            @Param("start") LocalDateTime start,
-            @Param("end") LocalDateTime end,
-            @Param("startDate") LocalDate startDate,
-            @Param("endDate") LocalDate endDate);
+    List<Order> findByOrderDateTimeBetween(LocalDateTime start, LocalDateTime end);
 
     // Đếm số đơn hàng đã giao (DELIVERED) trong khoảng thời gian
     // Kiểm tra cả orderDateTime và orderDate (fallback nếu orderDateTime là NULL)
     @Query("SELECT COUNT(o) FROM Order o WHERE o.status = 'DELIVERED' AND " +
-           "((o.orderDateTime IS NOT NULL AND o.orderDateTime BETWEEN :start AND :end) OR " +
-           "(o.orderDateTime IS NULL AND o.orderDate IS NOT NULL AND o.orderDate BETWEEN :startDate AND :endDate))")
+            "((o.orderDateTime IS NOT NULL AND o.orderDateTime BETWEEN :start AND :end) OR " +
+            "(o.orderDateTime IS NULL AND o.orderDate IS NOT NULL AND o.orderDate BETWEEN :startDate AND :endDate))")
     Long countByOrderDateTimeBetween(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,
@@ -124,8 +115,8 @@ public interface OrderRepository extends JpaRepository<Order, String> {
     // Đếm số đơn hàng bị hủy trong khoảng thời gian
     @Query(
             "SELECT COUNT(o) FROM Order o WHERE o.status = 'CANCELLED' AND " +
-            "((o.orderDateTime IS NOT NULL AND o.orderDateTime BETWEEN :start AND :end) OR " +
-            "(o.orderDateTime IS NULL AND o.orderDate IS NOT NULL AND o.orderDate BETWEEN :startDate AND :endDate))")
+                    "((o.orderDateTime IS NOT NULL AND o.orderDateTime BETWEEN :start AND :end) OR " +
+                    "(o.orderDateTime IS NULL AND o.orderDate IS NOT NULL AND o.orderDate BETWEEN :startDate AND :endDate))")
     Long countCancelledOrdersByOrderDateTimeBetween(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,
@@ -135,8 +126,8 @@ public interface OrderRepository extends JpaRepository<Order, String> {
     // Đếm số đơn hàng đã hoàn tiền trong khoảng thời gian
     @Query(
             "SELECT COUNT(o) FROM Order o WHERE o.status = 'REFUNDED' AND " +
-            "((o.orderDateTime IS NOT NULL AND o.orderDateTime BETWEEN :start AND :end) OR " +
-            "(o.orderDateTime IS NULL AND o.orderDate IS NOT NULL AND o.orderDate BETWEEN :startDate AND :endDate))")
+                    "((o.orderDateTime IS NOT NULL AND o.orderDateTime BETWEEN :start AND :end) OR " +
+                    "(o.orderDateTime IS NULL AND o.orderDate IS NOT NULL AND o.orderDate BETWEEN :startDate AND :endDate))")
     Long countRefundedOrdersByOrderDateTimeBetween(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end,
