@@ -160,7 +160,57 @@ public class CartService {
                     tax = 0.08; // Mặc định 8% như frontend
                 }
                 double priceWithTax = variantPrice * (1.0 + tax);
-                return Math.round(priceWithTax); // Làm tròn như frontend
+                
+                // Áp dụng discount từ promotion nếu có (giống như sản phẩm không có variant)
+                // Tìm promotion active (giống logic cho sản phẩm không có variant)
+                var today = java.time.LocalDate.now();
+                com.nova_beauty.backend.entity.Promotion activePromotion = null;
+
+                // Kiểm tra promotion trực tiếp của product
+                if (product.getPromotion() != null && isPromotionActive(product.getPromotion(), today)) {
+                    activePromotion = product.getPromotion();
+                }
+
+                // Nếu chưa có, tìm promotion theo productId
+                if (activePromotion == null) {
+                    var promosByProduct = promotionRepository.findActiveByProductId(product.getId(), today);
+                    if (!promosByProduct.isEmpty()) {
+                        activePromotion = promosByProduct.get(0); // Lấy promotion đầu tiên
+                    }
+                }
+
+                // Nếu chưa có, tìm promotion theo category
+                if (activePromotion == null && product.getCategory() != null) {
+                    var promosByCategory = promotionRepository.findActiveByCategoryId(
+                            product.getCategory().getId(), today);
+                    if (!promosByCategory.isEmpty()) {
+                        activePromotion = promosByCategory.get(0); // Lấy promotion đầu tiên
+                    }
+                }
+
+                // Tính discount và final price cho variant (giống logic frontend)
+                if (activePromotion != null) {
+                    // Tính tỷ lệ discount từ giá sản phẩm chung (unitPrice * (1 + tax))
+                    double productUnitPrice = product.getUnitPrice() != null ? product.getUnitPrice() : 0.0;
+                    double productTax = product.getTax() != null ? product.getTax() : 0.08;
+                    double originalProductPriceWithTax = productUnitPrice * (1.0 + productTax);
+                    
+                    // Tính discount amount từ promotion cho giá sản phẩm chung
+                    double productDiscountAmount = calculateDiscountAmount(activePromotion, originalProductPriceWithTax);
+                    
+                    // Tính tỷ lệ discount thực tế đã được áp dụng
+                    double discountRate = originalProductPriceWithTax > 0 
+                        ? productDiscountAmount / originalProductPriceWithTax 
+                        : 0;
+                    
+                    // Áp dụng cùng tỷ lệ discount cho variant
+                    double variantDiscount = priceWithTax * discountRate;
+                    double finalPrice = Math.max(0, priceWithTax - variantDiscount);
+                    return Math.round(finalPrice);
+                } else {
+                    // Không có promotion, trả về giá variant có thuế
+                    return Math.round(priceWithTax);
+                }
             }
         }
 

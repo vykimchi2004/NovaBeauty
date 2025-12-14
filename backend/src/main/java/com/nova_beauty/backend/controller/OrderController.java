@@ -125,6 +125,21 @@ public class OrderController {
                 .build();
     }
 
+    /**
+     * Endpoint để frontend check và update order status sau khi redirect từ MoMo
+     * Frontend sẽ gọi endpoint này với orderCode và resultCode từ MoMo redirect
+     */
+    @PostMapping("/check-momo-payment")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ApiResponse<OrderDetailResponse> checkMomoPayment(
+            @RequestParam String orderCode,
+            @RequestParam(required = false) Integer resultCode) {
+        Order order = orderService.checkAndUpdateMomoPaymentStatus(orderCode, resultCode);
+        return ApiResponse.<OrderDetailResponse>builder()
+                .result(toDetailResponse(order))
+                .build();
+    }
+
     @PostMapping("/{id}/request-return")
     @PreAuthorize("hasRole('CUSTOMER')")
     public ApiResponse<OrderDetailResponse> requestReturn(

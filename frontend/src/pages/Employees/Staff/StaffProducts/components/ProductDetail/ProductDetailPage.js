@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faEdit, faTimes, faTrash } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from '../../StaffProducts.module.scss';
 import fallbackImage from '~/assets/images/products/image1.jpg';
@@ -13,10 +13,10 @@ function ProductDetailPage({
   open,
   product,
   formatPrice,
-  getStatusBadge,
-  getNormalizedStatus,
   onClose,
   onEdit,
+  onDelete,
+  canDelete = true, // Mặc định true cho trang staff
 }) {
   const detailProduct = product || {};
 
@@ -183,16 +183,8 @@ function ProductDetailPage({
     { label: 'Trọng lượng', value: displayWeight() },
     { label: 'Kết cấu', value: textureInfo },
     { label: 'Loại da', value: skinTypeInfo },
-    { label: 'Ngày gửi', value: formatDateTime(detailProduct.createdAt) },
+    { label: 'Ngày tạo', value: formatDateTime(detailProduct.createdAt) },
   );
-
-  if (detailProduct.approvedAt) {
-    infoRows.push({ label: 'Ngày duyệt', value: formatDateTime(detailProduct.approvedAt) });
-  }
-
-  if (detailProduct.approvedByName) {
-    infoRows.push({ label: 'Người duyệt', value: detailProduct.approvedByName });
-  }
 
   // Hiển thị tồn kho (chỉ khi không có color variants)
   if (!colorVariants || colorVariants.length === 0) {
@@ -217,9 +209,11 @@ function ProductDetailPage({
     if (onEdit) onEdit(detailProduct);
   };
 
-  const normalizedStatus = getNormalizedStatus
-    ? getNormalizedStatus(detailProduct)
-    : detailProduct.status;
+  const handleDelete = () => {
+    if (onDelete && detailProduct) {
+      onDelete(detailProduct);
+    }
+  };
 
   if (!open || !product) {
     return null;
@@ -301,9 +295,6 @@ function ProductDetailPage({
               <div className={cx('detailRight')}>
                 <div className={cx('detailHeaderBlock')}>
                   <h3>Thông tin sản phẩm</h3>
-                  <div className={cx('detailStatus')}>
-                    {getStatusBadge ? getStatusBadge(detailProduct.status) : normalizedStatus}
-                  </div>
                 </div>
 
                 <div className={cx('detailInfoList')}>
@@ -405,18 +396,17 @@ function ProductDetailPage({
                   </div>
                 )}
 
-                {detailProduct.rejectionReason && (
-                  <div className={cx('detailTextGroup', 'rejectionReason')}>
-                    <span className={cx('detailInfoLabel')}>Lý do từ chối</span>
-                    <p className={cx('detailInfoValue')}>{detailProduct.rejectionReason}</p>
-                  </div>
-                )}
-
                 <div className={cx('detailActions')}>
                   <button className={cx('primaryBtn')} onClick={handleEdit}>
                     <FontAwesomeIcon icon={faEdit} />
                     Sửa sản phẩm
                   </button>
+                  {canDelete && onDelete && (
+                    <button className={cx('deleteBtn')} onClick={handleDelete}>
+                      <FontAwesomeIcon icon={faTrash} />
+                      Xóa sản phẩm
+                    </button>
+                  )}
                   <button className={cx('secondaryBtn')} onClick={onClose}>
                     Đóng
                   </button>

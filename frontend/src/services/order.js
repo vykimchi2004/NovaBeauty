@@ -155,6 +155,26 @@ const orderService = {
             return { ok: false, status: error.status || 500, data: null };
         }
     },
+
+    /**
+     * Kiểm tra và cập nhật trạng thái thanh toán MoMo sau khi redirect
+     * @param {string} orderCode - Mã đơn hàng
+     * @param {number} resultCode - Mã kết quả từ MoMo (0 = thành công)
+     */
+    async checkMomoPayment(orderCode, resultCode) {
+        try {
+            const response = await apiClient.post(
+                `/orders/check-momo-payment?orderCode=${encodeURIComponent(orderCode)}${resultCode !== null && resultCode !== undefined ? `&resultCode=${resultCode}` : ''}`
+            );
+            if (response && typeof response === 'object' && 'result' in response) {
+                return response.result;
+            }
+            return response;
+        } catch (error) {
+            console.error('[Order Service] checkMomoPayment error:', error);
+            throw error;
+        }
+    },
 };
 
 export default orderService;

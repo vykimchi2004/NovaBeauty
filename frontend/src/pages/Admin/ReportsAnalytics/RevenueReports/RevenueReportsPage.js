@@ -80,94 +80,137 @@ function RevenueReportsPage({ timeMode = 'day', customDateRange = null }) {
             );
         }
 
+        // Sắp xếp dữ liệu theo thời gian (từ sớm đến muộn)
+        const sortedData = [...data].sort((a, b) => {
+            const dateA = a.dateTime ? new Date(a.dateTime) : (a.date ? new Date(a.date) : new Date(0));
+            const dateB = b.dateTime ? new Date(b.dateTime) : (b.date ? new Date(b.date) : new Date(0));
+            return dateA.getTime() - dateB.getTime();
+        });
+
+        // Kích thước biểu đồ
         const width = 800;
         const height = 300;
-        const padding = { top: 20, right: 40, bottom: 40, left: 60 };
+        // Tăng padding.left để có đủ không gian cho nhãn Y-axis (giá trị tiền)
+        const padding = { top: 20, right: 40, bottom: 50, left: 80 };
         const chartWidth = width - padding.left - padding.right;
         const chartHeight = height - padding.top - padding.bottom;
 
-        const values = data.map(item => item.total || 0);
-        const maxValue = Math.max(...values, 1);
-        const minValue = Math.min(...values, 0);
+        // Tính toán giá trị min và max
+        const values = sortedData.map(item => Number(item.total) || 0);
+        const actualMaxValue = values.length > 0 ? Math.max(...values) : 0;
+        const actualMinValue = values.length > 0 ? Math.min(...values) : 0;
+        
+        // Nếu tất cả giá trị bằng nhau và > 0, dùng 0 làm min để hiển thị đầy đủ range
+        let minValue = (actualMinValue === actualMaxValue && actualMaxValue > 0) ? 0 : actualMinValue;
+        
+        // Làm tròn maxValue lên để có padding phía trên và làm tròn đẹp
+        let maxValue = actualMaxValue;
+        if (maxValue > 0) {
+            // Thêm 10% padding phía trên
+            maxValue = maxValue * 1.1;
+            // Làm tròn lên theo bậc thang đẹp
+            if (maxValue >= 1000000) {
+                maxValue = Math.ceil(maxValue / 100000) * 100000; // Làm tròn đến hàng trăm nghìn
+            } else if (maxValue >= 100000) {
+                maxValue = Math.ceil(maxValue / 10000) * 10000; // Làm tròn đến hàng chục nghìn
+            } else if (maxValue >= 10000) {
+                maxValue = Math.ceil(maxValue / 1000) * 1000; // Làm tròn đến hàng nghìn
+            } else if (maxValue >= 1000) {
+                maxValue = Math.ceil(maxValue / 100) * 100; // Làm tròn đến hàng trăm
+            } else {
+                maxValue = Math.ceil(maxValue / 10) * 10; // Làm tròn đến hàng chục
+            }
+        } else {
+            maxValue = 1;
+        }
 
+        // Scale functions
         const xScale = (index) => {
-            return padding.left + (index / (data.length - 1 || 1)) * chartWidth;
+            if (sortedData.length === 1) {
+                return padding.left + chartWidth / 2; // Đặt ở giữa nếu chỉ có 1 điểm
+            }
+            return padding.left + (index / (sortedData.length - 1)) * chartWidth;
         };
 
         const yScale = (value) => {
-            const range = maxValue - minValue || 1;
-            return padding.top + chartHeight - ((value - minValue) / range) * chartHeight;
+            const range = maxValue - minValue;
+            if (range === 0) {
+                // Nếu range = 0, đặt ở giữa biểu đồ
+                return padding.top + chartHeight / 2;
+            }
+            // Tính vị trí Y: giá trị cao hơn ở trên, giá trị thấp hơn ở dưới
+            const normalizedValue = (value - minValue) / range;
+            return padding.top + chartHeight - (normalizedValue * chartHeight);
         };
 
-        // Generate path for line
-        const pathData = data
-            .map((item, index) => {
-                const x = xScale(index);
-                const y = yScale(item.total || 0);
-                return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-            })
-            .join(' ');
-
-        // Generate area path
-        const areaPath = `${pathData} L ${xScale(data.length - 1)} ${padding.top + chartHeight} L ${padding.left} ${padding.top + chartHeight} Z`;
-
-        // Format date labels
+        // Format date label
         const formatDateLabel = (item) => {
             if (item.dateTime) {
-                return new Date(item.dateTime).toLocaleDateString('vi-VN', { 
-                    day: '2-digit', 
-                    month: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
+                const date = new Date(item.dateTime);
+                const hours = date.getHours().toString().padStart(2, '0');
+                const minutes = date.getMinutes().toString().padStart(2, '0');
+                const day = date.getDate().toString().padStart(2, '0');
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                return `${hours}:${minutes} ${day}-${month}`;
             }
             if (item.date) {
-                return new Date(item.date).toLocaleDateString('vi-VN', { 
-                    day: '2-digit', 
-                    month: '2-digit' 
-                });
+                const date = new Date(item.date);
+                const day = date.getDate().toString().padStart(2, '0');
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                return `${day}-${month}`;
             }
             return '-';
         };
 
+        // Tạo đường path cho line chart
+        let pathData = '';
+        let areaPath = '';
+        if (sortedData.length > 0) {
+            const points = sortedData.map((item, index) => {
+                const x = xScale(index);
+                const y = yScale(item.total || 0);
+                return { x, y };
+            });
+
+            // Tạo path cho đường line
+            pathData = points.map((point, index) => {
+                return `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`;
+            }).join(' ');
+
+            // Tạo path cho area (vùng dưới đường line)
+            if (points.length > 0) {
+                const firstPoint = points[0];
+                const lastPoint = points[points.length - 1];
+                const bottomY = padding.top + chartHeight;
+                areaPath = `${pathData} L ${lastPoint.x} ${bottomY} L ${firstPoint.x} ${bottomY} Z`;
+            }
+        }
+
+        // Tạo grid lines với nhãn đúng thứ tự (từ dưới lên trên: min -> max)
+        const gridLines = [];
+        const numGridLines = 5;
+        
+        for (let i = 0; i < numGridLines; i++) {
+            // ratio từ 0 (dưới cùng) đến 1 (trên cùng)
+            const ratio = i / (numGridLines - 1);
+            // Vị trí Y: ratio = 0 ở dưới cùng, ratio = 1 ở trên cùng
+            const y = padding.top + chartHeight - (ratio * chartHeight);
+            // Giá trị: ratio = 0 là minValue, ratio = 1 là maxValue
+            const value = minValue + (maxValue - minValue) * ratio;
+            
+            gridLines.push({ y, value, ratio });
+        }
+
         return (
             <div className={cx('chartContainer')}>
-                <svg width={width} height={height} className={cx('chart')}>
-                    {/* Grid lines */}
-                    {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-                        const y = padding.top + chartHeight - (ratio * chartHeight);
-                        const value = minValue + (maxValue - minValue) * (1 - ratio);
-                        return (
-                            <g key={ratio}>
-                                <line
-                                    x1={padding.left}
-                                    y1={y}
-                                    x2={width - padding.right}
-                                    y2={y}
-                                    stroke="#e0e0e0"
-                                    strokeWidth="1"
-                                    strokeDasharray="4,4"
-                                />
-                                <text
-                                    x={padding.left - 10}
-                                    y={y + 4}
-                                    textAnchor="end"
-                                    fontSize="12"
-                                    fill="#666"
-                                >
-                                    {formatPrice(value)}
-                                </text>
-                            </g>
-                        );
-                    })}
-
-                    {/* Area under line */}
-                    <path
-                        d={areaPath}
-                        fill="url(#gradient)"
-                        opacity="0.3"
-                    />
-
+                <svg 
+                    width={width} 
+                    height={height} 
+                    className={cx('chart')}
+                    viewBox={`0 0 ${width} ${height}`}
+                    preserveAspectRatio="xMidYMid meet"
+                    style={{ overflow: 'visible' }}
+                >
                     {/* Gradient definition */}
                     <defs>
                         <linearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -176,7 +219,42 @@ function RevenueReportsPage({ timeMode = 'day', customDateRange = null }) {
                         </linearGradient>
                     </defs>
 
+                    {/* Grid lines */}
+                    {gridLines.map((grid, index) => (
+                        <g key={index}>
+                                <line
+                                    x1={padding.left}
+                                y1={grid.y}
+                                    x2={width - padding.right}
+                                y2={grid.y}
+                                    stroke="#e0e0e0"
+                                    strokeWidth="1"
+                                    strokeDasharray="4,4"
+                                />
+                                <text
+                                    x={padding.left - 15}
+                                    y={grid.y + 4}
+                                    textAnchor="end"
+                                    fontSize="12"
+                                    fill="#666"
+                                    dominantBaseline="middle"
+                                >
+                                    {formatPrice(grid.value)}
+                                </text>
+                            </g>
+                    ))}
+
+                    {/* Area under line */}
+                    {areaPath && (
+                    <path
+                        d={areaPath}
+                        fill="url(#gradient)"
+                        opacity="0.3"
+                    />
+                    )}
+
                     {/* Line */}
+                    {pathData && (
                     <path
                         d={pathData}
                         fill="none"
@@ -185,11 +263,13 @@ function RevenueReportsPage({ timeMode = 'day', customDateRange = null }) {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                     />
+                    )}
 
                     {/* Data points */}
-                    {data.map((item, index) => {
+                    {sortedData.map((item, index) => {
                         const x = xScale(index);
                         const y = yScale(item.total || 0);
+                        const value = item.total || 0;
                         return (
                             <g key={index}>
                                 <circle
@@ -200,26 +280,41 @@ function RevenueReportsPage({ timeMode = 'day', customDateRange = null }) {
                                     stroke="#fff"
                                     strokeWidth="2"
                                 />
+                                {/* Value label above the point */}
+                                <text
+                                    x={x}
+                                    y={y - 15}
+                                    textAnchor="middle"
+                                    fontSize="11"
+                                    fill="#333"
+                                    fontWeight="500"
+                                    dominantBaseline="auto"
+                                >
+                                    {formatPrice(value)}
+                                </text>
                                 {/* Tooltip on hover */}
                                 <title>
-                                    {formatDateLabel(item)}: {formatPrice(item.total || 0)}
+                                    {formatDateLabel(item)}: {formatPrice(value)}
                                 </title>
                             </g>
                         );
                     })}
 
                     {/* X-axis labels */}
-                    {data.map((item, index) => {
-                        if (data.length > 10 && index % Math.ceil(data.length / 8) !== 0) return null;
+                    {sortedData.map((item, index) => {
+                        if (sortedData.length > 10 && index % Math.ceil(sortedData.length / 8) !== 0) {
+                            return null;
+                        }
                         const x = xScale(index);
                         return (
                             <text
                                 key={index}
                                 x={x}
-                                y={height - padding.bottom + 20}
+                                y={height - padding.bottom + 25}
                                 textAnchor="middle"
                                 fontSize="11"
                                 fill="#666"
+                                dominantBaseline="hanging"
                             >
                                 {formatDateLabel(item)}
                             </text>

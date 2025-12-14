@@ -83,7 +83,7 @@ function CheckoutDetailPage() {
   const directCheckoutItem = useMemo(() => {
     if (!directCheckout || !directProduct) return null;
     
-    // Tính giá dựa trên variant nếu có colorCode
+    // Tính giá dựa trên variant nếu có colorCode - ÁP DỤNG DISCOUNT TỪ PROMOTION
     let unitPrice = directProduct.currentPrice || directProduct.price || 0;
     let finalPrice = unitPrice * directQuantity;
     
@@ -95,8 +95,32 @@ function CheckoutDetailPage() {
         const vCode = (v.code || v.name || '').toString().trim().toLowerCase();
         return vCode === code;
       });
-      if (variant && variant.price) {
-        unitPrice = variant.price;
+      if (variant && variant.price && parseFloat(variant.price) > 0) {
+        // Variant có giá riêng, tính giá hiển thị (có thuế)
+        const variantPrice = parseFloat(variant.price);
+        const tax = directProduct.tax != null ? directProduct.tax : 0.08; // Tax là decimal (0.08 = 8%)
+        const priceWithTax = variantPrice * (1 + tax);
+        
+        // Áp dụng discount từ promotion nếu có - TÍNH THEO TỶ LỆ ĐỂ TẤT CẢ VARIANT GIẢM CÙNG MỨC
+        if (directProduct.promotionId && directProduct.discountValue && directProduct.discountValue > 0 && directProduct.unitPrice) {
+          // Tính giá gốc của sản phẩm (unitPrice + tax) - đây là giá trước discount
+          const productUnitPrice = parseFloat(directProduct.unitPrice) || 0;
+          const productTax = directProduct.tax != null ? directProduct.tax : 0.08;
+          const originalProductPriceWithTax = productUnitPrice * (1 + productTax);
+          
+          // Tính tỷ lệ discount (%) từ giá gốc của sản phẩm
+          const discountRate = originalProductPriceWithTax > 0 
+            ? directProduct.discountValue / originalProductPriceWithTax 
+            : 0;
+          
+          // Áp dụng cùng tỷ lệ discount cho variant
+          const variantDiscount = priceWithTax * discountRate;
+          const finalVariantPrice = Math.max(0, priceWithTax - variantDiscount);
+          unitPrice = Math.round(finalVariantPrice);
+        } else {
+          // Không có promotion, dùng giá variant với thuế
+          unitPrice = Math.round(priceWithTax);
+        }
         finalPrice = unitPrice * directQuantity;
       }
     }
@@ -113,7 +137,7 @@ function CheckoutDetailPage() {
       finalPrice: finalPrice,
       imageUrl: directProduct.defaultMediaUrl || directProduct.mediaUrls?.[0],
     };
-  }, [directCheckout, directProduct, directQuantity, directColorCode]);
+  }, [directCheckout, directProduct, directQuantity, directColorCode, directProductId]);
 
   // Lọc ra các item được chọn thanh toán (giống LuminaBook)
   const checkoutItems = useMemo(() => {
