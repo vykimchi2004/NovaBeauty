@@ -94,6 +94,11 @@ public class AddressService {
         User currentUser = getCurrentUser();
         Address address = getOwnedAddress(addressId, currentUser);
 
+        // Prevent deleting the current default address
+        if (address.isDefaultAddress()) {
+            throw new AppException(ErrorCode.BAD_REQUEST);
+        }
+
         currentUser.getAddresses().remove(address);
         userRepository.save(currentUser);
 

@@ -6,6 +6,7 @@ import {
   formatFullAddress, 
   setDefaultAddress, 
   createAddress,
+  deleteAddress,
   getProvinces,
   getDistricts,
   getWards
@@ -32,6 +33,7 @@ function ProfileSection({
   selectedAddress,
 }) {
   const [addresses, setAddresses] = useState([]);
+  const [deletingAddressId, setDeletingAddressId] = useState('');
   const [loadingAddresses, setLoadingAddresses] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   
@@ -197,6 +199,42 @@ function ProfileSection({
       setAddresses(sorted);
     } catch (err) {
       console.error('Không thể đặt địa chỉ mặc định', err);
+    }
+  };
+
+  const handleDeleteAddress = async (address) => {
+    const addressId = address.id || address.addressId || address.address_id;
+    if (!addressId) {
+      console.error('Address ID not found:', address);
+      return;
+    }
+    if (address.defaultAddress) {
+      notify.error('Không thể xóa địa chỉ mặc định. Hãy đặt địa chỉ khác làm mặc định trước.');
+      return;
+    }
+
+    try {
+      setDeletingAddressId(addressId);
+      await deleteAddress(addressId);
+      notify.success('Đã xóa địa chỉ');
+      if (setAddressRefreshKey) {
+        setAddressRefreshKey((prev) => prev + 1);
+      }
+      // Refresh addresses
+      const data = await getMyAddresses();
+      const sorted = Array.isArray(data) 
+        ? [...data].sort((a, b) => {
+            if (a?.defaultAddress && !b?.defaultAddress) return -1;
+            if (!a?.defaultAddress && b?.defaultAddress) return 1;
+            return 0;
+          })
+        : [];
+      setAddresses(sorted);
+    } catch (err) {
+      console.error('Không thể xóa địa chỉ', err);
+      notify.error('Không thể xóa địa chỉ. Vui lòng thử lại.');
+    } finally {
+      setDeletingAddressId('');
     }
   };
 
@@ -660,6 +698,14 @@ function ProfileSection({
                           {address.defaultAddress && (
                             <span className={cx('addressBadge')}>Mặc định</span>
                           )}
+                        <button
+                          className={cx('addressBtn', 'danger', 'addressDeleteBtn')}
+                          onClick={() => handleDeleteAddress(address)}
+                          disabled={address.defaultAddress || deletingAddressId === addressId}
+                          title={address.defaultAddress ? 'Đặt địa chỉ khác làm mặc định trước khi xóa' : 'Xóa địa chỉ này'}
+                        >
+                          Xóa
+                        </button>
                         </div>
                         <p className={cx('addressLine')}>{formatFullAddress(address)}</p>
                       </div>

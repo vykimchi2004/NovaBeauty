@@ -316,8 +316,8 @@
   min-width: 800px;
 
   thead {
-    background: $primary-700;
-    color: $white;
+    background: #e5677d;
+    color: #fff;
 
     th {
       padding: 16px 12px;
@@ -334,7 +334,7 @@
       transition: background-color 0.2s;
 
       &:hover {
-        background-color: $primary-50;
+        background-color: #fff0f6;
       }
 
       &:last-child {
@@ -345,7 +345,7 @@
     td {
       padding: 16px 12px;
       font-size: 14px;
-      color: $text-dark;
+      color: #212529;
       vertical-align: middle;
     }
   }
@@ -353,12 +353,12 @@
 
 .idCell {
   font-weight: 600;
-  color: $text-dark;
+  color: #212529;
 }
 
 .nameCell {
   font-weight: 500;
-  color: $text-dark;
+  color: #212529;
   max-width: 320px;
 }
 
@@ -387,7 +387,7 @@
 
 .priceCell {
   font-weight: 600;
-  color: $primary;
+  color: #e5677d;
 }
 
 .actions {
@@ -408,7 +408,7 @@
 
   &.editBtn {
     background: #1c7ed6;
-    color: $white;
+    color: #fff;
 
     &:hover {
       background: #1971c2;
@@ -418,7 +418,7 @@
 
   &.viewBtn {
     background: #2f9e44;
-    color: $white;
+    color: #fff;
 
     &:hover {
       background: #2b8a3e;
@@ -428,7 +428,7 @@
 
   &.approveBtn {
     background: #1c7ed6;
-    color: $white;
+    color: #fff;
 
     &:hover {
       background: #1971c2;
@@ -438,7 +438,7 @@
 
   &.rejectBtn {
     background: #e03131;
-    color: $white;
+    color: #fff;
 
     &:hover {
       background: #c92a2a;
@@ -448,7 +448,7 @@
 
   &.deleteBtn {
     background: #e03131;
-    color: $white;
+    color: #fff;
 
     &:hover {
       background: #c92a2a;
@@ -582,7 +582,7 @@
     transition: border-color 0.2s;
 
     &:focus {
-      border-color: $primary;
+      border-color: #e5677d;
       box-shadow: 0 0 0 3px rgba(255, 128, 181, 0.15);
     }
   }
@@ -673,7 +673,7 @@
   transition: border-color 0.2s, box-shadow 0.2s;
 
   &.active {
-    border-color: $primary;
+      border-color: #e5677d;
     box-shadow: 0 0 0 2px rgba(229, 103, 125, 0.15);
   }
 
@@ -709,8 +709,8 @@
   transition: all 0.2s;
 
   &:hover:not(:disabled) {
-    border-color: $primary;
-    color: $primary;
+    border-color: #e5677d;
+    color: #e5677d;
   }
 
   &:disabled {
@@ -779,7 +779,7 @@
   overflow: hidden;
 
   &.active {
-    border-color: $primary;
+    border-color: #e5677d;
   }
 
   &:hover {
@@ -827,11 +827,11 @@
 }
 
 .submitBtn {
-  background: $primary-700;
+    background: #e5677d;
   color: #fff;
 
   &:hover {
-    background: $primary-600;
+    background: #e5677d;
     box-shadow: 0 4px 12px rgba(255, 84, 155, 0.3);
   }
 }

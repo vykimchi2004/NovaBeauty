@@ -2077,6 +2077,11 @@ $white: #fff;
   gap: 8px;
   margin-bottom: 8px;
   flex-wrap: wrap;
+
+  .addressDeleteBtn {
+    margin-left: auto;
+    padding: 6px 10px;
+  }
 }
 
 .addressRecipient {
@@ -2132,6 +2137,24 @@ $white: #fff;
   font-size: 14px;
   font-weight: 600;
   transition: all 0.15s ease;
+
+  &.danger {
+    background: #ffe3e3;
+    color: #c92a2a;
+    border: 1px solid #ffc9c9;
+
+    &:hover {
+      background: #ffc9c9;
+      color: #b02525;
+    }
+
+    &:disabled {
+      background: #f1f3f5;
+      color: #adb5bd;
+      border-color: #e9ecef;
+      cursor: not-allowed;
+    }
+  }
 
   &.primary {
     background: $primary;
