@@ -203,11 +203,10 @@ public class OrderService {
                     cartService.removeCartItemsForOrder(savedOrder.getUser(), pricing.selectedCartItemIds);
                 }
 
-                // Ghi nhận doanh thu: COD chỉ ghi nhận khi DELIVERED, các phương thức khác ghi nhận ngay
-                if (paymentMethod != PaymentMethod.COD) {
-                    recordOrderRevenue(savedOrder);
-                }
-                // COD: Doanh thu sẽ được ghi nhận khi status chuyển sang DELIVERED (trong ShipmentService)
+                // Ghi nhận doanh thu:
+                // - COD: chỉ ghi nhận khi DELIVERED (trong ShipmentService)
+                // - MoMo: chỉ ghi nhận khi đã xác nhận thanh toán thành công (trong IPN callback hoặc check payment status)
+                // Không gọi recordOrderRevenue ở đây để tránh duplicate khi MoMo callback sau đó
 
                 break; // Thành công, thoát khỏi retry loop
             } catch (Exception e) {
@@ -285,12 +284,10 @@ public class OrderService {
                     cartService.removeCartItemsForOrder(savedOrder.getUser(), pricing.selectedCartItemIds);
                 }
 
-                // Ghi nhận doanh thu: COD chỉ ghi nhận khi DELIVERED, các phương thức khác ghi nhận ngay
-                PaymentMethod orderPaymentMethod = savedOrder.getPaymentMethod();
-                if (orderPaymentMethod != PaymentMethod.COD) {
-                    recordOrderRevenue(savedOrder);
-                }
-                // COD: Doanh thu sẽ được ghi nhận khi status chuyển sang DELIVERED (trong ShipmentService)
+                // Ghi nhận doanh thu:
+                // - COD: chỉ ghi nhận khi DELIVERED (trong ShipmentService)
+                // - MoMo: chỉ ghi nhận khi đã xác nhận thanh toán thành công (trong IPN callback hoặc check payment status)
+                // Không gọi recordOrderRevenue ở đây để tránh duplicate khi MoMo callback sau đó
 
                 return savedOrder;
             } catch (Exception e) {
@@ -640,8 +637,13 @@ public class OrderService {
         }
 
         // Ghi nhận doanh thu cho đơn hàng MoMo đã thanh toán thành công
-        log.info("handleMomoIpn: Recording revenue for order {}", request.getOrderId());
-        recordOrderRevenue(reloadedOrder);
+        log.info("handleMomoIpn: Attempting to record revenue for order {}", request.getOrderId());
+        if (financialService.hasRecordedRevenue(request.getOrderId())) {
+            log.warn("handleMomoIpn: Revenue already recorded for order {}, skipping", request.getOrderId());
+        } else {
+            recordOrderRevenue(reloadedOrder);
+            log.info("handleMomoIpn: Revenue recording completed for order {}", request.getOrderId());
+        }
 
         // Parse và xóa cart items
         List<String> cartItemIds = parseCartItemIds(reloadedOrder.getCartItemIdsSnapshot());
@@ -718,8 +720,16 @@ public class OrderService {
                 }
             }
 
-            // Ghi nhận doanh thu
-            recordOrderRevenue(reloadedOrder);
+            // KHÔNG ghi nhận doanh thu ở đây - chỉ ghi nhận trong handleMomoIpn (IPN callback)
+            // Lý do: IPN callback là nguồn chính thức từ MoMo, và việc ghi nhận doanh thu ở 2 nơi
+            // có thể gây duplicate do race condition
+            // Nếu IPN chưa đến, doanh thu sẽ được ghi nhận khi IPN đến
+            log.info("checkAndUpdateMomoPaymentStatus: Skipping revenue recording for order {} - will be handled by IPN callback", orderCode);
+            if (financialService.hasRecordedRevenue(reloadedOrder.getId())) {
+                log.info("checkAndUpdateMomoPaymentStatus: Revenue already recorded for order {} (by IPN)", orderCode);
+            } else {
+                log.warn("checkAndUpdateMomoPaymentStatus: Revenue not recorded yet for order {} - waiting for IPN callback", orderCode);
+            }
 
             // Xóa cart items
             List<String> cartItemIds = parseCartItemIds(reloadedOrder.getCartItemIdsSnapshot());
@@ -751,6 +761,8 @@ public class OrderService {
     }
 
     // Đảm bảo doanh thu được ghi nhận cho đơn hàng
+    // Sử dụng @Transactional để đảm bảo atomicity và tránh race condition
+    @Transactional
     public void ensureOrderRevenueRecorded(Order order) {
         if (order == null || order.getItems() == null || order.getItems().isEmpty()) {
             return;
@@ -761,13 +773,17 @@ public class OrderService {
             return;
         }
 
+        String orderId = order.getId();
+        
         // Kiểm tra xem đã ghi nhận doanh thu chưa (tránh duplicate)
-        if (financialService.hasRecordedRevenue(order.getId())) {
-            log.debug("Revenue already recorded for order {}", order.getId());
+        // Check trước khi vào transaction để tránh race condition
+        if (financialService.hasRecordedRevenue(orderId)) {
+            log.info("Revenue already recorded for order {}, skipping", orderId);
             return;
         }
 
         // Ghi nhận doanh thu cho từng sản phẩm trong đơn hàng
+        int recordedCount = 0;
         for (OrderItem item : order.getItems()) {
             if (item.getProduct() != null && item.getFinalPrice() != null && item.getFinalPrice() > 0) {
                 try {
@@ -777,10 +793,16 @@ public class OrderService {
                             item.getFinalPrice(),
                             order.getPaymentMethod()
                     );
+                    recordedCount++;
                 } catch (Exception e) {
-                    log.error("Error recording revenue for order {} item {}", order.getId(), item.getId(), e);
+                    log.error("Error recording revenue for order {} item {}", orderId, item.getId(), e);
                 }
             }
+        }
+        
+        // Kiểm tra lại sau khi save để đảm bảo đã tạo thành công
+        if (recordedCount > 0) {
+            log.info("Recorded revenue for order {} with {} items", orderId, recordedCount);
         }
     }
 

@@ -270,19 +270,25 @@ public class ShipmentService {
                 order.setStatus(newStatus);
                 orderRepository.save(order);
 
-                // Đảm bảo doanh thu được ghi nhận cho đơn COD khi chuyển sang DELIVERED
-                // Đối với COD: xóa FinancialRecord cũ (nếu có) và ghi nhận lại với occurredAt = thời điểm DELIVERED
+                // Đảm bảo doanh thu được ghi nhận cho đơn hàng khi chuyển sang DELIVERED
+                // - COD: xóa FinancialRecord cũ (nếu có) và ghi nhận lại với occurredAt = thời điểm DELIVERED
+                // - MoMo: cập nhật occurredAt của FinancialRecord hiện có = thời điểm DELIVERED
                 if (newStatus == OrderStatus.DELIVERED
-                        && order.getPaymentMethod() == PaymentMethod.COD
                         && order.getPaymentStatus() == PaymentStatus.PAID
                         && Boolean.TRUE.equals(order.getPaid())) {
                     try {
                         // Reload order với items để đảm bảo có đầy đủ dữ liệu
                         Order reloadedOrder = orderRepository.findById(order.getId()).orElse(order);
-                        // Sử dụng method trong FinancialService để đảm bảo logic nhất quán
-                        financialService.ensureCodOrderRevenueRecorded(reloadedOrder);
+                        
+                        if (order.getPaymentMethod() == PaymentMethod.COD) {
+                            // COD: xóa và tạo lại FinancialRecord với occurredAt = thời điểm DELIVERED
+                            financialService.ensureCodOrderRevenueRecorded(reloadedOrder);
+                        } else if (order.getPaymentMethod() == PaymentMethod.MOMO) {
+                            // MoMo: cập nhật occurredAt của FinancialRecord hiện có = thời điểm DELIVERED
+                            financialService.ensureMomoOrderRevenueRecorded(reloadedOrder);
+                        }
                     } catch (Exception e) {
-                        log.error("Error ensuring revenue recorded for COD order {} when delivered", order.getId(), e);
+                        log.error("Error ensuring revenue recorded for order {} when delivered", order.getId(), e);
                     }
                 }
             }

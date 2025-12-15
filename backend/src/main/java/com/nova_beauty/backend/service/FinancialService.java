@@ -103,16 +103,35 @@ public class FinancialService {
 
     @Transactional
     public void recordRevenue(Order order, Product product, double amount, PaymentMethod method) {
+        // Kiểm tra xem đã có FinancialRecord cho order và product này chưa (tránh duplicate)
+        // Mỗi order + product chỉ nên có 1 FinancialRecord ORDER_PAYMENT
+        List<FinancialRecord> existingRecords = financialRecordRepository
+                .findByOrderIdAndRecordType(order.getId(), FinancialRecordType.ORDER_PAYMENT);
+        
+        // Kiểm tra xem có FinancialRecord cho product cụ thể này chưa
+        boolean productExists = existingRecords.stream()
+                .anyMatch(record -> record.getProduct() != null 
+                        && record.getProduct().getId() != null
+                        && record.getProduct().getId().equals(product.getId()));
+        
+        if (productExists) {
+            log.warn("FinancialRecord already exists for order {} and product {}, skipping", 
+                    order.getId(), product.getId());
+            return;
+        }
+        
         FinancialRecord rec =
                 FinancialRecord.builder()
-                .order(order)
-                .product(product)
-                .amount(amount)
-                .paymentMethod(method)
-                .recordType(FinancialRecordType.ORDER_PAYMENT)
-                .occurredAt(LocalDateTime.now())
-                .build();
+                        .order(order)
+                        .product(product)
+                        .amount(amount)
+                        .paymentMethod(method)
+                        .recordType(FinancialRecordType.ORDER_PAYMENT)
+                        .occurredAt(LocalDateTime.now())
+                        .build();
         financialRecordRepository.save(rec);
+        log.info("Created FinancialRecord for order {} product {} amount {} (order status: {})", 
+                order.getId(), product.getId(), amount, order.getStatus());
     }
 
     // Xử lý lại doanh thu cho đơn COD đã DELIVERED (đảm bảo có FinancialRecord với occurredAt = thời
@@ -156,6 +175,50 @@ public class FinancialService {
                 "Ensured revenue recorded for COD order {} when delivered with {} items",
                 order.getId(),
                 order.getItems().size());
+    }
+
+    // Xử lý lại doanh thu cho đơn MoMo đã DELIVERED (cập nhật occurredAt = thời điểm DELIVERED)
+    @Transactional
+    public void ensureMomoOrderRevenueRecorded(Order order) {
+        if (order == null
+                || order.getPaymentMethod() != PaymentMethod.MOMO
+                || order.getStatus() != OrderStatus.DELIVERED
+                || order.getPaymentStatus() != PaymentStatus.PAID
+                || !Boolean.TRUE.equals(order.getPaid())
+                || order.getItems() == null
+                || order.getItems().isEmpty()) {
+            return;
+        }
+
+        // Lấy các FinancialRecord hiện có của order này
+        List<FinancialRecord> existingRecords = financialRecordRepository
+                .findByOrderIdAndRecordType(order.getId(), FinancialRecordType.ORDER_PAYMENT);
+
+        if (existingRecords.isEmpty()) {
+            // Nếu chưa có FinancialRecord, tạo mới (trường hợp IPN chưa được gọi)
+            log.warn("No FinancialRecord found for MoMo order {} when delivered, creating new records", order.getId());
+            for (OrderItem item : order.getItems()) {
+                if (item.getProduct() != null
+                        && item.getFinalPrice() != null
+                        && item.getFinalPrice() > 0) {
+                    try {
+                        recordRevenue(order, item.getProduct(), item.getFinalPrice(), order.getPaymentMethod());
+                    } catch (Exception e) {
+                        log.error("Error recording revenue for MoMo order {} product {}", 
+                                order.getId(), item.getProduct().getId(), e);
+                    }
+                }
+            }
+        } else {
+            // Cập nhật occurredAt của các FinancialRecord hiện có = thời điểm hiện tại (DELIVERED)
+            LocalDateTime now = LocalDateTime.now();
+            for (FinancialRecord record : existingRecords) {
+                record.setOccurredAt(now);
+                financialRecordRepository.save(record);
+            }
+            log.info("Updated occurredAt for {} FinancialRecords of MoMo order {} to delivery time", 
+                    existingRecords.size(), order.getId());
+        }
     }
 
     // Tính doanh thu theo đơn hàng theo timeMode
@@ -293,8 +356,8 @@ public class FinancialService {
 
             return result.stream()
                     .sorted((a, b) -> a.getDate().compareTo(b.getDate()))
-                .toList();
-    }
+                    .toList();
+        }
 
         // Week mode: group theo ngày
         List<Object[]> orderRevenueData =
@@ -456,9 +519,9 @@ public class FinancialService {
                         .filter(
                                 fr -> fr.getAmount() != null
                                         && (fr.getRecordType()
-                                                        == FinancialRecordType.REFUND
-                                                || fr.getRecordType()
-                                                        == FinancialRecordType.COMPENSATION))
+                                        == FinancialRecordType.REFUND
+                                        || fr.getRecordType()
+                                        == FinancialRecordType.COMPENSATION))
                         .mapToDouble(fr -> Math.abs(fr.getAmount())) // Lấy giá trị tuyệt đối vì đây là
                         // chi phí
                         .sum();
