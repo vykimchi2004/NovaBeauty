@@ -1,3 +1,15 @@
+@keyframes dropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .navbar {
   background: linear-gradient(115deg, #e5677d 0%, #d85a6f 100%);
   position: relative;
@@ -75,31 +87,19 @@
       background: #ffffff;
       color: #1a1a1a;
       padding: 24px 40px;
-      /* Tăng padding */
       display: flex;
       flex-direction: row;
-      /* Xếp ngang */
       flex-wrap: wrap;
-      /* Xuống dòng nếu hết chỗ */
       min-width: unset;
       max-height: 60vh;
-      /* Giới hạn chiều cao nếu quá nhiều */
       overflow-y: auto;
       box-shadow: 0 14px 32px rgba(15, 23, 42, 0.1);
       border-top: 1px solid #f1f3f5;
       z-index: 100;
-      opacity: 0;
-      visibility: hidden;
-      transition: all 0.3s ease;
 
-      /* Hiệu ứng hiển thị */
-      /* Do React unmount/mount nên ta set luôn hiển thị */
-      opacity: 1;
-      visibility: visible;
-
-      /* Reset lại transition opacity vì JS đang unmount/mount */
-      opacity: 1;
-      visibility: visible;
+      /* Animation for entry */
+      transform-origin: top center;
+      animation: dropdownSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
     }
 
     .megaItemGroup {
@@ -381,7 +381,7 @@
     position: absolute;
     top: 100%;
     left: 0;
-    margin-top: 10px;
+    /* Space from button */
     background: #ffffff;
     display: flex;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
@@ -390,19 +390,24 @@
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transition: all 0.2s ease;
+    /* Smooth transform & opacity */
+    transform: translateY(12px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 200;
     border: 1px solid #eee;
     width: max-content;
     min-width: 800px;
     max-width: 1200px;
+
+    /* Origin at top for natural reveal */
+    transform-origin: top center;
   }
 
   .category-dropdown-wrapper:hover .dropdown-container {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    margin-top: 0;
+    transform: translateY(0);
   }
 
   /* Left Vertical Menu */

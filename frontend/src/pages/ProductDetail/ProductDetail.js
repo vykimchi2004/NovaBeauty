@@ -9,7 +9,7 @@ import { storage } from '~/services/utils';
 import { STORAGE_KEYS } from '~/services/config';
 import notify from '~/utils/notification';
 import { normalizeVariantRecords, getVariantLabel } from '~/utils/productVariants';
-import { getReviewsByProduct, createReview } from '~/services/review';
+import { getReviewsByProduct, createReview, getMyReviews } from '~/services/review';
 import orderService from '~/services/order';
 
 const TABS = [
@@ -50,6 +50,8 @@ function ProductDetail() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [hasPurchasedProduct, setHasPurchasedProduct] = useState(false);
   const [checkingPurchase, setCheckingPurchase] = useState(false);
+  const [availableOrderItems, setAvailableOrderItems] = useState([]); // Danh sách order items có thể đánh giá
+  const [myReviews, setMyReviews] = useState([]); // Danh sách reviews của user hiện tại (để kiểm tra orderItemId đã đánh giá)
   const [activeReviewTab, setActiveReviewTab] = useState('latest'); // 'latest' | 'top'
   const [expandedReviews, setExpandedReviews] = useState({});
   const contentRefs = {
@@ -504,8 +506,62 @@ function ProductDetail() {
     fetchReviews();
   }, [id]);
 
-  // Check if user is logged in - tính toán một lần
+  // Check if user is logged in - tính toán một lần (phải khai báo trước khi sử dụng)
   const isLoggedIn = !!storage.get(STORAGE_KEYS.TOKEN);
+
+  // Fetch my reviews để kiểm tra orderItemId đã đánh giá chưa
+  useEffect(() => {
+    if (!id || !isLoggedIn) {
+      setMyReviews([]);
+      return;
+    }
+
+    const fetchMyReviews = async () => {
+      try {
+        const token = storage.get(STORAGE_KEYS.TOKEN);
+        if (!token) {
+          setMyReviews([]);
+          return;
+        }
+
+        const data = await getMyReviews();
+        const myReviewsList = Array.isArray(data) ? data : [];
+        // Chỉ lấy reviews của sản phẩm này
+        const productReviews = myReviewsList.filter(review => 
+          review.productId === id || review.product?.id === id
+        );
+        console.log(`Fetched ${productReviews.length} my reviews for product ${id}`);
+        setMyReviews(productReviews);
+      } catch (err) {
+        console.error('Error fetching my reviews:', err);
+        setMyReviews([]);
+      }
+    };
+
+    fetchMyReviews();
+  }, [id, isLoggedIn]);
+
+  // Lấy danh sách order items chưa được đánh giá (có thể đánh giá được)
+  const reviewableOrderItems = useMemo(() => {
+    if (!availableOrderItems.length) {
+      return [];
+    }
+
+    // Nếu chưa có reviews của user, tất cả order items đều có thể đánh giá
+    if (!myReviews.length) {
+      return availableOrderItems;
+    }
+
+    // Lấy danh sách orderItemIds đã được đánh giá bởi user hiện tại
+    const reviewedOrderItemIds = new Set(
+      myReviews
+        .map(review => review.orderItemId)
+        .filter(id => id) // Lọc bỏ null/undefined
+    );
+
+    // Lọc ra các order items chưa được đánh giá
+    return availableOrderItems.filter(item => !reviewedOrderItemIds.has(item.id));
+  }, [availableOrderItems, myReviews]);
 
   // Check if user has purchased this product
   useEffect(() => {
@@ -528,27 +584,35 @@ function ProductDetail() {
         setCheckingPurchase(true);
         const orders = await orderService.getMyOrders();
 
-        // Kiểm tra xem có đơn hàng nào chứa sản phẩm này không
-        // Đơn hàng phải ở trạng thái đã giao hàng (DELIVERED) - khớp với backend
-        const hasPurchased = orders.some((order) => {
-          // Chỉ kiểm tra các đơn hàng đã được giao (status: DELIVERED)
+        // Lấy danh sách order items chứa sản phẩm này từ đơn hàng đã giao (DELIVERED)
+        const orderItems = [];
+        orders.forEach((order) => {
+          // Chỉ lấy các đơn hàng đã được giao (status: DELIVERED)
           if (order.status !== 'DELIVERED') {
-            return false;
+            return;
           }
 
-          // Kiểm tra trong order items
+          // Lấy order items chứa sản phẩm này
           if (order.items && Array.isArray(order.items)) {
-            return order.items.some((item) => {
-              // Kiểm tra productId hoặc product.id
+            order.items.forEach((item) => {
               const itemProductId = item.productId || item.product?.id;
-              return itemProductId === id || itemProductId === product?.id;
+              if (itemProductId === id || itemProductId === product?.id) {
+                orderItems.push({
+                  id: item.id,
+                  orderId: order.id,
+                  orderCode: order.code,
+                  quantity: item.quantity,
+                  orderDate: order.orderDate || order.orderDateTime
+                });
+              }
             });
           }
-          return false;
         });
 
-        setHasPurchasedProduct(hasPurchased);
-        console.log(`[ProductDetail] User has purchased product ${id}:`, hasPurchased);
+        setAvailableOrderItems(orderItems);
+        setHasPurchasedProduct(orderItems.length > 0);
+        
+        console.log(`[ProductDetail] User has purchased product ${id}:`, orderItems.length, 'order items available');
       } catch (err) {
         console.error('Error checking user purchase:', err);
         // Nếu có lỗi, mặc định là false để không cho phép đánh giá
@@ -678,7 +742,17 @@ function ProductDetail() {
       setSubmittingReview(true);
       const trimmedName = newNameDisplay.trim();
       const trimmedComment = newComment.trim();
-      // Payload structure giống LuminaBook
+      
+      // Kiểm tra có order items có thể đánh giá không
+      if (reviewableOrderItems.length === 0) {
+        notify.error('Bạn đã đánh giá tất cả các đơn hàng rồi');
+        return;
+      }
+
+      // Tự động chọn order item đầu tiên chưa được đánh giá
+      const orderItemIdToReview = reviewableOrderItems[0].id;
+
+      // Payload structure với orderItemId
       const payload = {
         nameDisplay: trimmedName || undefined,
         rating: newRating,
@@ -686,6 +760,7 @@ function ProductDetail() {
         product: {
           id: id,
         },
+        orderItemId: orderItemIdToReview, // Thêm orderItemId
       };
 
       console.log('[ProductDetail] Submitting review payload:', JSON.stringify(payload, null, 2));
@@ -724,6 +799,14 @@ function ProductDetail() {
           const refreshedReviews = Array.isArray(refreshedData) ? refreshedData : [];
           console.log('Reloaded reviews:', refreshedReviews.length, 'reviews');
           setReviews(refreshedReviews);
+
+          // Reload my reviews để cập nhật danh sách order items có thể đánh giá
+          const myReviewsData = await getMyReviews();
+          const myReviewsList = Array.isArray(myReviewsData) ? myReviewsData : [];
+          const productReviews = myReviewsList.filter(review => 
+            review.productId === id || review.product?.id === id
+          );
+          setMyReviews(productReviews);
         } catch (refreshErr) {
           console.error('Error refreshing reviews:', refreshErr);
           // Retry nếu chưa quá 2 lần
@@ -1305,6 +1388,9 @@ function ProductDetail() {
               <p className={cx('login-prompt')}>
                 Chỉ khách hàng đã mua sản phẩm mới được viết đánh giá.
               </p>
+            ) : reviewableOrderItems.length === 0 ? (
+              // Đã đánh giá hết các đơn hàng, không hiển thị nút
+              null
             ) : (
               <div className={cx('write-review-container')}>
                 <button

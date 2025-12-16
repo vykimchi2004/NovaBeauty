@@ -49,6 +49,7 @@ public enum ErrorCode {
     // REVIEW
     REVIEW_NOT_EXISTED(5001, "Review không tồn tại", HttpStatus.NOT_FOUND),
     REVIEW_NOT_PURCHASED(5002, "Bạn chưa mua sản phẩm này, không thể đánh giá", HttpStatus.BAD_REQUEST),
+    REVIEW_ALREADY_EXISTS(5003, "Bạn đã đánh giá đơn hàng này rồi. Mỗi đơn hàng chỉ được đánh giá 1 lần", HttpStatus.BAD_REQUEST),
 
     // PRODUCT
     PRODUCT_NOT_EXISTED(6001, "Product không tồn tại", HttpStatus.NOT_FOUND),

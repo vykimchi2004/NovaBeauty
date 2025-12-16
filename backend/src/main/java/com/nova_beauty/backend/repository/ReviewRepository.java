@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import com.nova_beauty.backend.entity.OrderItem;
 import com.nova_beauty.backend.entity.Product;
 import com.nova_beauty.backend.entity.Review;
 import com.nova_beauty.backend.entity.User;
@@ -22,6 +23,9 @@ public interface ReviewRepository extends JpaRepository<Review, String> {
     List<Review> findByUserId(String userId);
 
     boolean existsByUserAndProduct(User user, Product product);
+
+    // Kiểm tra orderItem đã có review chưa (mỗi đơn hàng chỉ đánh giá 1 lần)
+    boolean existsByOrderItemId(String orderItemId);
 
     // Tìm review của user cho product cụ thể
     Optional<Review> findByUserIdAndProductId(String userId, String productId);

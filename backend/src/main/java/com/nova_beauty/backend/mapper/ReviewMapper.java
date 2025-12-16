@@ -15,6 +15,7 @@ public interface ReviewMapper {
     @Mapping(target = "userName", source = "user.fullName")
     @Mapping(target = "productId", source = "product.id")
     @Mapping(target = "productName", source = "product.name")
+    @Mapping(target = "orderItemId", source = "orderItem.id")
     ReviewResponse toReviewResponse(Review review);
 
     // Request to Entity
@@ -24,5 +25,6 @@ public interface ReviewMapper {
     @Mapping(target = "reply", ignore = true)
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "product", ignore = true)
+    @Mapping(target = "orderItem", ignore = true)
     Review toReview(ReviewCreationRequest request);
 }

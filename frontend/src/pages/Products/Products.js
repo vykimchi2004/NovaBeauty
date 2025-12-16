@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import classNames from 'classnames/bind';
-import styles from '../Categories/Makeup/Category.module.scss';
+import styles from './Products.module.scss';
 import image1 from '~/assets/images/products/image1.jpg';
 import { Link } from 'react-router-dom';
 import { scrollToTop } from '~/services/utils';
@@ -161,7 +161,7 @@ function Products() {
   };
 
   return (
-    <div className={cx('makeup-page')}>
+    <div className={cx('products-page')}>
       {/* Sidebar filters */}
       <aside className={cx('sidebar')}>
         <h2 className={cx('filter-title')}>BỘ LỌC</h2>
