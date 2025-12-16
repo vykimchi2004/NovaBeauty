@@ -114,15 +114,23 @@ function StaffProducts() {
     filterInactive: true,
   });
 
-  // Build categories tree từ allCategories - tối ưu với useMemo
+  // Build categories tree từ allCategories - tối ưu với useMemo (bao gồm cả grandchildren)
   const categoriesTree = useMemo(() => {
     if (!allCategories || allCategories.length === 0) return [];
     
     const rootCats = allCategories.filter((cat) => !cat.parentId);
-    return rootCats.map((root) => ({
-      ...root,
-      children: allCategories.filter((cat) => cat.parentId === root.id),
-    }));
+    return rootCats.map((root) => {
+      const children = allCategories.filter((cat) => cat.parentId === root.id);
+      // Thêm grandchildren cho mỗi child
+      const childrenWithGrandchildren = children.map((child) => ({
+        ...child,
+        children: allCategories.filter((cat) => cat.parentId === child.id),
+      }));
+      return {
+        ...root,
+        children: childrenWithGrandchildren,
+      };
+    });
   }, [allCategories]);
 
   const categories = allCategories;

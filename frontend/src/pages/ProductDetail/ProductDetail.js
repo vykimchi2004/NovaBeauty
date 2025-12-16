@@ -38,7 +38,7 @@ function ProductDetail() {
   const [selectedColorCode, setSelectedColorCode] = useState(null); // Mã màu đã chọn
   const tabsSectionRef = useRef(null);
   const tabsContainerRef = useRef(null);
-  
+
   // Review states
   const [reviews, setReviews] = useState([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
@@ -173,10 +173,10 @@ function ProductDetail() {
     } catch (e) {
       console.error('[ProductDetail] Error parsing user from storage:', e);
     }
-    
+
     const userRole = user?.role?.name || user?.roleName || '';
-    console.log('[ProductDetail] User info:', { 
-      hasToken: !!token, 
+    console.log('[ProductDetail] User info:', {
+      hasToken: !!token,
       tokenLength: typeof token === 'string' ? token.length : 'N/A',
       userRole: userRole,
       userId: user?.id || 'N/A'
@@ -198,10 +198,10 @@ function ProductDetail() {
       setAddingToCart(true);
       console.log('[ProductDetail] Adding to cart - productId:', product.id, 'quantity:', quantity, 'colorCode:', selectedColorCode);
       await cartService.addItem(product.id, quantity, selectedColorCode || null);
-      
+
       // Dispatch event để cập nhật cart count trong header
       window.dispatchEvent(new CustomEvent('cartUpdated'));
-      
+
       notify.success('Đã thêm sản phẩm vào giỏ hàng!');
     } catch (error) {
       console.error('[ProductDetail] Error adding to cart:', {
@@ -211,11 +211,11 @@ function ProductDetail() {
         message: error.message,
         response: error.response
       });
-      
+
       // Kiểm tra lỗi authentication (401) TRƯỚC - thường xảy ra khi token không hợp lệ hoặc thiếu
-      if (error.code === 401 || error.status === 401 || 
-          error.message?.includes('authentication') || 
-          error.message?.includes('Full authentication is required')) {
+      if (error.code === 401 || error.status === 401 ||
+        error.message?.includes('authentication') ||
+        error.message?.includes('Full authentication is required')) {
         console.warn('[ProductDetail] 401 Unauthorized - Token may be missing or invalid');
         notify.warning('Phiên đăng nhập đã hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.');
         storage.remove(STORAGE_KEYS.TOKEN);
@@ -225,7 +225,7 @@ function ProductDetail() {
         }, 2000);
         return;
       }
-      
+
       // Kiểm tra lỗi permission (403) - xảy ra khi user không có quyền
       if (error.code === 403 || error.status === 403) {
         console.warn('[ProductDetail] 403 Forbidden - User may not have CUSTOMER role');
@@ -237,10 +237,10 @@ function ProductDetail() {
         } catch (e) {
           console.error('Error parsing user from storage:', e);
         }
-        
+
         const userRole = user?.role?.name || user?.roleName || '';
         console.log('[ProductDetail] User role from storage:', userRole);
-        
+
         if (userRole && userRole !== 'CUSTOMER') {
           notify.error(`Tài khoản ${userRole} không thể thêm sản phẩm vào giỏ hàng. Vui lòng đăng nhập bằng tài khoản CUSTOMER.`);
         } else {
@@ -248,7 +248,7 @@ function ProductDetail() {
         }
         return; // Không reload nếu là lỗi permission
       }
-      
+
       // Các lỗi khác
       if (error.message && error.message.includes('Sản phẩm không tồn tại')) {
         notify.error('Sản phẩm không tồn tại trong hệ thống. Vui lòng chọn sản phẩm khác.');
@@ -280,9 +280,9 @@ function ProductDetail() {
     } catch (e) {
       console.error('[ProductDetail] Error parsing user from storage:', e);
     }
-    
+
     const userRole = user?.role?.name || user?.roleName || '';
-    
+
     if (!product || !product.id) {
       notify.error('Sản phẩm không tồn tại');
       return;
@@ -298,15 +298,15 @@ function ProductDetail() {
     try {
       setAddingToCart(true);
       console.log('[ProductDetail] Buy now (direct) - productId:', product.id, 'quantity:', quantity, 'colorCode:', selectedColorCode);
-      
+
       // Chuyển đến trang checkout với thông tin sản phẩm để checkout trực tiếp (không thêm vào giỏ hàng)
-      navigate('/checkout', { 
-        state: { 
+      navigate('/checkout', {
+        state: {
           directCheckout: true,
           productId: product.id,
           quantity: quantity,
           colorCode: selectedColorCode || null
-        } 
+        }
       });
     } catch (error) {
       console.error('[ProductDetail] Error in buy now:', {
@@ -316,11 +316,11 @@ function ProductDetail() {
         message: error.message,
         response: error.response
       });
-      
+
       // Kiểm tra lỗi authentication (401)
-      if (error.code === 401 || error.status === 401 || 
-          error.message?.includes('authentication') || 
-          error.message?.includes('Full authentication is required')) {
+      if (error.code === 401 || error.status === 401 ||
+        error.message?.includes('authentication') ||
+        error.message?.includes('Full authentication is required')) {
         console.warn('[ProductDetail] 401 Unauthorized - Token may be missing or invalid');
         notify.warning('Phiên đăng nhập đã hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.');
         storage.remove(STORAGE_KEYS.TOKEN);
@@ -330,7 +330,7 @@ function ProductDetail() {
         }, 2000);
         return;
       }
-      
+
       // Kiểm tra lỗi permission (403)
       if (error.code === 403 || error.status === 403) {
         console.warn('[ProductDetail] 403 Forbidden - User may not have CUSTOMER role');
@@ -341,9 +341,9 @@ function ProductDetail() {
         } catch (e) {
           console.error('Error parsing user from storage:', e);
         }
-        
+
         const userRole = user?.role?.name || user?.roleName || '';
-        
+
         if (userRole && userRole !== 'CUSTOMER') {
           notify.error(`Tài khoản ${userRole} không thể mua sản phẩm. Vui lòng đăng nhập bằng tài khoản CUSTOMER.`);
         } else {
@@ -351,7 +351,7 @@ function ProductDetail() {
         }
         return;
       }
-      
+
       // Các lỗi khác
       if (error.message && error.message.includes('Sản phẩm không tồn tại')) {
         notify.error('Sản phẩm không tồn tại trong hệ thống. Vui lòng chọn sản phẩm khác.');
@@ -368,10 +368,10 @@ function ProductDetail() {
     if (contentRefs[tabId]?.current) {
       const element = contentRefs[tabId].current;
       if (!element) return;
-      
+
       requestAnimationFrame(() => {
-        const fixedTabsHeight = showFixedTabs && tabsContainerRef.current 
-          ? tabsContainerRef.current.offsetHeight 
+        const fixedTabsHeight = showFixedTabs && tabsContainerRef.current
+          ? tabsContainerRef.current.offsetHeight
           : 0;
         const offset = fixedTabsHeight > 0 ? fixedTabsHeight + 20 : 20;
         const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
@@ -400,15 +400,15 @@ function ProductDetail() {
   // Lấy các giá trị trọng lượng khác nhau từ variants
   const variantWeights = useMemo(() => {
     if (!colorVariants || colorVariants.length === 0) return null;
-    
+
     const weights = new Set();
-    
+
     colorVariants.forEach((variant) => {
       if (variant.weight !== null && variant.weight !== undefined && variant.weight !== '') {
         weights.add(Number(variant.weight));
       }
     });
-    
+
     return weights.size > 0 ? Array.from(weights).sort((a, b) => a - b) : null;
   }, [colorVariants]);
 
@@ -426,7 +426,7 @@ function ProductDetail() {
       const name = (variant.name || '').trim();
       const codeValue = (variant.code || '').trim();
       const label = name || codeValue || `${variantLabel} ${acc.length + 1}`;
-      
+
       // Chỉ thêm variant nếu có label hợp lệ
       if (label && label.trim()) {
         acc.push({
@@ -527,7 +527,7 @@ function ProductDetail() {
       try {
         setCheckingPurchase(true);
         const orders = await orderService.getMyOrders();
-        
+
         // Kiểm tra xem có đơn hàng nào chứa sản phẩm này không
         // Đơn hàng phải ở trạng thái đã giao hàng (DELIVERED) - khớp với backend
         const hasPurchased = orders.some((order) => {
@@ -633,30 +633,30 @@ function ProductDetail() {
         const variantPrice = parseFloat(selectedOption.price);
         const tax = product.tax != null ? product.tax : 0.08; // Tax là decimal (0.08 = 8%)
         const priceWithTax = variantPrice * (1 + tax);
-        
+
         // Áp dụng discount từ promotion nếu có - TÍNH THEO TỶ LỆ ĐỂ TẤT CẢ VARIANT GIẢM CÙNG MỨC
         if (product.promotionId && product.discountValue && product.discountValue > 0 && product.unitPrice) {
           // Backend tính: priceWithTax = unitPrice * (1 + tax)
           // Backend tính: discountValue = calculateDiscountAmount(promotion, priceWithTax)
           // Backend tính: finalPrice = priceWithTax - discountValue
           // Vậy: discountValue / (unitPrice * (1 + tax)) = tỷ lệ discount thực tế đã được áp dụng
-          
+
           const productUnitPrice = parseFloat(product.unitPrice) || 0;
           const productTax = product.tax != null ? product.tax : 0.08;
           const originalProductPriceWithTax = productUnitPrice * (1 + productTax);
-          
+
           // Tính tỷ lệ discount thực tế đã được áp dụng (có thể đã bị giới hạn bởi maxDiscountValue)
           // Đây là tỷ lệ discount thực tế, không phải tỷ lệ gốc từ promotion
-          const discountRate = originalProductPriceWithTax > 0 
-            ? product.discountValue / originalProductPriceWithTax 
+          const discountRate = originalProductPriceWithTax > 0
+            ? product.discountValue / originalProductPriceWithTax
             : 0;
-          
+
           // Áp dụng cùng tỷ lệ discount cho variant (giống như backend đã làm cho sản phẩm)
           const variantDiscount = priceWithTax * discountRate;
           const finalPrice = Math.max(0, priceWithTax - variantDiscount);
           return Math.round(finalPrice);
         }
-        
+
         return Math.round(priceWithTax);
       }
     }
@@ -687,7 +687,7 @@ function ProductDetail() {
           id: id,
         },
       };
-      
+
       console.log('[ProductDetail] Submitting review payload:', JSON.stringify(payload, null, 2));
 
       const { ok, status, data } = await createReview(payload);
@@ -808,7 +808,7 @@ function ProductDetail() {
           const variantPrice = parseFloat(selectedOption.price);
           const tax = product.tax != null ? product.tax : 0.08;
           const priceWithTax = variantPrice * (1 + tax);
-          
+
           // Chỉ hiển thị oldPrice nếu có discount
           return Math.round(priceWithTax);
         }
@@ -879,14 +879,20 @@ function ProductDetail() {
             )}
             {selectedMedia.type === 'VIDEO' ? (
               <video
+                key={selectedMedia.url}
                 className={cx('main-video')}
                 src={selectedMedia.url}
                 controls
+                autoPlay
               >
                 Trình duyệt không hỗ trợ video.
               </video>
             ) : (
-              <img src={selectedMedia.url || image1} alt={displayProduct.name} />
+              <img
+                key={selectedMedia.url}
+                src={selectedMedia.url || image1}
+                alt={displayProduct.name}
+              />
             )}
             {totalMedia > 1 && (
               <button
@@ -963,8 +969,8 @@ function ProductDetail() {
                 const productTax = product.tax != null ? product.tax : 0.08;
                 const originalProductPriceWithTax = productUnitPrice * (1 + productTax);
                 // Tính tỷ lệ discount thực tế đã được áp dụng
-                const discountRate = originalProductPriceWithTax > 0 
-                  ? product.discountValue / originalProductPriceWithTax 
+                const discountRate = originalProductPriceWithTax > 0
+                  ? product.discountValue / originalProductPriceWithTax
                   : 0;
                 discountPercent = Math.round(discountRate * 100);
               } else {
@@ -1034,15 +1040,15 @@ function ProductDetail() {
           </div>
 
           <div className={cx('action-buttons')}>
-            <button 
-              className={cx('btn-cart')} 
+            <button
+              className={cx('btn-cart')}
               onClick={handleAddToCart}
               disabled={addingToCart || (colorOptions.length > 0 && !selectedColorCode)}
               title={colorOptions.length > 0 && !selectedColorCode ? `Vui lòng chọn ${variantLabel.toLowerCase()} trước` : ''}
             >
               <span>🛒</span> {addingToCart ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
             </button>
-            <button 
+            <button
               className={cx('btn-buy-now')}
               onClick={handleBuyNow}
               disabled={addingToCart || (colorOptions.length > 0 && !selectedColorCode)}
@@ -1050,7 +1056,7 @@ function ProductDetail() {
             >
               {addingToCart ? 'Đang xử lý...' : 'MUA NGAY'}
             </button>
-           
+
           </div>
 
           <div className={cx('benefits')}>
@@ -1155,7 +1161,7 @@ function ProductDetail() {
             ))}
           </div>
         )}
-        
+
         {/* Original tabs container */}
         <div className={cx('tabs-container')}>
           {TABS.map((t) => (

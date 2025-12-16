@@ -90,9 +90,17 @@ function ProductFormModal({
                   </option>
                   {/* Subcategories với indent */}
                   {parentCat.children && parentCat.children.length > 0 && parentCat.children.map((subCat) => (
-                    <option key={subCat.id} value={subCat.id} className={cx('category-child')}>
-                      &nbsp;&nbsp;&nbsp;&nbsp;{subCat.name}
-                    </option>
+                    <React.Fragment key={subCat.id}>
+                      <option value={subCat.id} className={cx('category-child')}>
+                        &nbsp;&nbsp;&nbsp;&nbsp;{subCat.name}
+                      </option>
+                      {/* Grandchildren với indent nhiều hơn */}
+                      {subCat.children && subCat.children.length > 0 && subCat.children.map((grandChild) => (
+                        <option key={grandChild.id} value={grandChild.id} className={cx('category-grandchild')}>
+                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{grandChild.name}
+                        </option>
+                      ))}
+                    </React.Fragment>
                   ))}
                 </React.Fragment>
               ))}

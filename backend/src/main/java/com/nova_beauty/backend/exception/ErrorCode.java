@@ -56,6 +56,7 @@ public enum ErrorCode {
     CATEGORY_ALREADY_EXISTS(6005, "Mã danh mục hoặc tên danh mục đã tồn tại", HttpStatus.BAD_REQUEST),
     CATEGORY_HAS_PRODUCTS(6006, "Không thể xóa danh mục vì còn sản phẩm thuộc danh mục này", HttpStatus.BAD_REQUEST),
     CATEGORY_HAS_SUBCATEGORIES(6007, "Không thể xóa danh mục vì còn danh mục con", HttpStatus.BAD_REQUEST),
+    CATEGORY_CANNOT_CHANGE_ID_HAS_CHILDREN(6008, "Không thể đổi ID danh mục. Vui lòng xóa danh mục con trước", HttpStatus.BAD_REQUEST),
     OUT_OF_STOCK(6002, "Hết hàng", HttpStatus.BAD_REQUEST),
 
     // ORDER - SHIPMENT - CART - ADDRESS

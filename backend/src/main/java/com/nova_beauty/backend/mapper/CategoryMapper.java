@@ -31,7 +31,6 @@ public interface CategoryMapper {
     Category toCategory(CategoryCreationRequest request);
 
     // Update Entity
-    @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "parentCategory", ignore = true)

@@ -10,29 +10,42 @@
   .menu {
     display: flex;
     list-style: none;
-    margin: 0;
+    margin: 0 auto;
+    position: relative;
+    /* Tạo context để dropdown căn theo chiều rộng menu */
     color: #ffffff;
     font-weight: 600;
-    font-size: clamp(11px, 1.6vw, 18px); /* tự co font theo kích thước màn hình */
-    flex-wrap: wrap; /* cho phép tự xuống dòng khi thiếu chỗ */
-    justify-content: center; /* căn giữa nội dung */
+    font-size: clamp(11px, 1.6vw, 18px);
+    /* tự co font theo kích thước màn hình */
+    flex-wrap: wrap;
+    /* cho phép tự xuống dòng khi thiếu chỗ */
+    justify-content: space-between;
+    /* căn đều 2 bên */
     width: 100%;
+    max-width: 1500px;
+    padding-left: 70px;
+    padding-right: 90px;
+    box-sizing: border-box;
 
     li {
       cursor: pointer;
-      flex: 1 1 0; /* distribute items evenly across the available width */
+      flex: 1 1 0;
+      /* distribute items evenly across the available width */
       text-align: center;
-      position: relative;
+      /* position: static giúp dropdown căn theo cha (navbar) thay vì li */
+      position: static;
 
       a {
         display: block;
-        padding: 15px 12px; /* roomy clickable area */
+        padding: 15px 12px;
+        /* roomy clickable area */
         text-decoration: none;
         color: inherit;
         border-radius: 6px;
         position: relative;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        white-space: nowrap; /* keep each label on one line */
+        white-space: nowrap;
+        /* keep each label on one line */
       }
 
       /* Hover trên danh mục cha: chỉ đổi màu chữ sang đen, không đổi nền */
@@ -50,49 +63,107 @@
       }
     }
 
-    /* Dropdown danh mục con cho desktop – gắn sát dưới từng mục navbar */
+    /* Dropdown danh mục con cho desktop – Mega Menu Full Width */
     .megaDropdown {
       position: absolute;
       top: 100%;
-      left: 0;
-      transform: translateY(2px); /* trượt nhẹ xuống dưới navbar */
+      left: 70px;
+      right: 90px;
+      width: auto;
+      transform: none;
       margin-top: 0;
       background: #ffffff;
       color: #1a1a1a;
-      padding: 8px 0;
+      padding: 24px 40px;
+      /* Tăng padding */
       display: flex;
-      flex-direction: column; /* hàng dọc */
-      align-items: stretch;
-      min-width: 260px;
-      max-height: 320px;
+      flex-direction: row;
+      /* Xếp ngang */
+      flex-wrap: wrap;
+      /* Xuống dòng nếu hết chỗ */
+      min-width: unset;
+      max-height: 60vh;
+      /* Giới hạn chiều cao nếu quá nhiều */
       overflow-y: auto;
-      box-shadow: 0 14px 32px rgba(15, 23, 42, 0.18);
-      border-radius: 10px;
-      border: 1px solid #f1f3f5;
+      box-shadow: 0 14px 32px rgba(15, 23, 42, 0.1);
+      border-top: 1px solid #f1f3f5;
       z-index: 100;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+
+      /* Hiệu ứng hiển thị */
+      /* Do React unmount/mount nên ta set luôn hiển thị */
+      opacity: 1;
+      visibility: visible;
+
+      /* Reset lại transition opacity vì JS đang unmount/mount */
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .megaItemGroup {
+      display: flex;
+      flex-direction: column;
+      flex: 0 0 20%;
+      /* Chia 5 cột hoặc tùy chỉnh */
+      min-width: 200px;
+      padding-right: 20px;
+      margin-bottom: 20px;
     }
 
     .megaItem {
       text-decoration: none;
       color: #1f2933;
-      padding: 10px 20px;
+      padding: 6px 0;
+      /* Giảm padding d?ng list */
       border-radius: 0;
-      white-space: nowrap;
-      font-weight: 500;
-      font-size: clamp(12px, 1.5vw, 16px); /* hơi nhỏ hơn 1 chút để cân đối */
+      white-space: normal;
+      /* Cho ph?p xu?ng d?ng */
+      font-weight: 400;
+      font-size: 14px;
       text-align: left;
-      letter-spacing: 0.01em;
-      transition: color 0.18s ease, background-color 0.18s ease;
+      transition: color 0.18s ease;
+      background: transparent !important;
+      /* B? background hover block cũ */
 
-      /* đường kẻ mảnh giữa các item cho gọn */
-      & + .megaItem {
-        border-top: 1px solid #f3f4f6;
-      }
-
+      /* Hover ch? đ?i màu ch? */
       &:hover {
-        background: #fff5f8;
         color: #e5677d;
       }
+
+      &.megaItemParent {
+        font-weight: 700;
+        /* In đ?m danh m?c cha */
+        font-size: 15px;
+        text-transform: uppercase;
+        color: #e5677d;
+        /* Màu n?i b?t cho tiêu đ? c?t */
+        margin-bottom: 8px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 8px;
+        display: block;
+      }
+
+      &.megaItemChild {
+        padding-left: 0;
+        /* Không c?n th?t lùi đ?u d?ng khi ? d?ng c?t */
+        color: #555;
+        font-size: 14px;
+
+        &:hover {
+          color: #d85a6f;
+          transform: translateX(4px);
+          transition: transform 0.2s;
+        }
+      }
+    }
+
+    .grandChildrenList {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      /* Khoảng cách giữa các mục con */
     }
   }
 
@@ -117,11 +188,15 @@
     .menu {
       display: flex;
       flex-direction: column;
+      justify-content: flex-start;
+      /* Reset justification */
       position: fixed;
       top: 0;
       left: 0;
       height: 100vh;
       width: 280px;
+      margin: 0;
+      /* Reset margin */
       max-width: 85%;
       background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
       padding: 16px 12px;
@@ -228,9 +303,11 @@
 
     /* pin a user/footer row to the bottom of the drawer */
     .user-footer {
-      margin-top: auto; /* take remaining space so it's at bottom */
+      margin-top: auto;
+      /* take remaining space so it's at bottom */
       margin-bottom: 50px;
     }
+
     .user-footer .user-footer-inner {
       display: block;
       background: linear-gradient(135deg, #e5677d 0%, #d85a6f 100%);
@@ -254,6 +331,172 @@
       &:active {
         transform: translateY(0);
         box-shadow: 0 2px 8px rgba(229, 103, 125, 0.25);
+      }
+    }
+  }
+
+  /* New Category Dropdown Styles */
+  .category-dropdown-wrapper {
+    position: relative !important;
+    flex: 0 0 auto !important;
+    margin-right: 20px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+  }
+
+  .category-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* Slightly reduced gap */
+    background: #ffffff;
+    color: #e5677d;
+    padding: 12px 18px;
+    /* Adjusted padding to be closer to other items but still button-like */
+    border-radius: 6px;
+    border: 1px solid #e5677d;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: inherit;
+    /* Inherit clamp size from parent */
+    transition: all 0.2s ease;
+    white-space: nowrap;
+
+    /* Ensure height matches or aligns */
+    line-height: 1.2;
+
+    .cat-icon {
+      font-size: 1.1em;
+      /* Relative to font size */
+    }
+
+    &:hover {
+      background: #e5677d;
+      color: #ffffff;
+    }
+  }
+
+  .dropdown-container {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 10px;
+    background: #ffffff;
+    display: flex;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: all 0.2s ease;
+    z-index: 200;
+    border: 1px solid #eee;
+    width: max-content;
+    min-width: 800px;
+    max-width: 1200px;
+  }
+
+  .category-dropdown-wrapper:hover .dropdown-container {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    margin-top: 0;
+  }
+
+  /* Left Vertical Menu */
+  .vertical-menu {
+    width: 260px;
+    background: #f9fafb;
+    list-style: none;
+    margin: 0;
+    padding: 10px 0;
+    border-right: 1px solid #eee;
+    flex-shrink: 0;
+
+    .vertical-item {
+      position: relative;
+
+      a {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 20px;
+        color: #333;
+        font-weight: 500;
+        font-size: 14px;
+        text-decoration: none;
+        transition: all 0.1s;
+
+        .arrow-icon {
+          font-size: 12px;
+          color: #999;
+        }
+      }
+
+      &:hover>a,
+      &.active>a {
+        background: #ffffff;
+        color: #e5677d;
+        font-weight: 600;
+
+        .arrow-icon {
+          color: #e5677d;
+        }
+      }
+    }
+  }
+
+  /* Right Sub-Panel */
+  .sub-panel {
+    flex: 1;
+    background: #ffffff;
+    padding: 30px;
+    min-height: 400px;
+  }
+
+  .mega-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+    align-content: flex-start;
+  }
+
+  /* Reuse or adapt mega styles */
+  .dropdown-container {
+    .megaItemGroup {
+      flex: 0 0 200px;
+      margin-bottom: 20px;
+
+      .megaItemParent {
+        font-size: 15px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #e5677d;
+        margin-bottom: 10px;
+        display: block;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 6px;
+        text-decoration: none;
+      }
+
+      .grandChildrenList {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+
+        .megaItemChild {
+          font-size: 14px;
+          color: #555;
+          transition: 0.2s;
+          text-decoration: none;
+
+          &:hover {
+            color: #e5677d;
+            transform: translateX(3px);
+          }
+        }
       }
     }
   }

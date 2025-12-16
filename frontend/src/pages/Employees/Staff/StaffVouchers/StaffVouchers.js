@@ -507,8 +507,8 @@ function StaffVouchers() {
     if (!voucherForm.discountValue || Number.isNaN(discountValue) || discountValue <= 0) {
       errors.discountValue = 'Giá trị giảm không hợp lệ';
     } else if (voucherForm.discountValueType === 'PERCENTAGE') {
-      if (discountValue > 100 || discountValue <= 0) {
-        errors.discountValue = 'Phần trăm giảm phải nằm trong khoảng 0 - 100';
+      if (discountValue < 1 || discountValue > 99) {
+        errors.discountValue = 'Phần trăm giảm phải từ 1% đến 99%';
       }
       if (!voucherForm.maxDiscountValue || Number(voucherForm.maxDiscountValue) <= 0) {
         errors.maxDiscountValue = 'Vui lòng nhập mức giảm tối đa khi dùng %';
@@ -555,6 +555,11 @@ function StaffVouchers() {
     if (!promotionForm.code?.trim()) errors.code = 'Mã khuyến mãi không được để trống';
     if (!promotionForm.discountValue || Number(promotionForm.discountValue) <= 0) {
       errors.discountValue = 'Giá trị giảm không hợp lệ';
+    } else {
+      const discountValue = Number(promotionForm.discountValue);
+      if (discountValue < 1 || discountValue > 99) {
+        errors.discountValue = 'Phần trăm giảm phải từ 1% đến 99%';
+      }
     }
     if (!promotionForm.startDate) {
       errors.startDate = 'Chọn ngày bắt đầu';

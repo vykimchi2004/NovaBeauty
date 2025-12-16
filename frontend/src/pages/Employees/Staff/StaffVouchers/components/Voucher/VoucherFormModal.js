@@ -44,6 +44,21 @@ function VoucherFormModal({
     return products.filter(p => formData.productIds?.includes(p.id));
   }, [products, formData.productIds]);
 
+  const handleDiscountChange = (e) => {
+    const { value } = e.target;
+    if (formData.discountValueType === 'PERCENTAGE') {
+      const num = Number(value);
+      if (Number.isNaN(num)) {
+        onChange('discountValue', value);
+        return;
+      }
+      const clamped = Math.max(1, Math.min(99, num));
+      onChange('discountValue', clamped);
+    } else {
+      onChange('discountValue', value);
+    }
+  };
+
   if (!open) return null;
 
   const title = mode === 'edit' ? 'Sửa voucher' : 'Thêm voucher';
@@ -194,11 +209,11 @@ function VoucherFormModal({
               </label>
               <input
                 type="number"
-                min="0"
+                min={formData.discountValueType === 'PERCENTAGE' ? '1' : '0'}
                 step="1"
-                max={formData.discountValueType === 'PERCENTAGE' ? 100 : undefined}
+                max={formData.discountValueType === 'PERCENTAGE' ? 99 : undefined}
                 value={formData.discountValue}
-                onChange={(e) => onChange('discountValue', e.target.value)}
+                onChange={handleDiscountChange}
                 placeholder={
                   formData.discountValueType === 'AMOUNT'
                     ? 'Nhập số tiền giảm'
