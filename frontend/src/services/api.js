@@ -1,9 +1,10 @@
-import { API_BASE_URL, STORAGE_KEYS } from './config';
+import { API_BASE_URL, STORAGE_KEYS, API_ENDPOINTS } from './config';
 
 // API Client wrapper
 class ApiClient {
     constructor(baseURL = API_BASE_URL) {
         this.baseURL = baseURL;
+        this.isRefreshing = false; // Flag để tránh refresh nhiều lần cùng lúc
     }
 
     isFormData(payload) {
@@ -68,9 +69,85 @@ class ApiClient {
                 headers.Authorization = `Bearer ${token.trim()}`;
             }
         }
-        // Không log warning cho public endpoints - đây là bình thường
 
         return headers;
+    }
+
+    // Lưu token vào storage
+    setToken(token) {
+        if (token) {
+            localStorage.setItem(STORAGE_KEYS.TOKEN, token);
+        }
+    }
+
+    // Xóa token khỏi storage
+    clearToken() {
+        localStorage.removeItem(STORAGE_KEYS.TOKEN);
+        sessionStorage.removeItem(STORAGE_KEYS.TOKEN);
+    }
+
+    // Lấy refresh token từ storage
+    getRefreshToken() {
+        try {
+            return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN) || 
+                   sessionStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    // Lưu refresh token vào storage
+    setRefreshToken(token) {
+        if (token) {
+            localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, token);
+        }
+    }
+
+    // Tự động refresh token khi hết hạn
+    async tryRefreshToken() {
+        if (this.isRefreshing) {
+            return false; // Đang refresh rồi, không refresh nữa
+        }
+
+        const refreshToken = this.getRefreshToken();
+        if (!refreshToken) {
+            return false; // Không có refresh token
+        }
+
+        this.isRefreshing = true;
+
+        try {
+            const url = this.buildURL(API_ENDPOINTS.AUTH.REFRESH_TOKEN);
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: refreshToken }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const newAccessToken = data?.result?.token || data?.token;
+                const newRefreshToken = data?.result?.refreshToken || data?.refreshToken;
+                
+                if (newAccessToken) {
+                    this.setToken(newAccessToken);
+                }
+                if (newRefreshToken) {
+                    this.setRefreshToken(newRefreshToken);
+                }
+                
+                if (newAccessToken) {
+                    console.log('[API] Token refreshed successfully');
+                    return true;
+                }
+            }
+            return false;
+        } catch (error) {
+            console.error('[API] Failed to refresh token:', error);
+            return false;
+        } finally {
+            this.isRefreshing = false;
+        }
     }
 
     // Handle response
@@ -171,6 +248,30 @@ class ApiClient {
         return data;
     }
 
+    // Fetch với tự động refresh token khi 401
+    async fetchWithRefresh(url, fetchOptions, endpoint) {
+        const response = await fetch(url, fetchOptions);
+
+        // Nếu 401 và không phải endpoint auth, thử refresh token
+        if (response.status === 401 && !endpoint.includes('/auth/')) {
+            const refreshed = await this.tryRefreshToken();
+            if (refreshed) {
+                // Cập nhật header với token mới
+                const newToken = this.getAuthToken();
+                if (newToken) {
+                    fetchOptions.headers = {
+                        ...fetchOptions.headers,
+                        Authorization: `Bearer ${newToken}`,
+                    };
+                }
+                // Thử lại request
+                return await fetch(url, fetchOptions);
+            }
+        }
+
+        return response;
+    }
+
     // GET request
     async get(endpoint, options = {}) {
         const url = this.buildURL(endpoint);
@@ -180,13 +281,14 @@ class ApiClient {
         // Extract options without headers to avoid override
         const { headers: _, ...restOptions } = options;
 
-        try {
-            const response = await fetch(url, {
-                method: 'GET',
-                headers,
-                ...restOptions,
-            });
+        const fetchOptions = {
+            method: 'GET',
+            headers,
+            ...restOptions,
+        };
 
+        try {
+            const response = await this.fetchWithRefresh(url, fetchOptions, endpoint);
             return await this.handleResponse(response);
         } catch (error) {
             // Không log error cho 401/403 khi gọi /cart endpoint (bình thường khi chưa đăng nhập)
@@ -210,41 +312,18 @@ class ApiClient {
         const hasQueryParams = url.includes('?');
         const body = hasQueryParams ? undefined : (isFormData ? data : JSON.stringify(data));
 
-        // Log request details để debug (luôn log cho cart và review endpoints)
-        if (endpoint.includes('/cart') || endpoint.includes('/reviews')) {
-            const token = this.getAuthToken();
-            console.log('[API] POST request:', {
-                url,
-                contentType: headers['Content-Type'],
-                hasAuth: !!headers.Authorization,
-                authHeader: headers.Authorization ? `${headers.Authorization.substring(0, 30)}...` : 'none',
-                tokenFromStorage: token ? `${token.substring(0, 20)}...` : 'none',
-                allHeaders: Object.keys(headers),
-                endpoint,
-            });
-        }
-
         // Extract options without headers to avoid override
         const { headers: _, ...restOptions } = options;
 
+        const fetchOptions = {
+            method: 'POST',
+            headers,
+            body,
+            ...restOptions,
+        };
+
         try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers,
-                body,
-                ...restOptions,
-            });
-
-            // Log response status (luôn log cho cart và review endpoints)
-            if (endpoint.includes('/cart') || endpoint.includes('/reviews')) {
-                console.log('[API] POST response:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    ok: response.ok,
-                    url: response.url
-                });
-            }
-
+            const response = await this.fetchWithRefresh(url, fetchOptions, endpoint);
             return await this.handleResponse(response);
         } catch (error) {
             console.error('[API] POST error:', error);
@@ -262,14 +341,14 @@ class ApiClient {
         }
         const body = isFormData ? data : JSON.stringify(data);
 
-        try {
-            const response = await fetch(url, {
-                method: 'PUT',
-                headers,
-                body,
-                ...options,
-            });
+        const fetchOptions = {
+            method: 'PUT',
+            headers,
+            body,
+        };
 
+        try {
+            const response = await this.fetchWithRefresh(url, fetchOptions, endpoint);
             return await this.handleResponse(response);
         } catch (error) {
             console.error('[API] PUT error:', error);
@@ -287,14 +366,14 @@ class ApiClient {
         }
         const body = isFormData ? data : JSON.stringify(data);
 
-        try {
-            const response = await fetch(url, {
-                method: 'PATCH',
-                headers,
-                body,
-                ...options,
-            });
+        const fetchOptions = {
+            method: 'PATCH',
+            headers,
+            body,
+        };
 
+        try {
+            const response = await this.fetchWithRefresh(url, fetchOptions, endpoint);
             return await this.handleResponse(response);
         } catch (error) {
             console.error('[API] PATCH error:', error);
@@ -307,13 +386,13 @@ class ApiClient {
         const url = this.buildURL(endpoint);
         const headers = this.buildHeaders(options.headers);
 
-        try {
-            const response = await fetch(url, {
-                method: 'DELETE',
-                headers,
-                ...options,
-            });
+        const fetchOptions = {
+            method: 'DELETE',
+            headers,
+        };
 
+        try {
+            const response = await this.fetchWithRefresh(url, fetchOptions, endpoint);
             return await this.handleResponse(response);
         } catch (error) {
             console.error('[API] DELETE error:', error);

@@ -72,9 +72,12 @@ export async function login(email, password) {
 
     const data = await apiClient.handleResponse(response);
 
-    // Lưu token vào storage
+    // Lưu access token và refresh token vào storage
     if (data && data.token) {
       storage.set(STORAGE_KEYS.TOKEN, data.token);
+    }
+    if (data && data.refreshToken) {
+      storage.set(STORAGE_KEYS.REFRESH_TOKEN, data.refreshToken);
     }
 
     return data;
@@ -158,24 +161,33 @@ export async function changePassword(currentPassword, newPassword) {
   }
 }
 
-// Refresh token
+// Refresh token - dùng refresh token để lấy cặp token mới
 export async function refreshToken(refreshTokenValue) {
   try {
-    // Endpoint public, không cần token cũ
+    // Nếu không truyền refreshTokenValue, lấy từ storage
+    const tokenToUse = refreshTokenValue || storage.get(STORAGE_KEYS.REFRESH_TOKEN);
+    
+    if (!tokenToUse) {
+      throw new Error('No refresh token available');
+    }
+
     const url = apiClient.buildURL(API_ENDPOINTS.AUTH.REFRESH_TOKEN);
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ token: refreshTokenValue }),
+      body: JSON.stringify({ token: tokenToUse }),
     });
 
     const data = await apiClient.handleResponse(response);
 
-    // Cập nhật token mới
+    // Cập nhật cả access token và refresh token mới
     if (data && data.token) {
       storage.set(STORAGE_KEYS.TOKEN, data.token);
+    }
+    if (data && data.refreshToken) {
+      storage.set(STORAGE_KEYS.REFRESH_TOKEN, data.refreshToken);
     }
 
     return data;
@@ -202,13 +214,15 @@ export async function logout(token) {
 
     await apiClient.handleResponse(response);
 
-    // Xóa token và user info
+    // Xóa tất cả token và user info
     storage.remove(STORAGE_KEYS.TOKEN);
+    storage.remove(STORAGE_KEYS.REFRESH_TOKEN);
     storage.remove(STORAGE_KEYS.USER);
   } catch (error) {
     console.error('[Auth Service] logout error:', error);
     // Vẫn xóa token ngay cả khi API call fail
     storage.remove(STORAGE_KEYS.TOKEN);
+    storage.remove(STORAGE_KEYS.REFRESH_TOKEN);
     storage.remove(STORAGE_KEYS.USER);
     throw error;
   }

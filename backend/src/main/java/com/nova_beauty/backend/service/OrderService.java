@@ -489,7 +489,6 @@ public class OrderService {
         try {
             return objectMapper.readValue(cartItemIdsSnapshot, new TypeReference<List<String>>() {});
         } catch (JsonProcessingException e) {
-            log.warn("Failed to parse cartItemIdsSnapshot: {}", cartItemIdsSnapshot, e);
             return new ArrayList<>();
         }
     }
@@ -512,19 +511,13 @@ public class OrderService {
         orderItemRepository.flush(); // Ensure items are persisted immediately
         order.setItems(orderItems);
         
-        // Cập nhật tồn kho và số lượng đã bán (giống LuminaBook)
-        // Reload product từ database với inventory được load
+        // Cập nhật tồn kho và số lượng đã bán
         for (CartItem ci : selectedItems) {
             if (ci.getProduct() != null && ci.getProduct().getId() != null) {
-                Product product = productRepository.findByIdWithRelations(ci.getProduct().getId())
-                        .orElse(null);
+                Product product = productRepository.findByIdWithRelations(ci.getProduct().getId()).orElse(null);
                 if (product != null) {
                     updateInventoryAndSales(product, ci.getQuantity(), ci.getColorCode());
-                } else {
-                    log.warn("Product not found for cart item: productId={}", ci.getProduct().getId());
                 }
-            } else {
-                log.warn("CartItem has null product or productId: cartItemId={}", ci.getId());
             }
         }
     }
@@ -567,81 +560,59 @@ public class OrderService {
     @Transactional
     public void handleMomoIpn(MomoIpnRequest request) {
         if (request == null || request.getOrderId() == null) {
-            log.warn("handleMomoIpn: request or orderId is null");
+            log.warn("MoMo IPN: request or orderId is null");
             return;
         }
-        
-        log.info("handleMomoIpn: Processing MoMo IPN for orderId={}, resultCode={}", 
-                request.getOrderId(), request.getResultCode());
-        
+
         Order order = orderRepository.findByCode(request.getOrderId())
                 .orElseThrow(() -> {
-                    log.error("handleMomoIpn: Order not found with code={}", request.getOrderId());
+                    log.error("MoMo IPN: Order not found - code={}", request.getOrderId());
                     return new AppException(ErrorCode.ORDER_NOT_EXISTED);
                 });
 
         if (request.getResultCode() != null && request.getResultCode() != 0) {
-            log.warn("handleMomoIpn: Payment failed for order={}, resultCode={}", 
-                    request.getOrderId(), request.getResultCode());
+            log.warn("MoMo IPN: Payment FAILED - order={}, resultCode={}", request.getOrderId(), request.getResultCode());
             order.setPaymentStatus(PaymentStatus.FAILED);
             orderRepository.save(order);
             return;
         }
 
         if (Boolean.TRUE.equals(order.getPaid())) {
-            log.info("handleMomoIpn: Order {} already paid, skipping", request.getOrderId());
-            return;
+            return; // Already paid, skip
         }
 
-        log.info("handleMomoIpn: Updating order {} to PAID status", request.getOrderId());
+        // Cập nhật trạng thái thanh toán
         order.setPaymentStatus(PaymentStatus.PAID);
         order.setPaid(true);
         order.setPaymentReference(request.getTransId() != null ? String.valueOf(request.getTransId()) : null);
         orderRepository.save(order);
-        orderRepository.flush(); // Ensure order is saved before reloading
+        orderRepository.flush();
 
-        // Cập nhật tồn kho và số lượng đã bán khi thanh toán thành công
-        // Reload order với items để đảm bảo có đầy đủ thông tin
+        // Reload order với items
         Order reloadedOrder = orderRepository.findById(order.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXISTED));
-        
-        // Force load items nếu chưa được load
+
         if (reloadedOrder.getItems() != null) {
             reloadedOrder.getItems().size(); // Trigger lazy loading
         }
         
-        log.info("handleMomoIpn: Order {} has {} items", request.getOrderId(), 
-                reloadedOrder.getItems() != null ? reloadedOrder.getItems().size() : 0);
-        
+        // Cập nhật tồn kho và số lượng đã bán
         if (reloadedOrder.getItems() != null && !reloadedOrder.getItems().isEmpty()) {
             for (OrderItem item : reloadedOrder.getItems()) {
-                // Force load product
                 if (item.getProduct() != null) {
                     item.getProduct().getId(); // Trigger lazy loading
                 }
                 
                 if (item.getProduct() != null && item.getProduct().getId() != null) {
-                    log.info("handleMomoIpn: Processing order item: productId={}, quantity={}, colorCode={}", 
-                            item.getProduct().getId(), item.getQuantity(), item.getColorCode());
-                    
-                    Product product = productRepository.findByIdWithRelations(item.getProduct().getId())
-                            .orElse(null);
+                    Product product = productRepository.findByIdWithRelations(item.getProduct().getId()).orElse(null);
                     if (product != null) {
-                        // Lấy colorCode từ order item (đã được lưu khi tạo order từ CartItem)
-                        log.info("handleMomoIpn: Updating inventory and sales for product={}, quantity={}, colorCode={}", 
-                                product.getId(), item.getQuantity(), item.getColorCode());
                         updateInventoryAndSales(product, item.getQuantity(), item.getColorCode());
-                    } else {
-                        log.warn("handleMomoIpn: Product not found for order item: productId={}", item.getProduct().getId());
                     }
-                } else {
-                    log.warn("handleMomoIpn: Order item has null product or productId");
                 }
             }
-        } else {
-            log.warn("handleMomoIpn: Order {} has no items", request.getOrderId());
         }
 
+        recordOrderRevenue(reloadedOrder);
         // Ghi nhận doanh thu cho đơn hàng MoMo đã thanh toán thành công
         log.info("handleMomoIpn: Attempting to record revenue for order {}", request.getOrderId());
         if (financialService.hasRecordedRevenue(request.getOrderId())) {
@@ -663,7 +634,7 @@ public class OrderService {
         
         finalizePaidOrder(reloadedOrder, cartItemIds);
         
-        log.info("handleMomoIpn: Successfully processed MoMo IPN for order {}", request.getOrderId());
+        log.info("MoMo IPN: Payment SUCCESS - order={}", request.getOrderId());
     }
 
     /**
@@ -681,30 +652,20 @@ public class OrderService {
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXISTED));
 
         // Chỉ xử lý nếu là order MoMo và chưa được thanh toán
-        if (order.getPaymentMethod() != PaymentMethod.MOMO) {
-            log.warn("checkAndUpdateMomoPaymentStatus: Order {} is not a MoMo order", orderCode);
-            return order;
-        }
-
-        if (Boolean.TRUE.equals(order.getPaid())) {
-            log.info("checkAndUpdateMomoPaymentStatus: Order {} already paid", orderCode);
+        if (order.getPaymentMethod() != PaymentMethod.MOMO || Boolean.TRUE.equals(order.getPaid())) {
             return order;
         }
 
         // Nếu resultCode = 0 (thành công), cập nhật order status
         if (resultCode != null && resultCode == 0) {
-            log.info("checkAndUpdateMomoPaymentStatus: Updating order {} to PAID status from redirect", orderCode);
-            
             order.setPaymentStatus(PaymentStatus.PAID);
             order.setPaid(true);
             orderRepository.save(order);
             orderRepository.flush();
 
-            // Reload order với items
             Order reloadedOrder = orderRepository.findById(order.getId())
                     .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXISTED));
 
-            // Force load items
             if (reloadedOrder.getItems() != null) {
                 reloadedOrder.getItems().size();
             }
@@ -715,10 +676,8 @@ public class OrderService {
                     if (item.getProduct() != null) {
                         item.getProduct().getId();
                     }
-
                     if (item.getProduct() != null && item.getProduct().getId() != null) {
-                        Product product = productRepository.findByIdWithRelations(item.getProduct().getId())
-                                .orElse(null);
+                        Product product = productRepository.findByIdWithRelations(item.getProduct().getId()).orElse(null);
                         if (product != null) {
                             updateInventoryAndSales(product, item.getQuantity(), item.getColorCode());
                         }
@@ -741,11 +700,10 @@ public class OrderService {
             List<String> cartItemIds = parseCartItemIds(reloadedOrder.getCartItemIdsSnapshot());
             finalizePaidOrder(reloadedOrder, cartItemIds);
 
-            log.info("checkAndUpdateMomoPaymentStatus: Successfully updated order {} to PAID from redirect", orderCode);
+            log.info("MoMo redirect: Payment SUCCESS - order={}", orderCode);
             return reloadedOrder;
         } else if (resultCode != null && resultCode != 0) {
-            // Thanh toán thất bại
-            log.warn("checkAndUpdateMomoPaymentStatus: Payment failed for order {}, resultCode={}", orderCode, resultCode);
+            log.warn("MoMo redirect: Payment FAILED - order={}, resultCode={}", orderCode, resultCode);
             order.setPaymentStatus(PaymentStatus.FAILED);
             orderRepository.save(order);
         }
@@ -770,13 +728,13 @@ public class OrderService {
         if (order == null) {
             return;
         }
-        
+
         String voucherCode = order.getAppliedVoucherCode();
         String voucherId = order.getAppliedVoucherId();
         if ((voucherCode == null || voucherCode.isBlank()) && (voucherId == null || voucherId.isBlank())) {
             return;
         }
-        
+
         // Xóa voucher khỏi order để khách có thể sử dụng lại
         log.info("Hoàn voucher {} (ID: {}) cho đơn hàng {}", voucherCode, voucherId, order.getCode());
         order.setAppliedVoucherCode(null);
@@ -802,7 +760,7 @@ public class OrderService {
         }
 
         String orderId = order.getId();
-        
+
         // Kiểm tra xem đã ghi nhận doanh thu chưa (tránh duplicate)
         // Check trước khi vào transaction để tránh race condition
         if (financialService.hasRecordedRevenue(orderId)) {
@@ -827,7 +785,7 @@ public class OrderService {
                 }
             }
         }
-        
+
         // Kiểm tra lại sau khi save để đảm bảo đã tạo thành công
         if (recordedCount > 0) {
             log.info("Recorded revenue for order {} with {} items", orderId, recordedCount);
@@ -1043,36 +1001,56 @@ public class OrderService {
                 }
             }
         }
-        // Reload để lấy status mới nhất
         return orderRepository.findAll();
     }
 
     /**
      * Danh sách đơn hàng của chính khách hàng hiện đang đăng nhập.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     @PreAuthorize("hasRole('CUSTOMER')")
     public List<Order> getMyOrders() {
         try {
             String email = SecurityUtil.getAuthentication().getName();
             List<Order> orders = orderRepository.findByUserEmail(email);
-            // Đồng bộ trạng thái từ GHN cho các đơn có shipment
+
+            // Chỉ đồng bộ các đơn đang trong quá trình vận chuyển
             for (Order order : orders) {
-                if (order.getShipment() != null && order.getShipment().getOrderCode() != null) {
+                if (shouldSyncOrderStatus(order)) {
                     try {
                         shipmentService.syncOrderStatusFromGhn(order.getId());
                     } catch (Exception e) {
-                        log.warn("Không thể đồng bộ trạng thái từ GHN cho order: {}", order.getId(), e);
+                        // Bỏ qua lỗi sync
                     }
                 }
             }
-            // Reload để lấy status mới nhất
             return orderRepository.findByUserEmail(email);
         } catch (Exception e) {
-            log.error("Error fetching orders for user: {}", e.getMessage(), e);
-            // Return empty list instead of throwing to prevent frontend crash
+            log.error("Error fetching orders: {}", e.getMessage());
             return new ArrayList<>();
         }
+    }
+
+    /**
+     * Kiểm tra xem đơn hàng có cần đồng bộ trạng thái từ GHN không.
+     * Chỉ đồng bộ các đơn:
+     * - Có shipment với orderCode (đã tạo trên GHN)
+     * - Chưa ở trạng thái cuối cùng (DELIVERED, CANCELLED, REFUNDED, etc.)
+     */
+    private boolean shouldSyncOrderStatus(Order order) {
+        if (order.getShipment() == null || order.getShipment().getOrderCode() == null) {
+            return false;
+        }
+
+        OrderStatus status = order.getStatus();
+        // Chỉ sync các đơn đang vận chuyển hoặc chờ xử lý
+        return status != OrderStatus.DELIVERED
+                && status != OrderStatus.CANCELLED
+                && status != OrderStatus.RETURN_REQUESTED
+                && status != OrderStatus.RETURN_CS_CONFIRMED
+                && status != OrderStatus.RETURN_STAFF_CONFIRMED
+                && status != OrderStatus.REFUNDED
+                && status != OrderStatus.RETURN_REJECTED;
     }
 
     /**
@@ -1218,61 +1196,32 @@ public class OrderService {
 
     @Transactional
     public Order requestReturn(String orderId, ReturnRequestRequest request) {
-        log.info("Processing request return for order: {}", orderId);
         try {
-            Order order =
-                    orderRepository
-                            .findById(orderId)
-                            .orElseThrow(
-                                    () -> {
-                                        log.error("Order not found: {}", orderId);
-                                        return new AppException(ErrorCode.ORDER_NOT_EXISTED);
-                                    });
+            Order order = orderRepository.findById(orderId)
+                    .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXISTED));
 
-            log.info("Order found: {}, current status: {}", orderId, order.getStatus());
-
-            // Đồng bộ trạng thái từ GHN trước khi kiểm tra điều kiện request return
-            // Để đảm bảo status được cập nhật mới nhất từ GHN
+            // Đồng bộ trạng thái từ GHN
             try {
                 shipmentService.syncOrderStatusFromGhn(orderId);
-                // Reload order để lấy status mới nhất sau khi sync
-                order =
-                        orderRepository
-                                .findById(orderId)
-                                .orElseThrow(
-                                        () -> new AppException(ErrorCode.ORDER_NOT_EXISTED));
-                log.info(
-                        "Order status after sync from GHN: {}, status: {}",
-                        orderId,
-                        order.getStatus());
+                order = orderRepository.findById(orderId)
+                        .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXISTED));
             } catch (Exception e) {
-                log.warn(
-                        "Failed to sync order status from GHN for order {}: {}",
-                        orderId,
-                        e.getMessage());
                 // Tiếp tục với status hiện tại nếu sync thất bại
             }
 
             // Cho phép yêu cầu trả hàng từ DELIVERED hoặc gửi lại từ RETURN_REJECTED
             if (order.getStatus() != OrderStatus.DELIVERED
                     && order.getStatus() != OrderStatus.RETURN_REJECTED) {
-                log.warn(
-                        "Invalid order status for return request: orderId={}, status={}",
-                        orderId,
-                        order.getStatus());
                 throw new AppException(
                         ErrorCode.UNCATEGORIZED_EXCEPTION,
                         String.format(
                                 "Chỉ có thể yêu cầu trả hàng cho đơn hàng đã giao (DELIVERED) hoặc đơn hàng đã bị từ chối hoàn tiền (RETURN_REJECTED). Trạng thái hiện tại: %s",
-                                order.getStatus() != null
-                                        ? order.getStatus().name()
-                                        : "null"));
+                                order.getStatus() != null ? order.getStatus().name() : "null"));
             }
 
             // Force load items để tránh LazyInitializationException
             if (order.getItems() != null) {
-                order.getItems().size(); // Trigger lazy loading
-                log.info("Loaded {} items for order: {}", order.getItems().size(), orderId);
+                order.getItems().size();
             }
 
             order.setStatus(OrderStatus.RETURN_REQUESTED);
@@ -1339,13 +1288,8 @@ public class OrderService {
 
                         double computedReturnFee = 0.0;
                         try {
-                            computedReturnFee =
-                                    shipmentService.estimateReturnShippingFee(order);
+                            computedReturnFee = shipmentService.estimateReturnShippingFee(order);
                         } catch (Exception e) {
-                            log.warn(
-                                    "Failed to estimate return shipping fee for order {}: {}",
-                                    orderId,
-                                    e.getMessage());
                             // Continue with fallback calculation
                         }
 
@@ -1585,8 +1529,6 @@ public class OrderService {
                     e);
         }
 
-        // TODO: Gửi thông báo in-app cho STAFF nếu bạn triển khai NotificationService
-
         return saved;
     }
 
@@ -1624,15 +1566,11 @@ public class OrderService {
         order.setStatus(OrderStatus.RETURN_STAFF_CONFIRMED);
         Order saved = orderRepository.save(order);
 
-        // Gửi email cho khách về kết quả kiểm tra hàng (lỗi bên nào, số tiền dự kiến hoàn)
+        // Gửi email cho khách về kết quả kiểm tra hàng
         try {
             brevoEmailService.sendReturnStaffInspectionEmail(saved);
         } catch (Exception e) {
-            log.error(
-                    "Failed to send staff inspection email for order {}: {}",
-                    orderId,
-                    e.getMessage(),
-                    e);
+            log.error("Failed to send staff inspection email for order {}", orderId);
         }
 
         return saved;
@@ -1664,10 +1602,10 @@ public class OrderService {
         if (request != null && request.getRefundAmount() != null) {
             order.setRefundAmount(request.getRefundAmount());
         }
-        
+
         // Hoàn voucher cho khách hàng khi hoàn tiền
         refundVoucher(order);
-        
+
         order.setStatus(OrderStatus.REFUNDED);
 
         Order savedOrder = orderRepository.save(order);
@@ -2035,45 +1973,47 @@ public class OrderService {
                 log.warn("updateColorVariantStockAndSales: Variant with colorCode {} not found in product {}", colorCode, product.getId());
             }
         } catch (Exception e) {
-            log.error("updateColorVariantStockAndSales: Could not update color variant for product {} with colorCode {}: {}", 
-                product.getId(), colorCode, e.getMessage(), e);
+            log.error("Failed to update color variant for product {} colorCode {}", product.getId(), colorCode);
+        }
+    }
+
+    private int parseIntSafe(Object obj) {
+        if (obj == null) return 0;
+        if (obj instanceof Number) return ((Number) obj).intValue();
+        try {
+            return Integer.parseInt(obj.toString());
+        } catch (NumberFormatException e) {
+            return 0;
         }
     }
 
     /**
      * Cập nhật số lượng đã bán tổng của product bằng tổng quantitySold của tất cả variants
-     * @param product Sản phẩm cần cập nhật
      */
     private void updateTotalQuantitySold(Product product) {
         try {
             String manufacturingLocation = product.getManufacturingLocation();
             if (manufacturingLocation == null || manufacturingLocation.trim().isEmpty()) {
-                log.warn("updateTotalQuantitySold: Product {} has no manufacturingLocation", product.getId());
                 return;
             }
 
-            // Parse JSON string - có thể là object với {type, variants} hoặc array trực tiếp
             List<Map<String, Object>> variants = null;
             try {
                 JsonNode rootNode = objectMapper.readTree(manufacturingLocation);
-                
-                // Kiểm tra xem có phải là object với field "variants" không
+
                 if (rootNode.isObject() && rootNode.has("variants")) {
                     JsonNode variantsNode = rootNode.get("variants");
                     if (variantsNode.isArray()) {
                         variants = objectMapper.convertValue(variantsNode, new TypeReference<List<Map<String, Object>>>() {});
                     }
                 } else if (rootNode.isArray()) {
-                    // Nếu là array trực tiếp
                     variants = objectMapper.convertValue(rootNode, new TypeReference<List<Map<String, Object>>>() {});
                 }
             } catch (Exception e) {
-                log.error("updateTotalQuantitySold: Failed to parse manufacturingLocation: {}", e.getMessage(), e);
                 return;
             }
 
             if (variants == null || variants.isEmpty()) {
-                log.warn("updateTotalQuantitySold: No variants found in manufacturingLocation for product {}", product.getId());
                 return;
             }
 

@@ -135,6 +135,7 @@ export const API_ENDPOINTS = {
 export const STORAGE_KEYS = {
     USER: 'user',
     TOKEN: 'token',
+    REFRESH_TOKEN: 'refreshToken',
     CART: 'cart',
     THEME: 'theme',
 };

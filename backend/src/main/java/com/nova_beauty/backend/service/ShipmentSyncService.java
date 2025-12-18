@@ -32,11 +32,11 @@ public class ShipmentSyncService {
     private final ShipmentService shipmentService;
 
 
-    @Scheduled(cron = "0 */1 * * * *") // Chạy mỗi 1 phút thay vì 15 phút
+    @Scheduled(fixedRate = 300000) // Chạy mỗi 5 phút (backup) - đồng bộ chính khi user xem danh sách đơn hàng
     @Transactional
     public void syncAllShipmentStatuses() {
         try {
-            log.info("Bắt đầu đồng bộ trạng thái đơn hàng từ GHN...");
+            log.debug("Bắt đầu đồng bộ trạng thái đơn hàng từ GHN (background job)...");
 
             // Lấy tất cả shipments có orderCode (đã tạo trên GHN) và provider là GHN
             List<Shipment> shipments = shipmentRepository.findAll().stream()

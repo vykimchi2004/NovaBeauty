@@ -45,6 +45,26 @@
   box-shadow: 0 0 0 3px rgba(229, 103, 125, 0.18);
 }
 
+.field input.error,
+.field select.error,
+.field textarea.error {
+  border-color: #dc3545;
+  background-color: #fff8f8;
+}
+
+.field input.error:focus,
+.field select.error:focus,
+.field textarea.error:focus {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.18);
+}
+
+.errorText {
+  color: #dc3545;
+  font-size: 13px;
+  margin-top: 2px;
+}
+
 .fieldGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

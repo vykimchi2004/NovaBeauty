@@ -12,12 +12,16 @@ import { storage } from '~/services/utils';
 
 const cx = classNames.bind(styles);
 
+// Key để lưu email "nhớ tài khoản" (chỉ lưu email, không lưu mật khẩu vì lý do bảo mật)
+const REMEMBER_EMAIL_KEY = 'nova_remember_email';
+
 function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenForgot }) {
   const navigate = useNavigate?.();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [renderKey, setRenderKey] = useState(0);
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
@@ -33,10 +37,20 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
       setPasswordError('');
       setLoading(false);
       setShowPassword(false);
-      setRenderKey((k) => k + 1); // Force remount inputs to clear values
-      // Also clear values via refs in case of browser autofill persistence
+      setRenderKey((k) => k + 1);
+      
+      // Kiểm tra xem có lưu email "nhớ tài khoản" không
+      const savedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY) || '';
+      setRememberMe(!!savedEmail); // Nếu có email đã lưu thì tích checkbox
+      
       setTimeout(() => {
-        if (emailRef.current) emailRef.current.value = '';
+        if (savedEmail) {
+          // Nếu có email đã lưu, điền vào form
+          if (emailRef.current) emailRef.current.value = savedEmail;
+        } else {
+          if (emailRef.current) emailRef.current.value = '';
+        }
+        // Luôn để trống mật khẩu (không lưu mật khẩu)
         if (passwordRef.current) passwordRef.current.value = '';
       }, 0);
     }
@@ -93,6 +107,13 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
       const response = await login(email, password);
       
       if (response && response.token) {
+        // Xử lý "nhớ tài khoản" - chỉ lưu email
+        if (rememberMe) {
+          localStorage.setItem(REMEMBER_EMAIL_KEY, email);
+        } else {
+          localStorage.removeItem(REMEMBER_EMAIL_KEY);
+        }
+        
         // Lấy thông tin user
         let userInfo = null;
         try {
@@ -181,17 +202,31 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
           </span>
         </p>
 
-        <form key={renderKey} onSubmit={handleSubmit} className={cx('form')} noValidate>
+        <form key={renderKey} onSubmit={handleSubmit} className={cx('form')} noValidate autoComplete="off">
           <div className={cx('formGroup')}>
             <label>Email</label>
-            <input ref={emailRef} name="email" type="email" placeholder="Nhập email của bạn" disabled={loading} />
+            <input 
+              ref={emailRef} 
+              name="email" 
+              type="email" 
+              placeholder="Nhập email của bạn" 
+              disabled={loading}
+              autoComplete="off"
+            />
             {emailError && <div className={cx('error')}>{emailError}</div>}
           </div>
 
           <div className={cx('formGroup')}>
             <label>Mật khẩu</label>
             <div className={cx('passwordWrapper')}>
-              <input ref={passwordRef} name="password" type={showPassword ? 'text' : 'password'} placeholder="Nhập mật khẩu" disabled={loading} />
+              <input 
+                ref={passwordRef} 
+                name="password" 
+                type={showPassword ? 'text' : 'password'} 
+                placeholder="Nhập mật khẩu" 
+                disabled={loading}
+                autoComplete="new-password"
+              />
               <button type="button" className={cx('eyeBtn')} onClick={() => setShowPassword((prev) => !prev)} disabled={loading} tabIndex={-1}>
                 <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} />
               </button>
@@ -201,7 +236,12 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
 
           <div className={cx('options')}>
             <label className={cx('remember')}>
-              <input type="checkbox" disabled={loading} /> Nhớ tài khoản
+              <input 
+                type="checkbox" 
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                disabled={loading} 
+              /> Nhớ tài khoản
             </label>
             <p className={cx('forgot')}>
               <span onClick={loading ? undefined : onOpenForgot} style={{ cursor: loading ? 'not-allowed' : 'pointer' }}>
