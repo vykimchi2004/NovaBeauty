@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import classNames from 'classnames/bind';
 import { NavLink, Route, Routes, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import styles from './CustomerSupportPage.module.scss';
@@ -14,6 +14,9 @@ import RefundManagementPage from './RefundManagement/RefundManagementPage';
 import RefundDetailPage from './RefundManagement/RefundDetail/RefundDetailPage';
 import ViewRefundDetailPage from './RefundManagement/ViewRefundDetail/ViewRefundDetailPage';
 import ProfileCustomerSupportPage from './ProfileCustomerSupport/ProfileCustomerSupportPage';
+import ticketService from '~/services/ticket';
+import { getAllReviews } from '~/services/review';
+import { getApiBaseUrl, getStoredToken } from '~/services/utils';
 
 const cx = classNames.bind(styles);
 
@@ -110,13 +113,121 @@ export default function CustomerSupportPage() {
     const [user, setUser] = useState(() => storage.get(STORAGE_KEYS.USER));
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [showNotifications, setShowNotifications] = useState(false);
-    const [notifications] = useState([]);
+    const [notifications, setNotifications] = useState([]);
+    const [loadingNotifications, setLoadingNotifications] = useState(false);
     const initials = (user?.fullName || 'CS')
         .split(' ')
         .filter(Boolean)
         .slice(0, 2)
         .map((word) => word[0]?.toUpperCase())
         .join('');
+
+    // Fetch notifications từ tickets, reviews và refund requests
+    const fetchNotifications = useCallback(async () => {
+        setLoadingNotifications(true);
+        const notificationList = [];
+
+        try {
+            // 1. Fetch tickets (khiếu nại) - lọc những cái cần CSKH xử lý
+            const tickets = await ticketService.getAllTickets();
+            if (Array.isArray(tickets)) {
+                const pendingTickets = tickets.filter(
+                    (t) => t.status === 'NEW' || t.status === 'PENDING' || t.status === 'IN_PROGRESS'
+                );
+                pendingTickets.forEach((ticket) => {
+                    const statusText = ticket.status === 'NEW' ? 'mới' : 
+                                       ticket.status === 'PENDING' ? 'chờ xử lý' : 'đang xử lý';
+                    notificationList.push({
+                        id: `ticket-${ticket.id}`,
+                        type: 'complaint',
+                        title: 'Khiếu nại ' + statusText,
+                        message: `Khách hàng ${ticket.customerName || 'N/A'} gửi khiếu nại${ticket.topic ? `: ${ticket.topic}` : ''}`,
+                        createdAt: ticket.createdAt,
+                        link: '/customer-support/complaints',
+                    });
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching tickets for notifications:', error);
+        }
+
+        try {
+            // 2. Fetch reviews (đánh giá) - lọc những cái chưa trả lời
+            const reviews = await getAllReviews();
+            if (Array.isArray(reviews)) {
+                const pendingReviews = reviews.filter((r) => !r.reply || !r.reply.trim());
+                pendingReviews.forEach((review) => {
+                    notificationList.push({
+                        id: `review-${review.id}`,
+                        type: 'review',
+                        title: 'Đánh giá chưa trả lời',
+                        message: `${review.nameDisplay || review.userName || 'Khách hàng'} đánh giá ${review.rating}★${review.productName ? ` - ${review.productName}` : ''}`,
+                        createdAt: review.createdAt,
+                        link: '/customer-support/reviews',
+                    });
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching reviews for notifications:', error);
+        }
+
+        try {
+            // 3. Fetch refund requests (yêu cầu hoàn tiền) - lọc những cái cần CSKH xác nhận
+            const token = getStoredToken();
+            if (token) {
+                const API_BASE_URL = getApiBaseUrl();
+                const response = await fetch(`${API_BASE_URL}/orders/return-requests`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const refundOrders = data?.result || data || [];
+                    
+                    // Chỉ lấy các yêu cầu đang chờ CSKH xử lý
+                    const pendingRefunds = refundOrders.filter(
+                        (order) => order.status === 'RETURN_REQUESTED' || order.status === 'RETURN_CS_CONFIRMED'
+                    );
+                    
+                    pendingRefunds.forEach((order) => {
+                        const statusText = order.status === 'RETURN_REQUESTED' ? 'mới' : 'đã xác nhận';
+                        notificationList.push({
+                            id: `refund-${order.id}`,
+                            type: 'refund',
+                            title: `Yêu cầu hoàn tiền ${statusText}`,
+                            message: `Khách hàng ${order.customerName || order.receiverName || 'N/A'} yêu cầu hoàn tiền đơn hàng #${order.code || order.id?.substring(0, 8)}`,
+                            createdAt: order.orderDateTime || order.orderDate,
+                            link: '/customer-support/refund-management',
+                        });
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching refund requests for notifications:', error);
+        }
+
+        // Sắp xếp theo thời gian mới nhất
+        notificationList.sort((a, b) => {
+            const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+            const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+            return dateB - dateA;
+        });
+
+        setNotifications(notificationList);
+        setLoadingNotifications(false);
+    }, []);
+
+    // Fetch notifications khi component mount và khi path thay đổi
+    useEffect(() => {
+        fetchNotifications();
+        // Refresh notifications mỗi 30 giây
+        const interval = setInterval(fetchNotifications, 30000);
+        return () => clearInterval(interval);
+    }, [fetchNotifications]);
 
     useEffect(() => {
         const currentUser = storage.get(STORAGE_KEYS.USER);
@@ -196,22 +307,65 @@ export default function CustomerSupportPage() {
                                     <div>
                                         <span>Thông báo</span>
                                         <div className={cx('notificationSub')}>
-                                            {notifications.length === 0
-                                                ? 'Không có thông báo'
-                                                : `${notifications.length} thông báo`}
+                                            {loadingNotifications
+                                                ? 'Đang tải...'
+                                                : notifications.length === 0
+                                                    ? 'Không có thông báo'
+                                                    : `${notifications.length} thông báo cần xử lý`}
                                         </div>
                                     </div>
+                                    <button
+                                        type="button"
+                                        className={cx('refreshBtn')}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            fetchNotifications();
+                                        }}
+                                        disabled={loadingNotifications}
+                                    >
+                                        ↻
+                                    </button>
                                 </div>
                                 <div className={cx('notificationList')}>
-                                    {notifications.length === 0 ? (
-                                        <div className={cx('notificationEmpty')}>Chưa có thông báo mới</div>
+                                    {loadingNotifications ? (
+                                        <div className={cx('notificationEmpty')}>Đang tải thông báo...</div>
+                                    ) : notifications.length === 0 ? (
+                                        <div className={cx('notificationEmpty')}>Không có việc cần xử lý</div>
                                     ) : (
-                                        notifications.map((item) => (
-                                            <div key={item.id} className={cx('notificationItem')}>
-                                                <div className={cx('notificationTitle')}>{item.title || 'Thông báo'}</div>
-                                                <div className={cx('notificationMessage')}>{item.message || ''}</div>
+                                        notifications.slice(0, 10).map((item) => (
+                                            <div
+                                                key={item.id}
+                                                className={cx('notificationItem', item.type)}
+                                                onClick={() => {
+                                                    setShowNotifications(false);
+                                                    navigate(item.link);
+                                                }}
+                                                style={{ cursor: 'pointer' }}
+                                            >
+                                                <div className={cx('notificationIcon')}>
+                                                    {item.type === 'complaint' ? '⚠️' : item.type === 'review' ? '💬' : '💰'}
+                                                </div>
+                                                <div className={cx('notificationContent')}>
+                                                    <div className={cx('notificationTitle')}>{item.title}</div>
+                                                    <div className={cx('notificationMessage')}>{item.message}</div>
+                                                    {item.createdAt && (
+                                                        <div className={cx('notificationTime')}>
+                                                            {new Date(item.createdAt).toLocaleString('vi-VN', {
+                                                                day: '2-digit',
+                                                                month: '2-digit',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit',
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         ))
+                                    )}
+                                    {notifications.length > 10 && (
+                                        <div className={cx('notificationMore')}>
+                                            +{notifications.length - 10} thông báo khác
+                                        </div>
                                     )}
                                 </div>
                             </div>
