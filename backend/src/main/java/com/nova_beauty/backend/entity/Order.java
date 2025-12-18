@@ -71,6 +71,15 @@ public class Order {
     @Column(name = "cart_item_ids", columnDefinition = "TEXT")
     String cartItemIdsSnapshot;
 
+    @Column(name = "applied_voucher_code")
+    String appliedVoucherCode; // Mã voucher đã áp dụng cho đơn hàng
+
+    @Column(name = "applied_voucher_id")
+    String appliedVoucherId; // ID voucher đã áp dụng (để kiểm tra usage chính xác)
+
+    @Column(name = "voucher_discount")
+    Double voucherDiscount; // Số tiền giảm giá từ voucher
+
     @Column(name = "payment_reference")
     String paymentReference;
 

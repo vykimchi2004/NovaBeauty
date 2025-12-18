@@ -636,7 +636,8 @@ function StaffVouchers() {
       refreshVoucherList();
     } catch (error) {
       console.error('Error saving voucher:', error);
-      notify.error('Không thể lưu voucher, vui lòng thử lại.');
+      // Hiển thị message lỗi từ backend (ví dụ: "Mã voucher đã tồn tại")
+      notify.error(error.message || 'Không thể lưu voucher, vui lòng thử lại.');
     }
   };
 
@@ -692,7 +693,8 @@ function StaffVouchers() {
       refreshPromotionList();
     } catch (error) {
       console.error('Error saving promotion:', error);
-      notify.error('Không thể lưu khuyến mãi, vui lòng thử lại.');
+      // Hiển thị message lỗi từ backend (ví dụ: "Mã khuyến mãi đã tồn tại")
+      notify.error(error.message || 'Không thể lưu khuyến mãi, vui lòng thử lại.');
     }
   };
 
@@ -714,8 +716,8 @@ function StaffVouchers() {
       if (isVoucher) refreshVoucherList();
       else refreshPromotionList();
     } catch (error) {
-      console.error('Error deleting promotion:', error);
-      notify.error('Không thể xóa, vui lòng thử lại.');
+      console.error('Error deleting:', error);
+      notify.error(error.message || 'Không thể xóa, vui lòng thử lại.');
     }
   };
 

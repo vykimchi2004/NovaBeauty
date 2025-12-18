@@ -189,6 +189,9 @@ public class OrderService {
                         .paymentStatus(PaymentStatus.PAID)
                         .paid(true)
                         .cartItemIdsSnapshot(pricing.cartItemIdsSnapshot)
+                        .appliedVoucherCode(appliedVoucherCode)
+                        .appliedVoucherId(cart.getAppliedVoucherId())
+                        .voucherDiscount(pricing.voucherDiscount)
                         .build();
 
                 savedOrder = orderRepository.save(order);
@@ -271,6 +274,9 @@ public class OrderService {
                         .paymentStatus(PaymentStatus.PAID)
                         .paid(true)
                         .cartItemIdsSnapshot(pricing.cartItemIdsSnapshot)
+                        .appliedVoucherCode(appliedVoucherCode)
+                        .appliedVoucherId(cart.getAppliedVoucherId())
+                        .voucherDiscount(pricing.voucherDiscount)
                         .build();
 
                 Order savedOrder = orderRepository.save(order);
@@ -754,6 +760,28 @@ public class OrderService {
             return;
         }
         // Có thể thêm logic tracking voucher usage sau nếu cần
+    }
+
+    /**
+     * Hoàn voucher cho khách hàng khi đơn hàng bị hủy hoặc hoàn tiền.
+     * Xóa appliedVoucherCode và appliedVoucherId khỏi Order để khách có thể sử dụng lại voucher.
+     */
+    private void refundVoucher(Order order) {
+        if (order == null) {
+            return;
+        }
+        
+        String voucherCode = order.getAppliedVoucherCode();
+        String voucherId = order.getAppliedVoucherId();
+        if ((voucherCode == null || voucherCode.isBlank()) && (voucherId == null || voucherId.isBlank())) {
+            return;
+        }
+        
+        // Xóa voucher khỏi order để khách có thể sử dụng lại
+        log.info("Hoàn voucher {} (ID: {}) cho đơn hàng {}", voucherCode, voucherId, order.getCode());
+        order.setAppliedVoucherCode(null);
+        order.setAppliedVoucherId(null);
+        order.setVoucherDiscount(null);
     }
 
     private void recordOrderRevenue(Order order) {
@@ -1636,6 +1664,10 @@ public class OrderService {
         if (request != null && request.getRefundAmount() != null) {
             order.setRefundAmount(request.getRefundAmount());
         }
+        
+        // Hoàn voucher cho khách hàng khi hoàn tiền
+        refundVoucher(order);
+        
         order.setStatus(OrderStatus.REFUNDED);
 
         Order savedOrder = orderRepository.save(order);
@@ -1724,6 +1756,9 @@ public class OrderService {
         order.setCancellationReason(resolvedReason);
         order.setCancellationSource(source);
         order.setNote(buildCancellationNote(resolvedReason));
+
+        // Hoàn voucher cho khách hàng khi hủy đơn
+        refundVoucher(order);
 
         Order savedOrder = orderRepository.save(order);
         if (source == CancellationSource.CUSTOMER) {

@@ -13,7 +13,6 @@ import { getProductById } from '~/services/product';
 import { normalizeVariantRecords } from '~/utils/productVariants';
 import {
   getStoredUserId,
-  hasUsedVoucher,
   markVoucherUsed,
   setPendingVoucher,
 } from '~/utils/voucherUsage';
@@ -504,10 +503,7 @@ function CheckoutDetailPage() {
       return;
     }
 
-    if (userId && hasUsedVoucher(userId, code)) {
-      notify.error('Bạn đã sử dụng mã giảm giá này cho một đơn hàng khác.');
-      return;
-    }
+    // Backend sẽ kiểm tra usage limit, không cần kiểm tra ở frontend
 
     try {
       setApplyingVoucher(true);

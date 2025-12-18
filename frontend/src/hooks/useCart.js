@@ -4,7 +4,7 @@ import { getProductById } from '~/services/product';
 import { normalizeVariantRecords } from '~/utils/productVariants';
 import { storage } from '~/services/utils';
 import { STORAGE_KEYS } from '~/services/config';
-import { getStoredUserId, hasUsedVoucher } from '~/utils/voucherUsage';
+// Không cần kiểm tra localStorage nữa - backend đã xử lý
 import notify from '~/utils/notification';
 
 /**
@@ -203,13 +203,7 @@ export const useCart = ({ autoLoad = true, listenToEvents = true } = {}) => {
   const applyVoucher = useCallback(async (code) => {
     try {
       const normalizedCode = (code || '').toString().trim().toUpperCase();
-      const userId = getStoredUserId();
-      if (userId && hasUsedVoucher(userId, normalizedCode)) {
-        const error = new Error('Bạn đã sử dụng mã giảm giá này cho một đơn hàng khác.');
-        error.code = 'VOUCHER_USAGE_LIMIT';
-        throw error;
-      }
-
+      // Backend sẽ kiểm tra usage limit, không cần kiểm tra ở frontend
       const cartData = await cartService.applyVoucher(normalizedCode);
       setAppliedDiscount(cartData.voucherDiscount || 0);
       setAppliedVoucherCode(cartData.appliedVoucherCode);

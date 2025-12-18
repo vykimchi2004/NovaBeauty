@@ -20,7 +20,6 @@ public class BannerResponse {
     String imageUrl;
     String linkUrl;
     Boolean status;
-    Boolean pendingReview;
     Integer orderIndex;
     LocalDateTime createdAt;
     LocalDateTime updatedAt;
@@ -34,7 +33,4 @@ public class BannerResponse {
     // Products info
     List<String> productIds;
     List<String> productNames;
-
-    // Rejection reason
-    String rejectionReason;
 }

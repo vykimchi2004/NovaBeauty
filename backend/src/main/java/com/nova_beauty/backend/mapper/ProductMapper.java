@@ -21,8 +21,6 @@ public interface ProductMapper {
     // Entity to Response
     @Mapping(target = "submittedBy", source = "submittedBy.id")
     @Mapping(target = "submittedByName", source = "submittedBy.fullName")
-    @Mapping(target = "approvedBy", source = "approvedBy.id")
-    @Mapping(target = "approvedByName", source = "approvedBy.fullName")
     @Mapping(target = "categoryId", source = "category.id")
     @Mapping(target = "categoryName", source = "category.name")
     @Mapping(target = "promotionId", source = "promotionApply", qualifiedByName = "mapPromotionId")
