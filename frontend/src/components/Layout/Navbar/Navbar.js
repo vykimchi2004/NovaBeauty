@@ -3,10 +3,12 @@ import { useEffect, useState } from 'react';
 import classNames from 'classnames/bind';
 import styles from './Navbar.module.scss';
 import { getRootCategories, getSubCategories } from '~/services/category';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBars, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 
 const cx = classNames.bind(styles);
 
-function Navbar({ open = false, setOpen = () => {}, onLoginClick = () => {} }) {
+function Navbar({ open = false, setOpen = () => { }, onLoginClick = () => { } }) {
   // read user from localStorage if available (expects JSON { name })
   let user = null;
   try {
@@ -22,6 +24,8 @@ function Navbar({ open = false, setOpen = () => {}, onLoginClick = () => {} }) {
   const [categories, setCategories] = useState([]);
   const [activeCategoryId, setActiveCategoryId] = useState(null);
   const [subCategories, setSubCategories] = useState([]);
+  const [grandChildrenMap, setGrandChildrenMap] = useState({}); // Map childId -> grandchildren array
+  const [activeSource, setActiveSource] = useState(null); // 'vertical' or 'horizontal'
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 992);
@@ -58,25 +62,45 @@ function Navbar({ open = false, setOpen = () => {}, onLoginClick = () => {} }) {
     fetchCategories();
   }, []);
 
-  const handleMouseEnterCategory = async (categoryId) => {
+  const handleMouseEnterCategory = async (categoryId, source) => {
     if (isMobile) return;
 
     setActiveCategoryId(categoryId);
+    setActiveSource(source);
 
     try {
+      // Lấy danh mục con (level 1)
       const data = await getSubCategories(categoryId);
       const activeSubs = (data || []).filter((cat) => cat.status !== false);
       setSubCategories(activeSubs);
+
+      // Lấy danh mục cháu (level 2) cho mỗi danh mục con
+      const grandChildrenData = {};
+      for (const sub of activeSubs) {
+        try {
+          const grandChildren = await getSubCategories(sub.id);
+          const activeGrandChildren = (grandChildren || []).filter((cat) => cat.status !== false);
+          if (activeGrandChildren.length > 0) {
+            grandChildrenData[sub.id] = activeGrandChildren;
+          }
+        } catch (err) {
+          console.error(`Error fetching grandchildren for ${sub.id}:`, err);
+        }
+      }
+      setGrandChildrenMap(grandChildrenData);
     } catch (error) {
       console.error('Error fetching subcategories for navbar:', error);
       setSubCategories([]);
+      setGrandChildrenMap({});
     }
   };
 
   const handleMouseLeaveNavbar = () => {
     if (isMobile) return;
     setActiveCategoryId(null);
+    setActiveSource(null);
     setSubCategories([]);
+    setGrandChildrenMap({});
   };
 
   return (
@@ -96,35 +120,144 @@ function Navbar({ open = false, setOpen = () => {}, onLoginClick = () => {} }) {
             </Link>
           </li>
         )}
-        <li>
+        {/* Product Categories Dropdown (Desktop) */}
+        {!isMobile && (
+          <li className={cx('category-dropdown-wrapper')}>
+            <div className={cx('category-btn')}>
+              <FontAwesomeIcon icon={faBars} className={cx('cat-icon')} />
+              <span>Danh Mục Sản Phẩm</span>
+            </div>
+
+            <div className={cx('dropdown-container')}>
+              {/* Left Side: Root Categories */}
+              <ul className={cx('vertical-menu')}>
+                {categories.map((category) => (
+                  <li
+                    key={category.id}
+                    className={cx('vertical-item', {
+                      active: activeCategoryId === category.id,
+                    })}
+                    onMouseEnter={() => handleMouseEnterCategory(category.id, 'vertical')}
+                  >
+                    <Link to={`/products?category=${category.id}`}>
+                      {category.name}
+                      <FontAwesomeIcon icon={faChevronRight} className={cx('arrow-icon')} />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Right Side: Subcategories (Mega Panel) */}
+              <div className={cx('sub-panel')}>
+                {categories.length > 0 && !activeCategoryId && (
+                  <div className={cx('placeholder-panel')}>
+                    {/* Optional: Show popular products or default content here */}
+                  </div>
+                )}
+
+                {activeCategoryId && subCategories.length > 0 && (
+                  <div className={cx('mega-content')}>
+                    {subCategories.map((sub) => {
+                      const grandchildren = grandChildrenMap[sub.id] || [];
+                      return (
+                        <div key={sub.id} className={cx('megaItemGroup')}>
+                          <Link
+                            to={`/products?category=${sub.id}`}
+                            className={cx('megaItem', 'megaItemParent')}
+                            onClick={() => setOpen(false)}
+                          >
+                            {sub.name}
+                          </Link>
+                          {grandchildren.length > 0 && (
+                            <div className={cx('grandChildrenList')}>
+                              {grandchildren.map((grandchild) => (
+                                <Link
+                                  key={grandchild.id}
+                                  to={`/products?category=${grandchild.id}`}
+                                  className={cx('megaItem', 'megaItemChild')}
+                                  onClick={() => setOpen(false)}
+                                >
+                                  {grandchild.name}
+                                </Link>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </li>
+        )}
+
+        <li onMouseEnter={() => {
+          setActiveCategoryId(null);
+          setActiveSource(null);
+        }}>
           <Link to="/promo" onClick={() => setOpen(false)}>
             Khuyến mãi hot
           </Link>
         </li>
-        {/* Dynamic categories from API - added to the right */}
-        {categories.map((category) => (
+
+        {/* Re-add horizontal categories for Desktop (Redundant per user request) */}
+        {!isMobile && categories.map((category) => (
           <li
-            key={category.id}
-            onMouseEnter={() => handleMouseEnterCategory(category.id)}
+            key={`h-${category.id}`} // use unique key prefix
+            onMouseEnter={() => handleMouseEnterCategory(category.id, 'horizontal')}
           >
             <Link to={`/products?category=${category.id}`} onClick={() => setOpen(false)}>
               {category.name}
             </Link>
 
-            {!isMobile && activeCategoryId === category.id && subCategories.length > 0 && (
+            {/* Horizontal Menu Hover Dropdown */}
+            {/* Only show horizontal dropdown if source is horizontal */}
+            {!isMobile && activeCategoryId === category.id && activeSource === 'horizontal' && subCategories.length > 0 && (
               <div className={cx('megaDropdown')}>
-                {subCategories.map((sub) => (
-                  <Link
-                    key={sub.id}
-                    to={`/products?category=${sub.id}`}
-                    className={cx('megaItem')}
-                    onClick={() => setOpen(false)}
-                  >
-                    {sub.name}
-                  </Link>
-                ))}
+                {subCategories.map((sub) => {
+                  const grandchildren = grandChildrenMap[sub.id] || [];
+                  return (
+                    <div key={sub.id} className={cx('megaItemGroup')}>
+                      <Link
+                        to={`/products?category=${sub.id}`}
+                        className={cx('megaItem', 'megaItemParent')}
+                        onClick={() => setOpen(false)}
+                      >
+                        {sub.name}
+                      </Link>
+                      {grandchildren.length > 0 && (
+                        <div className={cx('grandChildrenList')}>
+                          {grandchildren.map((grandchild) => (
+                            <Link
+                              key={grandchild.id}
+                              to={`/products?category=${grandchild.id}`}
+                              className={cx('megaItem', 'megaItemChild')}
+                              onClick={() => setOpen(false)}
+                            >
+                              {grandchild.name}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
+          </li>
+        ))}
+
+
+
+        {/* Mobile-only category rendering (keep existing logic simpler or just list them) */}
+        {isMobile && categories.map((category) => (
+          <li
+            key={category.id}
+          >
+            <Link to={`/products?category=${category.id}`} onClick={() => setOpen(false)}>
+              {category.name}
+            </Link>
           </li>
         ))}
 

@@ -8,12 +8,11 @@ import { STORAGE_KEYS } from '~/services/config';
 import notify from '~/utils/notification';
 import { useAddress } from '~/hooks';
 import orderService from '~/services/order';
-import { setDefaultAddress, formatFullAddress } from '~/services/address';
+import { setDefaultAddress, formatFullAddress, deleteAddress } from '~/services/address';
 import { getProductById } from '~/services/product';
 import { normalizeVariantRecords } from '~/utils/productVariants';
 import {
   getStoredUserId,
-  hasUsedVoucher,
   markVoucherUsed,
   setPendingVoucher,
 } from '~/utils/voucherUsage';
@@ -38,6 +37,7 @@ function CheckoutDetailPage() {
   const [directProductLoading, setDirectProductLoading] = useState(false);
   const [placingOrder, setPlacingOrder] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
+  const [deletingAddressId, setDeletingAddressId] = useState('');
   const [showAddAddressForm, setShowAddAddressForm] = useState(false);
   const [isDefaultAddress, setIsDefaultAddress] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('momo'); // 'momo' | 'cod'
@@ -503,10 +503,7 @@ function CheckoutDetailPage() {
       return;
     }
 
-    if (userId && hasUsedVoucher(userId, code)) {
-      notify.error('Bạn đã sử dụng mã giảm giá này cho một đơn hàng khác.');
-      return;
-    }
+    // Backend sẽ kiểm tra usage limit, không cần kiểm tra ở frontend
 
     try {
       setApplyingVoucher(true);
@@ -728,6 +725,46 @@ function CheckoutDetailPage() {
     } catch (error) {
       console.error('Error setting default address:', error);
       notify.error(error.message || 'Không thể đặt làm địa chỉ mặc định. Vui lòng thử lại.');
+    }
+  };
+
+  const handleDeleteAddress = async (addr, e) => {
+    e.stopPropagation();
+
+    const addressId = addr.id || addr.addressId || addr.address_id;
+    if (!addressId) {
+      console.error('Address ID not found:', addr);
+      notify.error('Không tìm thấy ID địa chỉ. Vui lòng thử lại.');
+      return;
+    }
+
+    if (addr.defaultAddress) {
+      notify.error('Không thể xóa địa chỉ mặc định. Vui lòng đặt địa chỉ khác làm mặc định trước.');
+      return;
+    }
+
+    try {
+      setDeletingAddressId(addressId);
+      await deleteAddress(addressId);
+      notify.success('Đã xóa địa chỉ.');
+      // Reload danh sách địa chỉ
+      const updatedAddresses = await loadAddresses();
+      // Nếu địa chỉ đang chọn bị xóa, chọn địa chỉ mặc định mới hoặc địa chỉ đầu tiên
+      let nextAddr = updatedAddresses?.find((a) => a.defaultAddress);
+      if (!nextAddr && updatedAddresses && updatedAddresses.length > 0) {
+        nextAddr = updatedAddresses[0];
+      }
+      if (nextAddr) {
+        setSelectedAddress(nextAddr);
+        await selectSavedAddress(nextAddr);
+      } else {
+        setSelectedAddress(null);
+      }
+    } catch (error) {
+      console.error('Error deleting address:', error);
+      notify.error(error.message || 'Không thể xóa địa chỉ. Vui lòng thử lại.');
+    } finally {
+      setDeletingAddressId('');
     }
   };
 
@@ -1116,15 +1153,30 @@ function CheckoutDetailPage() {
                             <div className={cx('savedAddressLine')}>
                               {fullAddr || 'Chưa có địa chỉ'}
                             </div>
-                            {!addr.defaultAddress && (
+                            <div className={cx('savedAddressActions')}>
+                              {!addr.defaultAddress && (
+                                <button
+                                  type="button"
+                                  className={cx('setDefaultBtn')}
+                                  onClick={(e) => handleSetDefaultAddress(addr, e)}
+                                >
+                                  Đặt làm mặc định
+                                </button>
+                              )}
                               <button
                                 type="button"
-                                className={cx('setDefaultBtn')}
-                                onClick={(e) => handleSetDefaultAddress(addr, e)}
+                                className={cx('deleteAddressBtn')}
+                                onClick={(e) => handleDeleteAddress(addr, e)}
+                                disabled={addr.defaultAddress || deletingAddressId === addressId}
+                                title={
+                                  addr.defaultAddress
+                                    ? 'Hãy đặt địa chỉ khác làm mặc định trước khi xóa'
+                                    : 'Xóa địa chỉ này'
+                                }
                               >
-                                Đặt làm mặc định
+                                Xóa
                               </button>
-                            )}
+                            </div>
                           </div>
                           <input
                             type="radio"

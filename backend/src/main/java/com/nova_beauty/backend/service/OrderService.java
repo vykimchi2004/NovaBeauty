@@ -189,6 +189,9 @@ public class OrderService {
                         .paymentStatus(PaymentStatus.PAID)
                         .paid(true)
                         .cartItemIdsSnapshot(pricing.cartItemIdsSnapshot)
+                        .appliedVoucherCode(appliedVoucherCode)
+                        .appliedVoucherId(cart.getAppliedVoucherId())
+                        .voucherDiscount(pricing.voucherDiscount)
                         .build();
 
                 savedOrder = orderRepository.save(order);
@@ -203,11 +206,10 @@ public class OrderService {
                     cartService.removeCartItemsForOrder(savedOrder.getUser(), pricing.selectedCartItemIds);
                 }
 
-                // Ghi nhận doanh thu: COD chỉ ghi nhận khi DELIVERED, các phương thức khác ghi nhận ngay
-                if (paymentMethod != PaymentMethod.COD) {
-                    recordOrderRevenue(savedOrder);
-                }
-                // COD: Doanh thu sẽ được ghi nhận khi status chuyển sang DELIVERED (trong ShipmentService)
+                // Ghi nhận doanh thu:
+                // - COD: chỉ ghi nhận khi DELIVERED (trong ShipmentService)
+                // - MoMo: chỉ ghi nhận khi đã xác nhận thanh toán thành công (trong IPN callback hoặc check payment status)
+                // Không gọi recordOrderRevenue ở đây để tránh duplicate khi MoMo callback sau đó
 
                 break; // Thành công, thoát khỏi retry loop
             } catch (Exception e) {
@@ -272,6 +274,9 @@ public class OrderService {
                         .paymentStatus(PaymentStatus.PAID)
                         .paid(true)
                         .cartItemIdsSnapshot(pricing.cartItemIdsSnapshot)
+                        .appliedVoucherCode(appliedVoucherCode)
+                        .appliedVoucherId(cart.getAppliedVoucherId())
+                        .voucherDiscount(pricing.voucherDiscount)
                         .build();
 
                 Order savedOrder = orderRepository.save(order);
@@ -285,12 +290,10 @@ public class OrderService {
                     cartService.removeCartItemsForOrder(savedOrder.getUser(), pricing.selectedCartItemIds);
                 }
 
-                // Ghi nhận doanh thu: COD chỉ ghi nhận khi DELIVERED, các phương thức khác ghi nhận ngay
-                PaymentMethod orderPaymentMethod = savedOrder.getPaymentMethod();
-                if (orderPaymentMethod != PaymentMethod.COD) {
-                    recordOrderRevenue(savedOrder);
-                }
-                // COD: Doanh thu sẽ được ghi nhận khi status chuyển sang DELIVERED (trong ShipmentService)
+                // Ghi nhận doanh thu:
+                // - COD: chỉ ghi nhận khi DELIVERED (trong ShipmentService)
+                // - MoMo: chỉ ghi nhận khi đã xác nhận thanh toán thành công (trong IPN callback hoặc check payment status)
+                // Không gọi recordOrderRevenue ở đây để tránh duplicate khi MoMo callback sau đó
 
                 return savedOrder;
             } catch (Exception e) {
@@ -560,7 +563,7 @@ public class OrderService {
             log.warn("MoMo IPN: request or orderId is null");
             return;
         }
-        
+
         Order order = orderRepository.findByCode(request.getOrderId())
                 .orElseThrow(() -> {
                     log.error("MoMo IPN: Order not found - code={}", request.getOrderId());
@@ -588,7 +591,7 @@ public class OrderService {
         // Reload order với items
         Order reloadedOrder = orderRepository.findById(order.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXISTED));
-        
+
         if (reloadedOrder.getItems() != null) {
             reloadedOrder.getItems().size(); // Trigger lazy loading
         }
@@ -610,8 +613,25 @@ public class OrderService {
         }
 
         recordOrderRevenue(reloadedOrder);
+        // Ghi nhận doanh thu cho đơn hàng MoMo đã thanh toán thành công
+        log.info("handleMomoIpn: Attempting to record revenue for order {}", request.getOrderId());
+        if (financialService.hasRecordedRevenue(request.getOrderId())) {
+            log.warn("handleMomoIpn: Revenue already recorded for order {}, skipping", request.getOrderId());
+        } else {
+            recordOrderRevenue(reloadedOrder);
+            log.info("handleMomoIpn: Revenue recording completed for order {}", request.getOrderId());
+        }
 
+        // Parse và xóa cart items
         List<String> cartItemIds = parseCartItemIds(reloadedOrder.getCartItemIdsSnapshot());
+        log.info("handleMomoIpn: Parsed {} cart item IDs from snapshot: {}", 
+                cartItemIds.size(), cartItemIds);
+        
+        if (cartItemIds.isEmpty()) {
+            log.warn("handleMomoIpn: No cart item IDs found in snapshot for order {}. Snapshot: {}", 
+                    request.getOrderId(), reloadedOrder.getCartItemIdsSnapshot());
+        }
+        
         finalizePaidOrder(reloadedOrder, cartItemIds);
         
         log.info("MoMo IPN: Payment SUCCESS - order={}", request.getOrderId());
@@ -665,7 +685,18 @@ public class OrderService {
                 }
             }
 
-            recordOrderRevenue(reloadedOrder);
+            // KHÔNG ghi nhận doanh thu ở đây - chỉ ghi nhận trong handleMomoIpn (IPN callback)
+            // Lý do: IPN callback là nguồn chính thức từ MoMo, và việc ghi nhận doanh thu ở 2 nơi
+            // có thể gây duplicate do race condition
+            // Nếu IPN chưa đến, doanh thu sẽ được ghi nhận khi IPN đến
+            log.info("checkAndUpdateMomoPaymentStatus: Skipping revenue recording for order {} - will be handled by IPN callback", orderCode);
+            if (financialService.hasRecordedRevenue(reloadedOrder.getId())) {
+                log.info("checkAndUpdateMomoPaymentStatus: Revenue already recorded for order {} (by IPN)", orderCode);
+            } else {
+                log.warn("checkAndUpdateMomoPaymentStatus: Revenue not recorded yet for order {} - waiting for IPN callback", orderCode);
+            }
+
+            // Xóa cart items
             List<String> cartItemIds = parseCartItemIds(reloadedOrder.getCartItemIdsSnapshot());
             finalizePaidOrder(reloadedOrder, cartItemIds);
 
@@ -689,11 +720,35 @@ public class OrderService {
         // Có thể thêm logic tracking voucher usage sau nếu cần
     }
 
+    /**
+     * Hoàn voucher cho khách hàng khi đơn hàng bị hủy hoặc hoàn tiền.
+     * Xóa appliedVoucherCode và appliedVoucherId khỏi Order để khách có thể sử dụng lại voucher.
+     */
+    private void refundVoucher(Order order) {
+        if (order == null) {
+            return;
+        }
+
+        String voucherCode = order.getAppliedVoucherCode();
+        String voucherId = order.getAppliedVoucherId();
+        if ((voucherCode == null || voucherCode.isBlank()) && (voucherId == null || voucherId.isBlank())) {
+            return;
+        }
+
+        // Xóa voucher khỏi order để khách có thể sử dụng lại
+        log.info("Hoàn voucher {} (ID: {}) cho đơn hàng {}", voucherCode, voucherId, order.getCode());
+        order.setAppliedVoucherCode(null);
+        order.setAppliedVoucherId(null);
+        order.setVoucherDiscount(null);
+    }
+
     private void recordOrderRevenue(Order order) {
         ensureOrderRevenueRecorded(order);
     }
 
     // Đảm bảo doanh thu được ghi nhận cho đơn hàng
+    // Sử dụng @Transactional để đảm bảo atomicity và tránh race condition
+    @Transactional
     public void ensureOrderRevenueRecorded(Order order) {
         if (order == null || order.getItems() == null || order.getItems().isEmpty()) {
             return;
@@ -704,13 +759,17 @@ public class OrderService {
             return;
         }
 
+        String orderId = order.getId();
+
         // Kiểm tra xem đã ghi nhận doanh thu chưa (tránh duplicate)
-        if (financialService.hasRecordedRevenue(order.getId())) {
-            log.debug("Revenue already recorded for order {}", order.getId());
+        // Check trước khi vào transaction để tránh race condition
+        if (financialService.hasRecordedRevenue(orderId)) {
+            log.info("Revenue already recorded for order {}, skipping", orderId);
             return;
         }
 
         // Ghi nhận doanh thu cho từng sản phẩm trong đơn hàng
+        int recordedCount = 0;
         for (OrderItem item : order.getItems()) {
             if (item.getProduct() != null && item.getFinalPrice() != null && item.getFinalPrice() > 0) {
                 try {
@@ -720,10 +779,16 @@ public class OrderService {
                             item.getFinalPrice(),
                             order.getPaymentMethod()
                     );
+                    recordedCount++;
                 } catch (Exception e) {
-                    log.error("Error recording revenue for order {} item {}", order.getId(), item.getId(), e);
+                    log.error("Error recording revenue for order {} item {}", orderId, item.getId(), e);
                 }
             }
+        }
+
+        // Kiểm tra lại sau khi save để đảm bảo đã tạo thành công
+        if (recordedCount > 0) {
+            log.info("Recorded revenue for order {} with {} items", orderId, recordedCount);
         }
     }
 
@@ -932,7 +997,7 @@ public class OrderService {
                 try {
                     shipmentService.syncOrderStatusFromGhn(order.getId());
                 } catch (Exception e) {
-                    // Bỏ qua lỗi sync
+                    log.warn("Không thể đồng bộ trạng thái từ GHN cho order: {}", order.getId(), e);
                 }
             }
         }
@@ -948,7 +1013,7 @@ public class OrderService {
         try {
             String email = SecurityUtil.getAuthentication().getName();
             List<Order> orders = orderRepository.findByUserEmail(email);
-            
+
             // Chỉ đồng bộ các đơn đang trong quá trình vận chuyển
             for (Order order : orders) {
                 if (shouldSyncOrderStatus(order)) {
@@ -965,7 +1030,7 @@ public class OrderService {
             return new ArrayList<>();
         }
     }
-    
+
     /**
      * Kiểm tra xem đơn hàng có cần đồng bộ trạng thái từ GHN không.
      * Chỉ đồng bộ các đơn:
@@ -976,7 +1041,7 @@ public class OrderService {
         if (order.getShipment() == null || order.getShipment().getOrderCode() == null) {
             return false;
         }
-        
+
         OrderStatus status = order.getStatus();
         // Chỉ sync các đơn đang vận chuyển hoặc chờ xử lý
         return status != OrderStatus.DELIVERED
@@ -1000,11 +1065,21 @@ public class OrderService {
         try {
             shipmentService.syncOrderStatusFromGhn(orderId);
         } catch (Exception e) {
-            // Bỏ qua lỗi sync
+            log.warn("Không thể đồng bộ trạng thái từ GHN cho order: {}", orderId, e);
         }
 
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_EXISTED));
+        // Tìm đơn hàng theo id
+        Order order =
+                orderRepository
+                        .findById(orderId)
+                        .orElseGet(
+                                () ->
+                                        orderRepository
+                                                .findByCode(orderId)
+                                                .orElseThrow(
+                                                        () ->
+                                                                new AppException(
+                                                                        ErrorCode.ORDER_NOT_EXISTED)));
 
         var auth = SecurityUtil.getAuthentication();
         boolean isStaffOrAdminOrSupport =
@@ -1162,26 +1237,31 @@ public class OrderService {
                 order.setRefundAccountNumber(request.getAccountNumber());
                 order.setRefundAccountHolder(request.getAccountHolder());
 
-                    // Save selected product IDs as JSON array
-                    if (request.getSelectedProductIds() != null
-                            && !request.getSelectedProductIds().isEmpty()) {
-                        try {
-                            String productIdsJson = objectMapper.writeValueAsString(request.getSelectedProductIds());
-                            order.setRefundSelectedProductIds(productIdsJson);
-                        } catch (Exception e) {
-                            order.setRefundSelectedProductIds(null);
-                        }
+                // Save selected product IDs as JSON array
+                if (request.getSelectedProductIds() != null
+                        && !request.getSelectedProductIds().isEmpty()) {
+                    try {
+                        String productIdsJson =
+                                objectMapper.writeValueAsString(
+                                        request.getSelectedProductIds());
+                        order.setRefundSelectedProductIds(productIdsJson);
+                    } catch (Exception e) {
+                        log.warn("Failed to serialize selected product IDs to JSON", e);
+                        order.setRefundSelectedProductIds(null);
                     }
+                }
 
-                    // Save media URLs as JSON array
-                    if (request.getMediaUrls() != null && !request.getMediaUrls().isEmpty()) {
-                        try {
-                            String mediaUrlsJson = objectMapper.writeValueAsString(request.getMediaUrls());
-                            order.setRefundMediaUrls(mediaUrlsJson);
-                        } catch (Exception e) {
-                            order.setRefundMediaUrls(null);
-                        }
+                // Save media URLs as JSON array
+                if (request.getMediaUrls() != null && !request.getMediaUrls().isEmpty()) {
+                    try {
+                        String mediaUrlsJson =
+                                objectMapper.writeValueAsString(request.getMediaUrls());
+                        order.setRefundMediaUrls(mediaUrlsJson);
+                    } catch (Exception e) {
+                        log.warn("Failed to serialize media URLs to JSON", e);
+                        order.setRefundMediaUrls(null);
                     }
+                }
 
                 // Calculate and save refund amount and return fee
                 if (order.getItems() != null && request.getSelectedProductIds() != null) {
@@ -1246,10 +1326,16 @@ public class OrderService {
                         order.setRefundConfirmedPenalty(penaltyAmount);
                         order.setRefundConfirmedSecondShippingFee(secondShippingFee);
                     } catch (Exception e) {
-                        log.error("Error calculating refund for order {}: {}", orderId, e.getMessage());
+                        log.error(
+                                "Error calculating refund amount for order {}: {}",
+                                orderId,
+                                e.getMessage(),
+                                e);
                         // Set default values to allow request to proceed
-                        double shippingFee = order.getShippingFee() != null ? order.getShippingFee() : 0.0;
-                        double totalPaid = order.getTotalAmount() != null ? order.getTotalAmount() : 0.0;
+                        double shippingFee =
+                                order.getShippingFee() != null ? order.getShippingFee() : 0.0;
+                        double totalPaid =
+                                order.getTotalAmount() != null ? order.getTotalAmount() : 0.0;
                         order.setRefundAmount(totalPaid);
                         order.setRefundReturnFee(shippingFee);
                         order.setRefundSecondShippingFee(shippingFee);
@@ -1313,17 +1399,53 @@ public class OrderService {
                 }
             }
 
+            log.info("Saving order with return request: {}", orderId);
             Order saved = orderRepository.save(order);
+            log.info("Order saved successfully: {}", orderId);
 
             // Gửi thông báo in-app cho bộ phận CSKH về yêu cầu hoàn tiền / trả hàng mới
-            // TODO: implement NotificationService nếu cần
+            try {
+                String customerName =
+                        order.getUser() != null && order.getUser().getFullName() != null
+                                ? order.getUser().getFullName()
+                                : "Khách hàng";
+                String title = "Yêu cầu hoàn tiền / trả hàng mới";
+                String message =
+                        String.format(
+                                "%s đã gửi yêu cầu hoàn tiền/trả hàng cho đơn hàng %s.",
+                                customerName, order.getCode());
+                String link = "/customer-support/refund-management";
+                // Bạn có thể implement NotificationService tương tự NovaBeauty nếu cần
+                // notificationService.sendToRole(title, message, "INFO", "CUSTOMER_SUPPORT",
+                // link);
+                log.info("Notification (mock) sent successfully for order: {}", orderId);
+            } catch (Exception e) {
+                log.error(
+                        "Failed to send notification to CS for return request {}: {}",
+                        orderId,
+                        e.getMessage(),
+                        e);
+                // Không throw exception vì notification là optional
+            }
 
-            log.info("Return request created - order={}", orderId);
+            log.info("Request return completed successfully for order: {}", orderId);
             return saved;
         } catch (AppException e) {
+            // Re-throw AppException để giữ nguyên error code và message
+            log.error(
+                    "AppException in requestReturn for order {}: code={}, message={}",
+                    orderId,
+                    e.getErrorCode().getCode(),
+                    e.getMessage(),
+                    e);
             throw e;
         } catch (Exception e) {
-            log.error("Error in requestReturn for order {}: {}", orderId, e.getMessage());
+            log.error(
+                    "Unexpected error in requestReturn for order {}: {}",
+                    orderId,
+                    e.getMessage(),
+                    e);
+            log.error("Exception stack trace:", e);
             throw new AppException(
                     ErrorCode.UNCATEGORIZED_EXCEPTION,
                     "Có lỗi xảy ra khi xử lý yêu cầu trả hàng. Vui lòng thử lại sau.");
@@ -1368,7 +1490,11 @@ public class OrderService {
         try {
             brevoEmailService.sendReturnRejectedEmail(saved);
         } catch (Exception e) {
-            log.error("Failed to send return rejected email for order {}", orderId);
+            log.error(
+                    "Failed to send return rejected email for order {}: {}",
+                    orderId,
+                    e.getMessage(),
+                    e);
         }
 
         return saved;
@@ -1396,7 +1522,11 @@ public class OrderService {
         try {
             brevoEmailService.sendReturnCsConfirmedEmail(saved);
         } catch (Exception e) {
-            log.error("Failed to send CS-confirmed email for order {}", orderId);
+            log.error(
+                    "Failed to send CS-confirmed return email for order {}: {}",
+                    orderId,
+                    e.getMessage(),
+                    e);
         }
 
         return saved;
@@ -1472,6 +1602,10 @@ public class OrderService {
         if (request != null && request.getRefundAmount() != null) {
             order.setRefundAmount(request.getRefundAmount());
         }
+
+        // Hoàn voucher cho khách hàng khi hoàn tiền
+        refundVoucher(order);
+
         order.setStatus(OrderStatus.REFUNDED);
 
         Order savedOrder = orderRepository.save(order);
@@ -1561,6 +1695,9 @@ public class OrderService {
         order.setCancellationSource(source);
         order.setNote(buildCancellationNote(resolvedReason));
 
+        // Hoàn voucher cho khách hàng khi hủy đơn
+        refundVoucher(order);
+
         Order savedOrder = orderRepository.save(order);
         if (source == CancellationSource.CUSTOMER) {
             notifyStaffOrderCancelledByCustomer(savedOrder);
@@ -1590,11 +1727,44 @@ public class OrderService {
     }
 
     private void notifyStaffOrderCancelledByCustomer(Order order) {
-        // TODO: implement notificationService.sendToStaff(...) if needed
+        try {
+            String code = resolveDisplayOrderCode(order);
+            int itemCount = order.getItems() != null ? order.getItems().size() : 0;
+            String message =
+                    itemCount > 0
+                            ? String.format(
+                                    "Khách hàng đã hủy đơn %s với %d sản phẩm. Vui lòng kiểm tra tồn kho/đơn hàng.",
+                                    code, itemCount)
+                            : String.format(
+                                    "Khách hàng đã hủy đơn %s. Vui lòng kiểm tra tồn kho/đơn hàng.",
+                                    code);
+            // TODO: implement notificationService.sendToStaff(...) if needed
+            log.info(
+                    "Mock notify staff order cancelled by customer: orderId={}, message={}",
+                    order.getId(),
+                    message);
+        } catch (Exception e) {
+            log.warn(
+                    "Không thể gửi thông báo hủy đơn bởi khách hàng cho order {}",
+                    order.getId(),
+                    e);
+        }
     }
 
     private void notifyStaffOrderReturned(Order order) {
-        // TODO: implement notificationService.sendToStaff(...) if needed
+        try {
+            String code = resolveDisplayOrderCode(order);
+            // TODO: implement notificationService.sendToStaff(...) if needed
+            log.info(
+                    "Mock notify staff order returned: orderId={}, code={}",
+                    order.getId(),
+                    code);
+        } catch (Exception e) {
+            log.warn(
+                    "Không thể gửi thông báo đơn hoàn về cho order {}",
+                    order.getId(),
+                    e);
+        }
     }
 
     private String resolveDisplayOrderCode(Order order) {
@@ -1623,74 +1793,109 @@ public class OrderService {
 
     /**
      * Cập nhật tồn kho và số lượng đã bán khi đơn hàng được tạo thành công
+     * Mỗi mã màu có số lượng đã bán riêng trong manufacturingLocation
      * @param product Sản phẩm cần cập nhật (đã được load với inventory)
      * @param quantity Số lượng đã bán
      * @param colorCode Mã màu (nếu có) - để giảm tồn kho và tăng số lượng đã bán của variant cụ thể
      */
     private void updateInventoryAndSales(Product product, int quantity, String colorCode) {
         if (product == null || quantity <= 0) {
+            log.warn("updateInventoryAndSales: product is null or quantity <= 0. product={}, quantity={}", product, quantity);
             return;
+        }
+
+        log.info("updateInventoryAndSales: Updating product {} with quantity {}, colorCode={}", product.getId(), quantity, colorCode);
+        log.info("updateInventoryAndSales: Product manufacturingLocation is null: {}", product.getManufacturingLocation() == null);
+        if (product.getManufacturingLocation() != null) {
+            log.info("updateInventoryAndSales: Product manufacturingLocation length: {}", product.getManufacturingLocation().length());
         }
 
         // Nếu có colorCode và có manufacturingLocation, cập nhật variant cụ thể
         if (colorCode != null && !colorCode.isBlank() && product.getManufacturingLocation() != null && !product.getManufacturingLocation().trim().isEmpty()) {
+            log.info("updateInventoryAndSales: Updating color variant for product {} with colorCode {}", product.getId(), colorCode);
+            // Cập nhật tồn kho và số lượng đã bán của variant cụ thể
             updateColorVariantStockAndSales(product, colorCode, quantity);
+            
+            // Cập nhật số lượng đã bán tổng của product (bằng tổng của tất cả variants)
             updateTotalQuantitySold(product);
         } else {
+            log.info("updateInventoryAndSales: Updating total inventory for product {} (no colorCode or no manufacturingLocation)", product.getId());
             // Nếu không có colorCode, cập nhật tổng của product
+            // Tăng số lượng đã bán tổng
             int sold = product.getQuantitySold() != null ? product.getQuantitySold() : 0;
             product.setQuantitySold(sold + quantity);
+            log.info("updateInventoryAndSales: Updated quantitySold from {} to {}", sold, sold + quantity);
 
             // Giảm tồn kho tổng
             if (product.getInventory() != null) {
                 Integer stock = product.getInventory().getStockQuantity();
-                if (stock == null) stock = 0;
-                product.getInventory().setStockQuantity(Math.max(0, stock - quantity));
+                if (stock == null) {
+                    stock = 0;
+                }
+                int updatedStock = stock - quantity;
+                int normalizedStock = Math.max(0, updatedStock);
+                product.getInventory().setStockQuantity(normalizedStock);
                 product.getInventory().setLastUpdated(LocalDate.now());
+                log.info("updateInventoryAndSales: Updated stockQuantity from {} to {}", stock, normalizedStock);
             } else {
                 // Nếu product không có inventory, tạo mới
+                log.warn("updateInventoryAndSales: Product {} has no inventory, creating new inventory", product.getId());
                 com.nova_beauty.backend.entity.Inventory inventory = com.nova_beauty.backend.entity.Inventory.builder()
-                        .stockQuantity(0)
+                        .stockQuantity(0) // Bắt đầu từ 0 vì đã bán
                         .lastUpdated(LocalDate.now())
                         .product(product)
                         .build();
                 product.setInventory(inventory);
+                log.info("updateInventoryAndSales: Created new inventory for product {}", product.getId());
             }
         }
 
+        // Save và flush để đảm bảo thay đổi được commit ngay
         productRepository.save(product);
         productRepository.flush();
+        log.info("updateInventoryAndSales: Successfully updated product {}", product.getId());
     }
 
     /**
      * Cập nhật tồn kho và số lượng đã bán của color variant cụ thể trong manufacturingLocation
+     * Mỗi mã màu có số lượng đã bán riêng
      */
     private void updateColorVariantStockAndSales(Product product, String colorCode, int quantity) {
         try {
             String manufacturingLocation = product.getManufacturingLocation();
             if (manufacturingLocation == null || manufacturingLocation.trim().isEmpty()) {
+                log.warn("updateColorVariantStockAndSales: Product {} has no manufacturingLocation", product.getId());
                 return;
             }
+
+            log.info("updateColorVariantStockAndSales: Parsing manufacturingLocation for product {}: {}", product.getId(), manufacturingLocation);
 
             // Parse JSON string - có thể là object với {type, variants} hoặc array trực tiếp
             List<Map<String, Object>> variants = null;
             try {
                 JsonNode rootNode = objectMapper.readTree(manufacturingLocation);
                 
+                // Kiểm tra xem có phải là object với field "variants" không
                 if (rootNode.isObject() && rootNode.has("variants")) {
                     JsonNode variantsNode = rootNode.get("variants");
                     if (variantsNode.isArray()) {
                         variants = objectMapper.convertValue(variantsNode, new TypeReference<List<Map<String, Object>>>() {});
+                        log.info("updateColorVariantStockAndSales: Parsed as object with variants field, found {} variants", variants != null ? variants.size() : 0);
                     }
                 } else if (rootNode.isArray()) {
+                    // Nếu là array trực tiếp
                     variants = objectMapper.convertValue(rootNode, new TypeReference<List<Map<String, Object>>>() {});
+                    log.info("updateColorVariantStockAndSales: Parsed as array directly, found {} variants", variants != null ? variants.size() : 0);
+                } else {
+                    log.warn("updateColorVariantStockAndSales: manufacturingLocation is neither object with variants nor array: {}", rootNode.getNodeType());
                 }
             } catch (Exception e) {
-                log.error("Failed to parse manufacturingLocation for product {}", product.getId());
+                log.error("updateColorVariantStockAndSales: Failed to parse manufacturingLocation: {}", e.getMessage(), e);
                 return;
             }
 
             if (variants == null || variants.isEmpty()) {
+                log.warn("updateColorVariantStockAndSales: No variants found in manufacturingLocation for product {}", product.getId());
                 return;
             }
 
@@ -1698,35 +1903,74 @@ public class OrderService {
             boolean updated = false;
             for (Map<String, Object> variant : variants) {
                 Object codeObj = variant.get("code");
-                if (codeObj != null && codeObj.toString().trim().equalsIgnoreCase(colorCode.trim())) {
-                    // Giảm tồn kho của variant này
-                    int currentStock = parseIntSafe(variant.get("stockQuantity"));
-                    variant.put("stockQuantity", Math.max(0, currentStock - quantity));
+                if (codeObj != null) {
+                    String variantCode = codeObj.toString().trim();
+                    if (variantCode.equalsIgnoreCase(colorCode.trim())) {
+                        // Giảm tồn kho của variant này
+                        Object stockObj = variant.get("stockQuantity");
+                        int currentStock = 0;
+                        if (stockObj != null) {
+                            if (stockObj instanceof Number) {
+                                currentStock = ((Number) stockObj).intValue();
+                            } else {
+                                try {
+                                    currentStock = Integer.parseInt(stockObj.toString());
+                                } catch (NumberFormatException e) {
+                                    log.warn("Cannot parse stockQuantity for variant: {}", stockObj);
+                                }
+                            }
+                        }
+                        int updatedStock = Math.max(0, currentStock - quantity);
+                        variant.put("stockQuantity", updatedStock);
+                        log.info("updateColorVariantStockAndSales: Updated stock for variant {}: {} -> {}", colorCode, currentStock, updatedStock);
 
-                    // Tăng số lượng đã bán của variant này
-                    int currentSold = parseIntSafe(variant.get("quantitySold"));
-                    variant.put("quantitySold", currentSold + quantity);
+                        // Tăng số lượng đã bán của variant này
+                        Object soldObj = variant.get("quantitySold");
+                        int currentSold = 0;
+                        if (soldObj != null) {
+                            if (soldObj instanceof Number) {
+                                currentSold = ((Number) soldObj).intValue();
+                            } else {
+                                try {
+                                    currentSold = Integer.parseInt(soldObj.toString());
+                                } catch (NumberFormatException e) {
+                                    log.warn("Cannot parse quantitySold for variant: {}", soldObj);
+                                }
+                            }
+                        }
+                        int updatedSold = currentSold + quantity;
+                        variant.put("quantitySold", updatedSold);
+                        log.info("updateColorVariantStockAndSales: Updated quantitySold for variant {}: {} -> {}", colorCode, currentSold, updatedSold);
 
-                    updated = true;
-                    break;
+                        updated = true;
+                        break;
+                    }
                 }
             }
 
-            // Serialize lại và lưu vào product
+            // Nếu đã cập nhật, serialize lại và lưu vào product
+            // Giữ nguyên cấu trúc ban đầu (object với type và variants hoặc array)
             if (updated) {
+                // Kiểm tra cấu trúc ban đầu để serialize đúng format
                 JsonNode originalRoot = objectMapper.readTree(manufacturingLocation);
                 String updatedManufacturingLocation;
                 
                 if (originalRoot.isObject() && originalRoot.has("variants")) {
+                    // Giữ nguyên cấu trúc object với type và variants
                     ObjectNode updatedRoot = objectMapper.createObjectNode();
                     updatedRoot.put("type", originalRoot.has("type") ? originalRoot.get("type").asText() : "COLOR_VARIANT_VERSION");
                     updatedRoot.set("variants", objectMapper.valueToTree(variants));
                     updatedManufacturingLocation = objectMapper.writeValueAsString(updatedRoot);
                 } else {
+                    // Nếu ban đầu là array, serialize lại thành array
                     updatedManufacturingLocation = objectMapper.writeValueAsString(variants);
                 }
                 
                 product.setManufacturingLocation(updatedManufacturingLocation);
+                log.info("updateColorVariantStockAndSales: Updated manufacturingLocation for product {} with variant {}", product.getId(), colorCode);
+                log.debug("updateColorVariantStockAndSales: Updated manufacturingLocation content: {}", updatedManufacturingLocation);
+            } else {
+                log.warn("updateColorVariantStockAndSales: Variant with colorCode {} not found in product {}", colorCode, product.getId());
             }
         } catch (Exception e) {
             log.error("Failed to update color variant for product {} colorCode {}", product.getId(), colorCode);
@@ -1756,7 +2000,7 @@ public class OrderService {
             List<Map<String, Object>> variants = null;
             try {
                 JsonNode rootNode = objectMapper.readTree(manufacturingLocation);
-                
+
                 if (rootNode.isObject() && rootNode.has("variants")) {
                     JsonNode variantsNode = rootNode.get("variants");
                     if (variantsNode.isArray()) {
@@ -1776,12 +2020,26 @@ public class OrderService {
             // Tính tổng quantitySold của tất cả variants
             int totalSold = 0;
             for (Map<String, Object> variant : variants) {
-                totalSold += parseIntSafe(variant.get("quantitySold"));
+                Object soldObj = variant.get("quantitySold");
+                if (soldObj != null) {
+                    if (soldObj instanceof Number) {
+                        totalSold += ((Number) soldObj).intValue();
+                    } else {
+                        try {
+                            totalSold += Integer.parseInt(soldObj.toString());
+                        } catch (NumberFormatException e) {
+                            log.warn("Cannot parse quantitySold for variant: {}", soldObj);
+                        }
+                    }
+                }
             }
 
+            // Cập nhật quantitySold tổng của product
             product.setQuantitySold(totalSold);
+            log.info("updateTotalQuantitySold: Updated total quantitySold for product {} to {}", product.getId(), totalSold);
         } catch (Exception e) {
-            log.error("Failed to update total quantitySold for product {}", product.getId());
+            log.error("updateTotalQuantitySold: Could not update total quantitySold for product {}: {}", 
+                product.getId(), e.getMessage(), e);
         }
     }
 }

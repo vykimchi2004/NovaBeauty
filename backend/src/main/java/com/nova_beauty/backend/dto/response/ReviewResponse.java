@@ -27,4 +27,7 @@ public class ReviewResponse {
     // Product info
     String productId;
     String productName;
+
+    // OrderItem info - để biết review này thuộc về order item nào
+    String orderItemId;
 }

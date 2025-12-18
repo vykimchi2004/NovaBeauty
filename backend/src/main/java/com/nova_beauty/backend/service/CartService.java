@@ -367,6 +367,7 @@ public class CartService {
             // Nếu voucher không tồn tại hoặc không active, xóa voucher khỏi cart
             if (voucher == null || !voucher.getIsActive() || voucher.getStatus() != com.nova_beauty.backend.enums.VoucherStatus.APPROVED) {
                 cart.setAppliedVoucherCode(null);
+                cart.setAppliedVoucherId(null);
                 return 0.0;
             }
 
@@ -375,6 +376,7 @@ public class CartService {
             if ((voucher.getStartDate() != null && today.isBefore(voucher.getStartDate()))
                     || (voucher.getExpiryDate() != null && today.isAfter(voucher.getExpiryDate()))) {
                 cart.setAppliedVoucherCode(null);
+                cart.setAppliedVoucherId(null);
                 return 0.0;
             }
 
@@ -393,6 +395,7 @@ public class CartService {
                     && applicableSubtotal < voucher.getMinOrderValue()) {
                 // Nếu không đủ điều kiện, xóa voucher khỏi cart
                 cart.setAppliedVoucherCode(null);
+                cart.setAppliedVoucherId(null);
                 return 0.0;
             }
 
@@ -421,6 +424,7 @@ public class CartService {
         } catch (Exception e) {
             // Nếu có lỗi, xóa voucher khỏi cart và trả về 0
             cart.setAppliedVoucherCode(null);
+            cart.setAppliedVoucherId(null);
             return 0.0;
         }
     }
@@ -458,10 +462,15 @@ public class CartService {
 
 
         if (voucher.getUsagePerUser() != null && voucher.getUsagePerUser() > 0) {
+            // Đếm số lần user đã dùng voucher này (kiểm tra theo voucherId, không tính đơn hủy/hoàn tiền)
+            final String voucherId = voucher.getId();
             long userUsageCount = orderRepository.findAll().stream()
                     .filter(order -> order.getUser() != null && userId.equals(order.getUser().getId()))
-                    .filter(order -> order.getCart() != null && order.getCart().getAppliedVoucherCode() != null)
-                    .filter(order -> voucher.getCode().equals(order.getCart().getAppliedVoucherCode()))
+                    .filter(order -> order.getAppliedVoucherId() != null)
+                    .filter(order -> voucherId.equals(order.getAppliedVoucherId()))
+                    // Không tính đơn hàng đã hủy hoặc hoàn tiền (voucher đã được hoàn)
+                    .filter(order -> order.getStatus() != com.nova_beauty.backend.enums.OrderStatus.CANCELLED 
+                            && order.getStatus() != com.nova_beauty.backend.enums.OrderStatus.REFUNDED)
                     .count();
 
             if (userUsageCount >= voucher.getUsagePerUser()) {
@@ -509,6 +518,7 @@ public class CartService {
         }
 
         cart.setAppliedVoucherCode(voucher.getCode());
+        cart.setAppliedVoucherId(voucher.getId());
         cart.setVoucherDiscount(discount);
         // Tổng sau voucher cũng làm tròn về đồng
         cart.setTotalAmount((double) Math.round(Math.max(0.0, fullSubtotal - discount)));
@@ -608,6 +618,7 @@ public class CartService {
     public Cart clearVoucher() {
         Cart cart = getOrCreateCartForCurrentCustomer();
         cart.setAppliedVoucherCode(null);
+        cart.setAppliedVoucherId(null);
         cart.setVoucherDiscount(0.0);
         recalcCartTotals(cart);
         return cart;
@@ -621,6 +632,7 @@ public class CartService {
 
         cartRepository.findByUserId(user.getId()).ifPresent(cart -> {
             cart.setAppliedVoucherCode(null);
+            cart.setAppliedVoucherId(null);
             cart.setVoucherDiscount(0.0);
             recalcCartTotals(cart);
         });

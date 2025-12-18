@@ -32,6 +32,11 @@ public class ReviewCreationRequest {
     // Nếu product chỉ có id, Jackson sẽ tạo Product object và set id
     Product product;
     
+    // OrderItem ID - để liên kết review với đơn hàng cụ thể
+    // Mỗi đơn hàng chỉ được đánh giá 1 lần
+    @NotNull(message = "OrderItem ID không được để trống")
+    String orderItemId;
+    
     // Helper method để lấy productId an toàn
     public String getProductId() {
         return product != null ? product.getId() : null;

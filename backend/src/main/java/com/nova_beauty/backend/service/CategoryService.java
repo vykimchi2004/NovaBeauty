@@ -108,26 +108,74 @@ public class CategoryService {
                 .findById(categoryId)
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
 
-        // Update category using mapper
-        categoryMapper.updateCategory(category, request);
-        category.setUpdatedAt(LocalDateTime.now());
-
-        // Update parent category if provided
-        if (request.getParentId() != null) {
-            if (request.getParentId().isEmpty()) {
-                category.setParentCategory(null);
-            } else {
-                Category parentCategory = categoryRepository
-                        .findById(request.getParentId())
-                        .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
-                category.setParentCategory(parentCategory);
+        // Check if ID is being changed
+        String newId = request.getId();
+        boolean idChanged = newId != null && !newId.isEmpty() && !newId.equals(categoryId);
+        
+        if (idChanged) {
+            // Check if category has sub-categories - cannot change ID if it has children
+            long subCategoryCount = categoryRepository.countSubCategoriesByCategoryId(categoryId);
+            if (subCategoryCount > 0) {
+                throw new AppException(ErrorCode.CATEGORY_CANNOT_CHANGE_ID_HAS_CHILDREN);
             }
+            
+            // Check if new ID already exists
+            if (categoryRepository.findById(newId).isPresent()) {
+                throw new AppException(ErrorCode.CATEGORY_ALREADY_EXISTS);
+            }
+            
+            // If ID is changed, create new category with new ID and copy all data
+            Category newCategory = new Category();
+            newCategory.setId(newId);
+            newCategory.setName(request.getName() != null ? request.getName() : category.getName());
+            newCategory.setDescription(request.getDescription() != null ? request.getDescription() : category.getDescription());
+            newCategory.setStatus(request.getStatus() != null ? request.getStatus() : category.getStatus());
+            newCategory.setCreatedAt(category.getCreatedAt());
+            newCategory.setUpdatedAt(LocalDateTime.now());
+            
+            // Update parent category if provided
+            if (request.getParentId() != null) {
+                if (request.getParentId().isEmpty()) {
+                    newCategory.setParentCategory(null);
+                } else {
+                    Category parentCategory = categoryRepository
+                            .findById(request.getParentId())
+                            .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
+                    newCategory.setParentCategory(parentCategory);
+                }
+            } else {
+                newCategory.setParentCategory(category.getParentCategory());
+            }
+            
+            // Save new category first
+            Category savedCategory = categoryRepository.save(newCategory);
+            
+            // Delete old category (since we already checked there are no subcategories, this is safe)
+            categoryRepository.delete(category);
+            
+            log.info("Category updated: {} -> {}", categoryId, newId);
+            return categoryMapper.toResponse(savedCategory);
+        } else {
+            // Normal update without ID change
+            categoryMapper.updateCategory(category, request);
+            category.setUpdatedAt(LocalDateTime.now());
+
+            // Update parent category if provided
+            if (request.getParentId() != null) {
+                if (request.getParentId().isEmpty()) {
+                    category.setParentCategory(null);
+                } else {
+                    Category parentCategory = categoryRepository
+                            .findById(request.getParentId())
+                            .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
+                    category.setParentCategory(parentCategory);
+                }
+            }
+
+            Category savedCategory = categoryRepository.save(category);
+            log.info("Category updated: {}", categoryId);
+            return categoryMapper.toResponse(savedCategory);
         }
-
-        Category savedCategory = categoryRepository.save(category);
-        log.info("Category updated: {}", categoryId);
-
-        return categoryMapper.toResponse(savedCategory);
     }
 
     @Transactional

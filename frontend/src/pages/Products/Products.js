@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import classNames from 'classnames/bind';
-import styles from '../Categories/Makeup/Category.module.scss';
+import styles from './Products.module.scss';
 import image1 from '~/assets/images/products/image1.jpg';
 import { Link } from 'react-router-dom';
 import { scrollToTop } from '~/services/utils';
@@ -26,6 +26,7 @@ function Products() {
   const [selectedPriceRanges, setSelectedPriceRanges] = useState([]); // Các price ranges được chọn
   const [selectedBrands, setSelectedBrands] = useState(() => (brandParam ? [brandParam] : [])); // Các brands được chọn
   const [brandSearchTerm, setBrandSearchTerm] = useState(''); // Từ khóa tìm kiếm brand
+  const [sortBy, setSortBy] = useState('best_selling'); // State sắp xếp
   const brandParamRef = useRef(brandParam);
 
   // Use hooks
@@ -59,11 +60,11 @@ function Products() {
     if (selectedPriceRanges.length > 0) {
       filtered = filtered.filter(product => {
         const productPrice = product.price || 0; // Dùng price (đã bao gồm VAT)
-        
+
         return selectedPriceRanges.some(rangeId => {
           const range = PRICE_RANGES.find(r => r.id === rangeId);
           if (!range) return false;
-          
+
           if (range.max === Infinity) {
             return productPrice >= range.min;
           } else {
@@ -81,8 +82,18 @@ function Products() {
       });
     }
 
+    // Sorting Logic - luôn sort lại toàn bộ danh sách khi thay đổi sortBy
+    if (sortBy === 'price_asc') {
+      filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
+    } else if (sortBy === 'price_desc') {
+      filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
+    } else if (sortBy === 'best_selling') {
+      // Sắp xếp theo số lượng đã bán (quantitySold)
+      filtered.sort((a, b) => (b.quantitySold || 0) - (a.quantitySold || 0));
+    }
+
     return filtered;
-  }, [allProducts, selectedPriceRanges, selectedBrands]);
+  }, [allProducts, selectedPriceRanges, selectedBrands, sortBy]);
 
   useEffect(() => {
     if (brandParamRef.current === brandParam) return;
@@ -128,14 +139,14 @@ function Products() {
     if (!product.promotionId || !product.promotionName) return null;
     if (!product.discountValue || product.discountValue <= 0) return null;
     if (!product.price || product.price <= 0) return null;
-    
+
     // Calculate original price: price + discountValue
     const originalPrice = product.price + product.discountValue;
     if (originalPrice <= 0) return null;
-    
+
     // Calculate percentage: (discountValue / originalPrice) * 100
     const percentage = Math.round((product.discountValue / originalPrice) * 100);
-    
+
     // Only return if percentage is greater than 0
     return percentage > 0 ? percentage : null;
   };
@@ -147,7 +158,7 @@ function Products() {
   };
 
   return (
-    <div className={cx('makeup-page')}>
+    <div className={cx('products-page')}>
       {/* Sidebar filters */}
       <aside className={cx('sidebar')}>
         <h2 className={cx('filter-title')}>BỘ LỌC</h2>
@@ -159,8 +170,8 @@ function Products() {
             <ul>
               <li>
                 <label>
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     checked={!categoryId}
                     onChange={() => {
                       const newParams = new URLSearchParams(searchParams);
@@ -175,8 +186,8 @@ function Products() {
                 .map((category) => (
                   <li key={category.id}>
                     <label>
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         checked={categoryId === category.id}
                         onChange={() => {
                           const newParams = new URLSearchParams(searchParams);
@@ -260,28 +271,49 @@ function Products() {
             {availableBrands.filter(brand =>
               brand.toLowerCase().includes(brandSearchTerm.toLowerCase())
             ).length === 0 && brandSearchTerm && (
-              <div style={{ padding: '8px', color: '#999', fontSize: '14px' }}>
-                Không tìm thấy thương hiệu
-              </div>
-            )}
+                <div style={{ padding: '8px', color: '#999', fontSize: '14px' }}>
+                  Không tìm thấy thương hiệu
+                </div>
+              )}
           </div>
         )}
       </aside>
       {/* Content: all products grid */}
       <div className={cx('content')}>
-        <h1 className={cx('title')}>{pageTitle}</h1>
+        <div className={cx('header-row')}>
+          <h1 className={cx('title')}>{pageTitle}</h1>
+          <div className={cx('sort-options')}>
+            <span>Sắp xếp:</span>
+            <select
+              className={cx('sort-select')}
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="best_selling">Bán chạy nhất</option>
+              <option value="price_desc">Giá cao nhất</option>
+              <option value="price_asc">Giá thấp nhất</option>
+            </select>
+          </div>
+        </div>
         {loading ? (
           <div className={cx('loading')}>Đang tải sản phẩm...</div>
         ) : products.length === 0 ? (
           <div className={cx('empty')}>Chưa có sản phẩm nào</div>
         ) : (
           <div className={cx('product-grid')}>
-            {products.map((p) => (
-              <Link key={p.id} to={`/product/${p.id}`} className={cx('product-card')} onClick={() => scrollToTop()}>
+            {products.map((p, index) => (
+              <Link
+                key={p.id}
+                to={`/product/${p.id}`}
+                className={cx('product-card')}
+                onClick={() => scrollToTop()}
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
                 <div className={cx('img-wrap')}>
                   <img
                     src={getProductImage(p)}
                     alt={p.name}
+                    loading="lazy"
                     onError={(e) => {
                       e.target.onerror = null;
                       e.target.src = image1;

@@ -12,6 +12,7 @@ import com.nova_beauty.backend.dto.request.ReviewCreationRequest;
 import com.nova_beauty.backend.dto.request.ReviewReplyRequest;
 import com.nova_beauty.backend.dto.response.ReviewResponse;
 import com.nova_beauty.backend.entity.Order;
+import com.nova_beauty.backend.entity.OrderItem;
 import com.nova_beauty.backend.entity.Product;
 import com.nova_beauty.backend.entity.Review;
 import com.nova_beauty.backend.entity.User;
@@ -19,6 +20,7 @@ import com.nova_beauty.backend.exception.AppException;
 import com.nova_beauty.backend.exception.ErrorCode;
 import com.nova_beauty.backend.mapper.ReviewMapper;
 import com.nova_beauty.backend.mapper.UserMapper;
+import com.nova_beauty.backend.repository.OrderItemRepository;
 import com.nova_beauty.backend.repository.OrderRepository;
 import com.nova_beauty.backend.repository.ProductRepository;
 import com.nova_beauty.backend.repository.ReviewRepository;
@@ -40,6 +42,7 @@ public class ReviewService {
     UserRepository userRepository;
     ProductRepository productRepository;
     OrderRepository orderRepository;
+    OrderItemRepository orderItemRepository;
     ReviewMapper reviewMapper;
     private final UserMapper userMapper;
 
@@ -88,39 +91,37 @@ public class ReviewService {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        // Get product - giống LuminaBook
-        String productId = request.getProductId();
-        if (productId == null || productId.trim().isEmpty()) {
-            throw new AppException(ErrorCode.PRODUCT_NOT_EXISTED);
+        // Kiểm tra orderItemId có trong request
+        String orderItemId = request.getOrderItemId();
+        if (orderItemId == null || orderItemId.trim().isEmpty()) {
+            throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "OrderItem ID không được để trống");
         }
-        Product product = productRepository
-                .findById(productId)
-                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
 
-        // Kiểm tra user đã mua sản phẩm này chưa
-        // Chỉ cho phép đánh giá nếu user đã có đơn hàng chứa sản phẩm này và đơn hàng đã được giao (DELIVERED)
-        List<Order> userOrders = orderRepository.findByUserEmail(userEmail);
-        boolean hasPurchased = userOrders.stream()
-                .anyMatch(order -> {
-                    // Chỉ kiểm tra các đơn hàng đã được giao
-                    if (order.getStatus() != OrderStatus.DELIVERED) {
-                        return false;
-                    }
-                    // Kiểm tra trong order items
-                    if (order.getItems() != null) {
-                        return order.getItems().stream()
-                                .anyMatch(item -> {
-                                    Product itemProduct = item.getProduct();
-                                    return itemProduct != null && 
-                                           (itemProduct.getId().equals(productId) || 
-                                            itemProduct.getId().equals(product.getId()));
-                                });
-                    }
-                    return false;
-                });
+        // Lấy OrderItem
+        OrderItem orderItem = orderItemRepository.findById(orderItemId)
+                .orElseThrow(() -> new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "OrderItem không tồn tại"));
 
-        if (!hasPurchased) {
-            throw new AppException(ErrorCode.REVIEW_NOT_PURCHASED);
+        // Kiểm tra OrderItem thuộc về user hiện tại
+        Order order = orderItem.getOrder();
+        if (order == null || !order.getUser().getId().equals(user.getId())) {
+            throw new AppException(ErrorCode.REVIEW_NOT_PURCHASED, "Bạn không có quyền đánh giá đơn hàng này");
+        }
+
+        // Kiểm tra đơn hàng đã được giao (DELIVERED) chưa
+        if (order.getStatus() != OrderStatus.DELIVERED) {
+            throw new AppException(ErrorCode.REVIEW_NOT_PURCHASED, "Chỉ có thể đánh giá sau khi đơn hàng đã được giao");
+        }
+
+        // Kiểm tra orderItem này đã được đánh giá chưa (mỗi đơn hàng chỉ đánh giá 1 lần)
+        boolean alreadyReviewed = reviewRepository.existsByOrderItemId(orderItemId);
+        if (alreadyReviewed) {
+            throw new AppException(ErrorCode.REVIEW_ALREADY_EXISTS);
+        }
+
+        // Lấy Product từ OrderItem
+        Product product = orderItem.getProduct();
+        if (product == null) {
+            throw new AppException(ErrorCode.PRODUCT_NOT_EXISTED);
         }
 
         // Create review entity using mapper
@@ -131,6 +132,7 @@ public class ReviewService {
         review.setCreatedAt(LocalDateTime.now());
         review.setUser(user);
         review.setProduct(product);
+        review.setOrderItem(orderItem); // Liên kết với OrderItem cụ thể
 
         Review savedReview = reviewRepository.save(review);
         log.info("Review created with ID: {} by user: {} (display name: {})", 

@@ -497,16 +497,15 @@ public class ProductService {
     }
 
     public List<ProductResponse> getProductsByCategory(String categoryId) {
-        // Lấy products từ category chính (with category loaded)
-        List<Product> products = new ArrayList<>(productRepository.findByCategoryIdWithCategory(categoryId));
+        // Lấy tất cả category IDs bao gồm category chính và tất cả descendant categories (đệ quy)
+        Set<String> allCategoryIds = getAllDescendantCategoryIds(categoryId);
+        allCategoryIds.add(categoryId); // Thêm category chính vào set
 
-        // Lấy tất cả subcategories của category này
-        List<Category> subCategories = categoryRepository.findByParentCategoryId(categoryId);
-
-        // Lấy products từ tất cả subcategories (with category loaded)
-        for (Category subCategory : subCategories) {
-            List<Product> subProducts = productRepository.findByCategoryIdWithCategory(subCategory.getId());
-            products.addAll(subProducts);
+        // Lấy products từ tất cả categories (bao gồm cả danh mục cha và các danh mục con)
+        List<Product> products = new ArrayList<>();
+        for (String catId : allCategoryIds) {
+            List<Product> categoryProducts = productRepository.findByCategoryIdWithCategory(catId);
+            products.addAll(categoryProducts);
         }
 
         // Filter chỉ lấy APPROVED products, apply promotions, và map sang response
@@ -515,6 +514,28 @@ public class ProductService {
                 .peek(this::applyActivePromotionToProduct)
                 .map(productMapper::toResponse)
                 .toList();
+    }
+
+    /**
+     * Đệ quy lấy tất cả ID của các danh mục con (descendant categories)
+     * Bao gồm con, cháu, chắt, v.v.
+     */
+    private Set<String> getAllDescendantCategoryIds(String categoryId) {
+        Set<String> allDescendantIds = new HashSet<>();
+        
+        // Lấy tất cả subcategories trực tiếp
+        List<Category> directSubCategories = categoryRepository.findByParentCategoryId(categoryId);
+        
+        for (Category subCategory : directSubCategories) {
+            // Thêm subcategory ID vào set
+            allDescendantIds.add(subCategory.getId());
+            
+            // Đệ quy lấy tất cả descendant của subcategory này
+            Set<String> deeperDescendants = getAllDescendantCategoryIds(subCategory.getId());
+            allDescendantIds.addAll(deeperDescendants);
+        }
+        
+        return allDescendantIds;
     }
 
     public List<ProductResponse> searchProducts(String keyword) {

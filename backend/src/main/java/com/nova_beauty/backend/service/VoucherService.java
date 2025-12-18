@@ -211,8 +211,10 @@ public class VoucherService {
         deleteMediaFileIfExists(voucher);
 
         // 3. XÃ³a voucher
+        String voucherCode = voucher.getCode();
         voucherRepository.delete(voucher);
-        // log.info("Voucher deleted: {} by user: {}", voucherId, currentUserId);
+        voucherRepository.flush(); // Đảm bảo xóa được thực hiện ngay
+        log.info("Voucher deleted: id={}, code={}, by user: {}", voucherId, voucherCode, currentUserId);
     }
 
     private User getCurrentUser() {

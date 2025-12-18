@@ -28,6 +28,7 @@ public class Cart {
 
     Double subtotal;
     String appliedVoucherCode;
+    String appliedVoucherId; // ID voucher đang áp dụng
     Double voucherDiscount;
     Double totalAmount; // subtotal - voucherDiscount
 }

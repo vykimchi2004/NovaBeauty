@@ -47,4 +47,9 @@ public class Review {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     Product product;
+
+    // OrderItem relationship - để đảm bảo mỗi đơn hàng chỉ được đánh giá 1 lần
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_item_id", nullable = false)
+    OrderItem orderItem;
 }
