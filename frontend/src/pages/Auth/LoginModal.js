@@ -12,10 +12,8 @@ import { storage } from '~/services/utils';
 
 const cx = classNames.bind(styles);
 
-// Keys để lưu thông tin "nhớ tài khoản"
+// Key để lưu email "nhớ tài khoản" (chỉ lưu email, không lưu mật khẩu vì lý do bảo mật)
 const REMEMBER_EMAIL_KEY = 'nova_remember_email';
-const REMEMBER_PASSWORD_KEY = 'nova_remember_password';
-const REMEMBER_CHECKED_KEY = 'nova_remember_checked';
 
 function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenForgot }) {
   const navigate = useNavigate?.();
@@ -41,22 +39,19 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
       setShowPassword(false);
       setRenderKey((k) => k + 1);
       
-      // Kiểm tra xem có lưu thông tin "nhớ tài khoản" không
-      const savedRemember = localStorage.getItem(REMEMBER_CHECKED_KEY) === 'true';
-      setRememberMe(savedRemember);
+      // Kiểm tra xem có lưu email "nhớ tài khoản" không
+      const savedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY) || '';
+      setRememberMe(!!savedEmail); // Nếu có email đã lưu thì tích checkbox
       
       setTimeout(() => {
-        if (savedRemember) {
-          // Nếu đã tích "nhớ tài khoản" trước đó, load email và password đã lưu
-          const savedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY) || '';
-          const savedPassword = localStorage.getItem(REMEMBER_PASSWORD_KEY) || '';
+        if (savedEmail) {
+          // Nếu có email đã lưu, điền vào form
           if (emailRef.current) emailRef.current.value = savedEmail;
-          if (passwordRef.current) passwordRef.current.value = savedPassword;
         } else {
-          // Nếu không tích, xóa hết
           if (emailRef.current) emailRef.current.value = '';
-          if (passwordRef.current) passwordRef.current.value = '';
         }
+        // Luôn để trống mật khẩu (không lưu mật khẩu)
+        if (passwordRef.current) passwordRef.current.value = '';
       }, 0);
     }
   }, [isOpen]);
@@ -112,17 +107,11 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
       const response = await login(email, password);
       
       if (response && response.token) {
-        // Xử lý "nhớ tài khoản"
+        // Xử lý "nhớ tài khoản" - chỉ lưu email
         if (rememberMe) {
-          // Nếu tích checkbox, lưu email và password
           localStorage.setItem(REMEMBER_EMAIL_KEY, email);
-          localStorage.setItem(REMEMBER_PASSWORD_KEY, password);
-          localStorage.setItem(REMEMBER_CHECKED_KEY, 'true');
         } else {
-          // Nếu không tích, xóa thông tin đã lưu
           localStorage.removeItem(REMEMBER_EMAIL_KEY);
-          localStorage.removeItem(REMEMBER_PASSWORD_KEY);
-          localStorage.setItem(REMEMBER_CHECKED_KEY, 'false');
         }
         
         // Lấy thông tin user

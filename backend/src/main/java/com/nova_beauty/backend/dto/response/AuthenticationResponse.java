@@ -9,6 +9,7 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class AuthenticationResponse {
-    String token;
+    String token;          // Access token (ngắn hạn)
+    String refreshToken;   // Refresh token (dài hạn)
     boolean authenticated;
 }
