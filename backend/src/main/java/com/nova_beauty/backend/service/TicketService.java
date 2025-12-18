@@ -87,10 +87,12 @@ public class TicketService {
         User currentUser = userRepository.findByEmail(currentUserEmail)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
         
-        // If CSKH saves a note (tiáº¿p nháº­n khiáº¿u náº¡i), automatically assign to them
-        if (request.getHandlerNote() != null && currentUser.getRole() != null 
-                && currentUser.getRole().getName().equals("CUSTOMER_SUPPORT")) {
-            
+        String roleName = currentUser.getRole() != null ? currentUser.getRole().getName() : "";
+        boolean isAdmin = "ADMIN".equals(roleName) || "STAFF".equals(roleName);
+        boolean isCS = "CUSTOMER_SUPPORT".equals(roleName);
+        
+        // CSKH chỉ được cập nhật csNote
+        if (isCS && request.getCsNote() != null) {
             // Check if ticket already has a handler
             boolean hasHandler = (ticket.getHandlerId() != null && !ticket.getHandlerId().isEmpty());
             
@@ -100,20 +102,22 @@ public class TicketService {
                     throw new AppException(ErrorCode.UNAUTHORIZED);
                 }
                 // Allow this CSKH to accept the complaint
-                ticket.setHandlerNote(request.getHandlerNote());
+                ticket.setCsNote(request.getCsNote());
                 ticket.setHandlerId(currentUser.getId());
                 ticket.setAssignedTo(TicketAssignee.CS);
                 ticket.setStatus(TicketStatus.IN_PROGRESS);
             } else if (ticket.getHandlerId().equals(currentUser.getId())) {
                 // Same handler - allow updating note (even if resolved)
-                ticket.setHandlerNote(request.getHandlerNote());
+                ticket.setCsNote(request.getCsNote());
             } else {
                 // Different handler already exists - reject
                 throw new AppException(ErrorCode.UNAUTHORIZED);
             }
-        } else if (request.getHandlerNote() != null) {
-            // Admin or Staff can always update note
-            ticket.setHandlerNote(request.getHandlerNote());
+        }
+        
+        // Admin có thể cập nhật adminNote
+        if (isAdmin && request.getAdminNote() != null) {
+            ticket.setAdminNote(request.getAdminNote());
         }
         
         if (request.getStatus() != null) {
@@ -142,7 +146,7 @@ public class TicketService {
 
     @Transactional
     @PreAuthorize("hasAnyRole('ADMIN','STAFF','CUSTOMER_SUPPORT')")
-    public TicketResponse resolve(String id, String handlerNote) {
+    public TicketResponse resolve(String id, String csNote, String adminNote) {
         SupportTicket ticket =
                 supportTicketRepository.findById(id).orElseThrow(() -> new AppException(ErrorCode.TICKET_NOT_EXISTED));
         
@@ -152,13 +156,21 @@ public class TicketService {
         User currentUser = userRepository.findByEmail(currentUserEmail)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
         
-        if (handlerNote != null) {
-            ticket.setHandlerNote(handlerNote);
-            // If CSKH resolves, set handlerId
-            if (currentUser.getRole() != null && currentUser.getRole().getName().equals("CUSTOMER_SUPPORT")) {
-                ticket.setHandlerId(currentUser.getId());
-            }
+        String roleName = currentUser.getRole() != null ? currentUser.getRole().getName() : "";
+        boolean isAdmin = "ADMIN".equals(roleName) || "STAFF".equals(roleName);
+        boolean isCS = "CUSTOMER_SUPPORT".equals(roleName);
+        
+        // CSKH cập nhật csNote
+        if (isCS && csNote != null) {
+            ticket.setCsNote(csNote);
+            ticket.setHandlerId(currentUser.getId());
         }
+        
+        // Admin cập nhật adminNote
+        if (isAdmin && adminNote != null) {
+            ticket.setAdminNote(adminNote);
+        }
+        
         ticket.setStatus(TicketStatus.RESOLVED);
         ticket.setUpdatedAt(LocalDateTime.now());
         SupportTicket saved = supportTicketRepository.save(ticket);

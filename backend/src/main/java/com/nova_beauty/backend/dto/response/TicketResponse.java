@@ -21,7 +21,8 @@ public class TicketResponse {
     String phone;
     String topic;
     String content;
-    String handlerNote;
+    String csNote; // Ghi chú của CSKH
+    String adminNote; // Ghi chú của Admin
     String handlerId;
     String handlerName;
     TicketStatus status;

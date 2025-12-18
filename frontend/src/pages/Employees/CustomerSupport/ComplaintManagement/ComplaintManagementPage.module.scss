@@ -271,6 +271,25 @@
     line-height: 1.6;
     margin: 0;
     white-space: pre-line;
+
+    &.cs-note-box {
+        background: #e3f2fd;
+        border-left: 4px solid #1976d2;
+        padding: 12px;
+        border-radius: 4px;
+    }
+
+    &.admin-note-box {
+        background: #fff3e0;
+        border-left: 4px solid #ff9800;
+        padding: 12px;
+        border-radius: 4px;
+    }
+}
+
+.no-note {
+    color: #9ca3af;
+    font-style: italic;
 }
 
 .notes-section {

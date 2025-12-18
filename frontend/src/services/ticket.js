@@ -67,10 +67,12 @@ const ticketService = {
 
     /**
      * Resolve ticket
+     * @param {string} id - Ticket ID
+     * @param {Object} notes - { csNote, adminNote }
      */
-    async resolveTicket(id, note) {
+    async resolveTicket(id, notes = {}) {
         try {
-            return await apiClient.post(`/api/tickets/${id}/resolve`, note ? { handlerNote: note } : {});
+            return await apiClient.post(`/api/tickets/${id}/resolve`, notes);
         } catch (error) {
             console.error('[Ticket Service] resolveTicket error:', error);
             throw error;

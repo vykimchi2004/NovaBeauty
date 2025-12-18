@@ -9,7 +9,8 @@ import lombok.experimental.FieldDefaults;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class TicketUpdateRequest {
-    String handlerNote;
+    String csNote; // Ghi chú của CSKH
+    String adminNote; // Ghi chú của Admin
     String status;
     String assignedTo;
 }

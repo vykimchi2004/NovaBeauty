@@ -95,7 +95,8 @@ export default function ComplaintManagementPage() {
                     date: ticket.createdAt ? formatDateTime(ticket.createdAt) : '',
                     createdAt: ticket.createdAt,
                     content: ticket.content,
-                    handlerNote: ticket.handlerNote || '',
+                    csNote: ticket.csNote || '',
+                    adminNote: ticket.adminNote || '',
                 }));
 
                 setComplaints(mappedComplaints);
@@ -113,7 +114,7 @@ export default function ComplaintManagementPage() {
 
     const handleView = (complaint) => {
         setSelectedComplaint(complaint);
-        setNote(complaint.handlerNote || '');
+        setNote(complaint.csNote || '');
         setNoteError('');
         setActionError('');
         setActionSuccess('');
@@ -148,7 +149,8 @@ export default function ComplaintManagementPage() {
                 date: ticket.createdAt ? formatDateTime(ticket.createdAt) : '',
                 createdAt: ticket.createdAt,
                 content: ticket.content,
-                handlerNote: ticket.handlerNote || '',
+                csNote: ticket.csNote || '',
+                adminNote: ticket.adminNote || '',
             }));
 
             setComplaints(mappedComplaints);
@@ -157,7 +159,7 @@ export default function ComplaintManagementPage() {
                 const updated = mappedComplaints.find((c) => c.id === selectedComplaint.id);
                 if (updated) {
                     setSelectedComplaint(updated);
-                    setNote(updated.handlerNote || '');
+                    setNote(updated.csNote || '');
                 }
             }
         } catch (err) {
@@ -180,7 +182,7 @@ export default function ComplaintManagementPage() {
                 setActionSuccess('');
 
                 try {
-                    await ticketService.resolveTicket(selectedComplaint.id, note || '');
+                    await ticketService.resolveTicket(selectedComplaint.id, { csNote: note || '' });
                     const msg = 'Khiếu nại đã được giải quyết thành công!';
                     setActionSuccess(msg);
                     notifySuccess(msg);
@@ -217,7 +219,7 @@ export default function ComplaintManagementPage() {
 
                 try {
                     await ticketService.updateTicket(selectedComplaint.id, {
-                        handlerNote: note || '',
+                        csNote: note || '',
                     });
 
                     const msg = 'Đã tiếp nhận khiếu nại thành công! Bạn đã trở thành người xử lý.';
@@ -274,7 +276,7 @@ export default function ComplaintManagementPage() {
                 try {
                     // Lưu ghi chú
                     await ticketService.updateTicket(selectedComplaint.id, {
-                        handlerNote: note.trim(),
+                        csNote: note.trim(),
                     });
 
                     // Gọi API escalate
@@ -466,18 +468,34 @@ export default function ComplaintManagementPage() {
                                                 : 'Chưa có người xử lý'}
                                     </span>
                                 </div>
-                                {selectedComplaint.handlerNote && selectedComplaint.handlerNote.trim() && (
-                                    <div className={cx('reply-row')}>
-                                        <div className={cx('reply-header')}>
-                                            <span className={cx('reply-label')}>CSKH đã trả lời:</span>
-                                        </div>
-                                        <p className={cx('reply-text')}>{selectedComplaint.handlerNote}</p>
+                                
+                                {/* Hiển thị ghi chú CSKH */}
+                                <div className={cx('reply-row')}>
+                                    <div className={cx('reply-header')}>
+                                        <span className={cx('reply-label')}>Ghi chú CSKH:</span>
                                     </div>
-                                )}
+                                    <p className={cx('reply-text', 'cs-note-box')}>
+                                        {selectedComplaint.csNote && selectedComplaint.csNote.trim() 
+                                            ? selectedComplaint.csNote 
+                                            : <span className={cx('no-note')}>Chưa có ghi chú từ CSKH</span>}
+                                    </p>
+                                </div>
+                                
+                                {/* Hiển thị ghi chú Admin */}
+                                <div className={cx('reply-row')}>
+                                    <div className={cx('reply-header')}>
+                                        <span className={cx('reply-label')}>Ghi chú Admin:</span>
+                                    </div>
+                                    <p className={cx('reply-text', 'admin-note-box')}>
+                                        {selectedComplaint.adminNote && selectedComplaint.adminNote.trim() 
+                                            ? selectedComplaint.adminNote 
+                                            : <span className={cx('no-note')}>Chưa có ghi chú từ Admin</span>}
+                                    </p>
+                                </div>
                             </div>
 
                             <div className={cx('notes-section')}>
-                                <label className={cx('notes-label')}>Ghi chú xử lý</label>
+                                <label className={cx('notes-label')}>Ghi chú CSKH</label>
                                 <textarea
                                     className={cx('notes-input', { 'has-error': noteError })}
                                     placeholder="Ghi chú ngắn"

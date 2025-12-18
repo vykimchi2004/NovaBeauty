@@ -65,9 +65,10 @@ public class TicketController {
     @PostMapping("/{id}/resolve")
     public ApiResponse<TicketResponse> resolve(
             @PathVariable String id, @RequestBody(required = false) TicketUpdateRequest request) {
-        String note = request != null ? request.getHandlerNote() : null;
+        String csNote = request != null ? request.getCsNote() : null;
+        String adminNote = request != null ? request.getAdminNote() : null;
         return ApiResponse.<TicketResponse>builder()
-                .result(ticketService.resolve(id, note))
+                .result(ticketService.resolve(id, csNote, adminNote))
                 .build();
     }
 }

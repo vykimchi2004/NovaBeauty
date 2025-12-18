@@ -23,7 +23,7 @@ function ManageComplaints() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [resolveNote, setResolveNote] = useState('');
+  const [adminNote, setAdminNote] = useState('');
 
   useEffect(() => {
     fetchTickets();
@@ -86,14 +86,30 @@ function ManageComplaints() {
     if (!selectedTicket) return;
 
     try {
-      await ticketService.resolveTicket(selectedTicket.id, resolveNote);
+      await ticketService.resolveTicket(selectedTicket.id, { adminNote });
       notify.success('Đã giải quyết khiếu nại thành công!');
       setShowDetailModal(false);
-      setResolveNote('');
+      setAdminNote('');
       fetchTickets();
     } catch (err) {
       console.error('Error resolving ticket:', err);
       notify.error('Không thể giải quyết khiếu nại. Vui lòng thử lại.');
+    }
+  };
+
+  const handleSaveAdminNote = async () => {
+    if (!selectedTicket) return;
+
+    try {
+      await ticketService.updateTicket(selectedTicket.id, { adminNote });
+      notify.success('Đã lưu ghi chú Admin!');
+      // Refresh ticket detail
+      const ticket = await ticketService.getTicketById(selectedTicket.id);
+      setSelectedTicket(ticket);
+      fetchTickets();
+    } catch (err) {
+      console.error('Error saving admin note:', err);
+      notify.error('Không thể lưu ghi chú. Vui lòng thử lại.');
     }
   };
 
@@ -283,34 +299,51 @@ function ManageComplaints() {
                     <label>Nội dung khiếu nại:</label>
                     <div className={cx('contentBox')}>{selectedTicket.content || '-'}</div>
                   </div>
-                  {selectedTicket.handlerNote && (
-                    <div className={cx('detailItem', 'fullWidth')}>
-                      <label>Ghi chú xử lý:</label>
-                      <div className={cx('contentBox')}>{selectedTicket.handlerNote}</div>
+                  
+                  {/* Ghi chú CSKH - chỉ hiển thị */}
+                  <div className={cx('detailItem', 'fullWidth')}>
+                    <label>Ghi chú CSKH:</label>
+                    <div className={cx('contentBox', 'csNoteBox')}>
+                      {selectedTicket.csNote || <span className={cx('noNote')}>Chưa có ghi chú từ CSKH</span>}
                     </div>
-                  )}
+                  </div>
+                  
+                  {/* Ghi chú Admin - có thể chỉnh sửa */}
+                  <div className={cx('detailItem', 'fullWidth')}>
+                    <label>Ghi chú Admin:</label>
+                    <div className={cx('contentBox', 'adminNoteBox')}>
+                      {selectedTicket.adminNote || <span className={cx('noNote')}>Chưa có ghi chú từ Admin</span>}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {selectedTicket.status !== 'RESOLVED' && (
-                <div className={cx('resolveSection')}>
-                  <h4>Giải quyết khiếu nại</h4>
-                  <div className={cx('formGroup')}>
-                    <label>Ghi chú giải quyết:</label>
-                    <textarea
-                      rows="4"
-                      value={resolveNote}
-                      onChange={(e) => setResolveNote(e.target.value)}
-                      placeholder="Nhập ghi chú về cách giải quyết khiếu nại..."
-                      className={cx('resolveTextarea')}
-                    />
-                  </div>
-                  <button type="button" className={cx('resolveBtn')} onClick={handleResolve}>
-                    <FontAwesomeIcon icon={faCheck} />
-                    Giải quyết
-                  </button>
+              {/* Phần nhập ghi chú Admin */}
+              <div className={cx('resolveSection')}>
+                <h4>Ghi chú của Admin</h4>
+                <div className={cx('formGroup')}>
+                  <label>Nhập ghi chú:</label>
+                  <textarea
+                    rows="4"
+                    value={adminNote}
+                    onChange={(e) => setAdminNote(e.target.value)}
+                    placeholder="Nhập ghi chú của Admin..."
+                    className={cx('resolveTextarea')}
+                  />
                 </div>
-              )}
+                <div className={cx('actionButtons')}>
+                  <button type="button" className={cx('saveNoteBtn')} onClick={handleSaveAdminNote}>
+                    <FontAwesomeIcon icon={faCheck} />
+                    Lưu ghi chú
+                  </button>
+                  {selectedTicket.status !== 'RESOLVED' && (
+                    <button type="button" className={cx('resolveBtn')} onClick={handleResolve}>
+                      <FontAwesomeIcon icon={faCheck} />
+                      Giải quyết khiếu nại
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>

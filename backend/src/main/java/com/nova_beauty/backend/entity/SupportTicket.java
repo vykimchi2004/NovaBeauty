@@ -38,7 +38,10 @@ public class SupportTicket {
     String content;
 
     @Column(columnDefinition = "TEXT")
-    String handlerNote; // CS/Admin handling notes
+    String csNote; // Ghi chú của CSKH
+
+    @Column(columnDefinition = "TEXT")
+    String adminNote; // Ghi chú của Admin
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

@@ -103,6 +103,21 @@
   line-height: 1.6;
   white-space: pre-wrap;
   word-wrap: break-word;
+
+  &.csNoteBox {
+    background: #e3f2fd;
+    border-left: 4px solid #1976d2;
+  }
+
+  &.adminNoteBox {
+    background: #fff3e0;
+    border-left: 4px solid #ff9800;
+  }
+}
+
+.noNote {
+  color: #999;
+  font-style: italic;
 }
 
 .resolveSection {
@@ -134,11 +149,36 @@
   }
 }
 
+.actionButtons {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.saveNoteBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #1565c0;
+    transform: translateY(-1px);
+  }
+}
+
 .resolveBtn {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 16px;
   padding: 12px 24px;
   background: #28a745;
   color: #fff;

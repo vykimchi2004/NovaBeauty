@@ -13,7 +13,8 @@ public interface TicketMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "assignedTo", ignore = true)
-    @Mapping(target = "handlerNote", ignore = true)
+    @Mapping(target = "csNote", ignore = true)
+    @Mapping(target = "adminNote", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     SupportTicket toEntity(TicketCreationRequest request);
