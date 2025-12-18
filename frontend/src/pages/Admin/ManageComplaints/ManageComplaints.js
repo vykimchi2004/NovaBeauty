@@ -295,6 +295,16 @@ function ManageComplaints() {
                     <label>Trạng thái:</label>
                     <span>{getStatusBadge(selectedTicket.status)}</span>
                   </div>
+                  <div className={cx('detailItem')}>
+                    <label>Phân quyền:</label>
+                    <span className={cx('assigneeBadge', selectedTicket.assignedTo === 'ADMIN' ? 'admin' : 'cs')}>
+                      {selectedTicket.assignedTo === 'ADMIN' ? 'Admin' : 'CSKH'}
+                    </span>
+                  </div>
+                  <div className={cx('detailItem', 'fullWidth')}>
+                    <label>Người xử lý (CSKH):</label>
+                    <span>{selectedTicket.handlerName ? selectedTicket.handlerName : <span className={cx('noNote')}>Chưa có người xử lý</span>}</span>
+                  </div>
                   <div className={cx('detailItem', 'fullWidth')}>
                     <label>Nội dung khiếu nại:</label>
                     <div className={cx('contentBox')}>{selectedTicket.content || '-'}</div>
@@ -321,23 +331,43 @@ function ManageComplaints() {
               {/* Phần nhập ghi chú Admin */}
               <div className={cx('resolveSection')}>
                 <h4>Ghi chú của Admin</h4>
+                
+                {/* Thông báo khi chưa được chuyển lên Admin */}
+                {selectedTicket.assignedTo !== 'ADMIN' && (
+                  <div className={cx('waitingForEscalate')}>
+                    <FontAwesomeIcon icon={faClock} />
+                    <span>Đang chờ CSKH xử lý. Admin chỉ có thể thao tác khi CSKH chuyển đơn lên.</span>
+                  </div>
+                )}
+                
                 <div className={cx('formGroup')}>
                   <label>Nhập ghi chú:</label>
                   <textarea
                     rows="4"
                     value={adminNote}
                     onChange={(e) => setAdminNote(e.target.value)}
-                    placeholder="Nhập ghi chú của Admin..."
-                    className={cx('resolveTextarea')}
+                    placeholder={selectedTicket.assignedTo === 'ADMIN' ? "Nhập ghi chú của Admin..." : "Chờ CSKH chuyển đơn lên..."}
+                    className={cx('resolveTextarea', { disabled: selectedTicket.assignedTo !== 'ADMIN' })}
+                    disabled={selectedTicket.assignedTo !== 'ADMIN'}
                   />
                 </div>
                 <div className={cx('actionButtons')}>
-                  <button type="button" className={cx('saveNoteBtn')} onClick={handleSaveAdminNote}>
+                  <button 
+                    type="button" 
+                    className={cx('saveNoteBtn', { disabled: selectedTicket.assignedTo !== 'ADMIN' })} 
+                    onClick={handleSaveAdminNote}
+                    disabled={selectedTicket.assignedTo !== 'ADMIN'}
+                  >
                     <FontAwesomeIcon icon={faCheck} />
                     Lưu ghi chú
                   </button>
                   {selectedTicket.status !== 'RESOLVED' && (
-                    <button type="button" className={cx('resolveBtn')} onClick={handleResolve}>
+                    <button 
+                      type="button" 
+                      className={cx('resolveBtn', { disabled: selectedTicket.assignedTo !== 'ADMIN' })} 
+                      onClick={handleResolve}
+                      disabled={selectedTicket.assignedTo !== 'ADMIN'}
+                    >
                       <FontAwesomeIcon icon={faCheck} />
                       Giải quyết khiếu nại
                     </button>

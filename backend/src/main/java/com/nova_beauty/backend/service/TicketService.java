@@ -115,8 +115,11 @@ public class TicketService {
             }
         }
         
-        // Admin có thể cập nhật adminNote
+        // Admin chỉ có thể cập nhật adminNote khi ticket đã được chuyển lên Admin
         if (isAdmin && request.getAdminNote() != null) {
+            if (ticket.getAssignedTo() != TicketAssignee.ADMIN) {
+                throw new AppException(ErrorCode.UNAUTHORIZED); // Ticket chưa được chuyển lên Admin
+            }
             ticket.setAdminNote(request.getAdminNote());
         }
         
@@ -160,15 +163,20 @@ public class TicketService {
         boolean isAdmin = "ADMIN".equals(roleName) || "STAFF".equals(roleName);
         boolean isCS = "CUSTOMER_SUPPORT".equals(roleName);
         
-        // CSKH cập nhật csNote
+        // CSKH cập nhật csNote và resolve
         if (isCS && csNote != null) {
             ticket.setCsNote(csNote);
             ticket.setHandlerId(currentUser.getId());
         }
         
-        // Admin cập nhật adminNote
-        if (isAdmin && adminNote != null) {
-            ticket.setAdminNote(adminNote);
+        // Admin chỉ có thể resolve khi ticket đã được chuyển lên Admin
+        if (isAdmin) {
+            if (ticket.getAssignedTo() != TicketAssignee.ADMIN) {
+                throw new AppException(ErrorCode.UNAUTHORIZED); // Ticket chưa được chuyển lên Admin
+            }
+            if (adminNote != null) {
+                ticket.setAdminNote(adminNote);
+            }
         }
         
         ticket.setStatus(TicketStatus.RESOLVED);
