@@ -106,7 +106,6 @@ public class ShipmentService {
         try {
             GhnCreateOrderRequest forwardRequest = buildGhnCreateOrderRequest(order, null);
             if (forwardRequest.getToDistrictId() == null || forwardRequest.getToWardCode() == null) {
-                log.warn("Cannot estimate return fee for order {} because destination ward/district is missing", order.getId());
                 return 0D;
             }
 
@@ -119,7 +118,6 @@ public class ShipmentService {
             GhnFeeResponse response = ghnService.calculateShippingFee(feeRequest);
             return response != null && response.getTotal() != null ? response.getTotal() : 0D;
         } catch (Exception ex) {
-            log.warn("Failed to estimate return shipping fee for order {}: {}", order.getId(), ex.getMessage());
             return 0D;
         }
     }
@@ -198,103 +196,69 @@ public class ShipmentService {
     // Đồng bộ trạng thái đơn hàng từ GHN API.
     @Transactional
     public void syncOrderStatusFromGhn(String orderId) {
-        log.info("Bắt đầu sync status từ GHN cho order: {}", orderId);
         try {
             Shipment shipment = shipmentRepository.findByOrderId(orderId).orElse(null);
             if (shipment == null || shipment.getOrderCode() == null || shipment.getOrderCode().isBlank()) {
-                log.warn("Không tìm thấy shipment hoặc orderCode cho order: {}", orderId);
                 return;
             }
 
-            // Chỉ đồng bộ nếu order chưa ở trạng thái cuối cùng (DELIVERED, CANCELLED, etc.)
             Order order = shipment.getOrder();
             if (order == null) {
                 return;
             }
 
             OrderStatus currentStatus = order.getStatus();
-            log.info("Order {} hiện tại có status: {}", orderId, currentStatus);
             // Không sync GHN nếu đơn đang trong luồng hoàn tiền/trả hàng
-            // (RETURN_REQUESTED, RETURN_CS_CONFIRMED, RETURN_STAFF_CONFIRMED, REFUNDED, RETURN_REJECTED)
-            // để tránh override status từ GHN (ví dụ: GHN có thể trả về DELIVERED nhưng đơn đang ở RETURN_CS_CONFIRMED)
             if (currentStatus == OrderStatus.CANCELLED ||
                 currentStatus == OrderStatus.RETURN_REQUESTED ||
                 currentStatus == OrderStatus.RETURN_CS_CONFIRMED ||
                 currentStatus == OrderStatus.RETURN_STAFF_CONFIRMED ||
                 currentStatus == OrderStatus.REFUNDED ||
                 currentStatus == OrderStatus.RETURN_REJECTED) {
-                log.info("Bỏ qua sync cho order {} vì đang ở trạng thái cuối cùng: {}", orderId, currentStatus);
                 return;
             }
 
             // Gọi GHN API để lấy trạng thái mới nhất
             GhnOrderDetailResponse ghnDetail;
             try {
-                log.info("Gọi GHN API để lấy trạng thái cho orderCode: {}", shipment.getOrderCode());
                 ghnDetail = ghnService.getOrderDetail(shipment.getOrderCode());
-                log.info("GHN API response cho orderCode {}: status = {}", shipment.getOrderCode(), 
-                    ghnDetail != null ? ghnDetail.getStatus() : "null");
             } catch (Exception e) {
-                // Nếu GHN API lỗi, chỉ log warning và return (không throw exception để không ảnh hưởng đến các thao tác khác)
-                log.error("Không thể lấy trạng thái từ GHN cho order: {} (orderCode: {}) - Error: {}", 
-                    orderId, shipment.getOrderCode(), e.getMessage(), e);
+                return; // Bỏ qua lỗi API
+            }
+
+            if (ghnDetail == null || ghnDetail.getStatus() == null || ghnDetail.getStatus().isBlank()) {
                 return;
             }
 
-            if (ghnDetail == null) {
-                log.warn("GHN API trả về null response cho order: {} (orderCode: {})", orderId, shipment.getOrderCode());
-                return;
-            }
-            
-            if (ghnDetail.getStatus() == null || ghnDetail.getStatus().isBlank()) {
-                log.warn("GHN API response không có status cho order: {} (orderCode: {}), full response: {}", 
-                    orderId, shipment.getOrderCode(), ghnDetail);
-                return;
-            }
-
-            String ghnStatus = ghnDetail.getStatus();
-            if (ghnStatus == null || ghnStatus.isBlank()) {
-                log.warn("GHN status is null or blank for order: {}", orderId);
-                return;
-            }
-            
-            String ghnStatusLower = ghnStatus.toLowerCase().trim();
+            String ghnStatusLower = ghnDetail.getStatus().toLowerCase().trim();
             OrderStatus newStatus = mapGhnStatusToOrderStatus(ghnStatusLower);
             
-            // Log để debug
-            log.info("Sync status từ GHN cho order {}: GHN status = '{}' (original: '{}'), mapped = {}, current = {}", 
-                    orderId, ghnStatusLower, ghnStatus, newStatus, currentStatus);
-            
             if (newStatus != null && newStatus != currentStatus) {
-                log.info("Cập nhật trạng thái đơn hàng {} từ {} sang {}", orderId, currentStatus, newStatus);
+                log.info("GHN sync: order {} status {} -> {}", orderId, currentStatus, newStatus);
                 order.setStatus(newStatus);
                 orderRepository.save(order);
 
-                // Đảm bảo doanh thu được ghi nhận cho đơn COD khi chuyển sang DELIVERED
-                // Đối với COD: xóa FinancialRecord cũ (nếu có) và ghi nhận lại với occurredAt = thời điểm DELIVERED
+                // Ghi nhận doanh thu cho đơn COD khi DELIVERED
                 if (newStatus == OrderStatus.DELIVERED
                         && order.getPaymentMethod() == PaymentMethod.COD
                         && order.getPaymentStatus() == PaymentStatus.PAID
                         && Boolean.TRUE.equals(order.getPaid())) {
                     try {
-                        // Reload order với items để đảm bảo có đầy đủ dữ liệu
                         Order reloadedOrder = orderRepository.findById(order.getId()).orElse(order);
-                        // Sử dụng method trong FinancialService để đảm bảo logic nhất quán
                         financialService.ensureCodOrderRevenueRecorded(reloadedOrder);
                     } catch (Exception e) {
-                        log.error("Error ensuring revenue recorded for COD order {} when delivered", order.getId(), e);
+                        log.error("Error recording revenue for COD order {}", order.getId());
                     }
                 }
             }
         } catch (Exception e) {
-            log.error("Lỗi khi đồng bộ trạng thái từ GHN cho order: {}", orderId, e);
+            log.error("Error syncing GHN status for order {}", orderId);
         }
     }
 
     // Map trạng thái GHN sang OrderStatus.
     private OrderStatus mapGhnStatusToOrderStatus(String ghnStatus) {
         if (ghnStatus == null || ghnStatus.isBlank()) {
-            log.warn("GHN status is null or blank");
             return null;
         }
 
@@ -314,9 +278,6 @@ public class ShipmentService {
         if (status.equals("delivered") || status.equals("money_collected")) {
             return OrderStatus.DELIVERED;
         }
-
-        // Log nếu không map được để debug
-        log.warn("Không thể map GHN status '{}' sang OrderStatus", ghnStatus);
 
         // return, returned, cancel, cancelled → không xử lý (tự quản lý)
         return null;
@@ -419,7 +380,6 @@ public class ShipmentService {
         try {
             List<GhnPickShiftResponse> shifts = ghnService.getPickShifts();
             if (shifts == null || shifts.isEmpty()) {
-                log.warn("No pick shifts available from GHN");
                 return new ArrayList<>();
             }
 
@@ -433,8 +393,6 @@ public class ShipmentService {
 
             return shiftId != null ? List.of(shiftId) : new ArrayList<>();
         } catch (Exception e) {
-            log.warn("Failed to fetch pick shifts from GHN, proceeding without pick shift: {}",
-                    e.getMessage());
             return new ArrayList<>();
         }
     }
@@ -583,7 +541,6 @@ public class ShipmentService {
         try {
             return Integer.parseInt(value.trim());
         } catch (NumberFormatException e) {
-            log.warn("Failed to parse integer: {}", value);
             return null;
         }
     }
