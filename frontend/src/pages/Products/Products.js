@@ -82,17 +82,14 @@ function Products() {
       });
     }
 
-    // Sorting Logic
+    // Sorting Logic - luôn sort lại toàn bộ danh sách khi thay đổi sortBy
     if (sortBy === 'price_asc') {
       filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
     } else if (sortBy === 'price_desc') {
       filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
-    } else {
-      // best_selling or default - random mix or by id if no sold data
-      // Checking if 'sold' property exists, if not, keep default order
-      if (filtered[0] && filtered[0].sold !== undefined) {
-        filtered.sort((a, b) => (b.sold || 0) - (a.sold || 0));
-      }
+    } else if (sortBy === 'best_selling') {
+      // Sắp xếp theo số lượng đã bán (quantitySold)
+      filtered.sort((a, b) => (b.quantitySold || 0) - (a.quantitySold || 0));
     }
 
     return filtered;
