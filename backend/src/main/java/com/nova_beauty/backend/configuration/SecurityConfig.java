@@ -32,7 +32,8 @@ public class SecurityConfig {
         "/auth/reset-password",
         "/shipments/ghn/fees",
         "/shipments/ghn/leadtime",
-        "/api/momo/ipn-handler"
+        "/api/momo/ipn-handler",
+        "/api/chatbot/ask"
     };
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {
