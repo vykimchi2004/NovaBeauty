@@ -64,7 +64,7 @@ $shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.15);
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 
         .icon {
-            transform: rotate(-90deg); // Keep icon upright or allow it to spin
+            transform: rotate(-90deg);
         }
     }
 
@@ -93,13 +93,6 @@ $shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.15);
     visibility: hidden;
     transition: all 0.3s ease;
     pointer-events: none;
-
-    &.visible {
-        // You might need JS to toggle class, or just rely on hover
-        opacity: 1;
-        transform: translateY(-50%) translateX(0);
-        visibility: visible;
-    }
 }
 
 .floatingBtn:hover .tooltip {
@@ -362,11 +355,6 @@ $shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.15);
         border-radius: 18px 18px 18px 4px;
         color: $text-dark;
         border: 1px solid #eee;
-
-        // Ensure action buttons inside bot message don't break layout
-        .actionButtons {
-            margin-top: 8px;
-        }
     }
 
     &.user {
@@ -385,19 +373,6 @@ $shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.15);
         line-height: 1.5;
     }
 
-    .chatLink {
-        color: $primary-color;
-        text-decoration: underline;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-
-        &:hover {
-            color: darken($primary-color, 10%);
-            text-decoration: none;
-        }
-    }
-
     .messageTime {
         display: block;
         font-size: 10px;
@@ -407,49 +382,14 @@ $shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.15);
     }
 }
 
-// Action Buttons
-.actionButtons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-
-    .actionBtn {
-        padding: 8px 16px;
-        border-radius: 20px;
-        font-size: 13px;
-        font-weight: 500;
-        text-decoration: none;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        border: none;
-
-        &.primary {
-            background: $primary-color;
-            color: $white;
-
-            &:hover {
-                background: darken($primary-color, 5%);
-            }
-        }
-
-        &.secondary {
-            background: #eee;
-            color: $text-dark;
-
-            &:hover {
-                background: #e0e0e0;
-            }
-        }
-    }
-}
-
 // Typing Indicator
 .typingIndicator {
     display: flex;
     gap: 4px;
-    padding: 4px 8px;
-    background: #f0f0f0;
-    border-radius: 12px;
+    padding: 12px 16px;
+    background: $white;
+    border-radius: 18px 18px 18px 4px;
+    border: 1px solid #eee;
 
     span {
         width: 6px;
@@ -473,7 +413,6 @@ $shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.15);
 }
 
 @keyframes typing {
-
     0%,
     100% {
         transform: scale(1);
@@ -481,64 +420,6 @@ $shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.15);
 
     50% {
         transform: scale(1.5);
-    }
-}
-
-// Quick Replies
-.quickReplies {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: auto;
-    padding-top: 12px;
-
-    .quickRepliesTitle {
-        font-size: 12px;
-        color: #999;
-        margin: 0;
-        padding-left: 4px;
-    }
-
-    .quickReplyButtons {
-        display: flex;
-        gap: 8px;
-        overflow-x: auto;
-        padding-bottom: 8px;
-        margin-right: -20px; // overflow edge
-        padding-right: 20px;
-
-        // Hide scrollbar for this horizontal list
-        &::-webkit-scrollbar {
-            display: none;
-        }
-
-        scrollbar-width: none;
-    }
-
-    .quickReplyBtn {
-        flex-shrink: 0;
-        padding: 8px 16px;
-        background: $white;
-        border: 1px solid $primary-color;
-        border-radius: 20px;
-        color: $primary-color;
-        font-size: 13px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-
-        &:hover {
-            background: $primary-color;
-            color: $white;
-        }
-
-        span {
-            font-size: 14px;
-        }
     }
 }
 
@@ -613,7 +494,7 @@ $shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.15);
     svg {
         width: 18px;
         height: 18px;
-        margin-left: 2px; // Visual center adjustment for icon
+        margin-left: 2px;
     }
 }
 
@@ -637,18 +518,18 @@ $shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.15);
         right: 0;
         left: 0;
         width: 100%;
-        height: 100%; // Full screen on mobile
+        height: 100%;
         max-height: none;
         border-radius: 0;
         z-index: 10000;
     }
 
     .chatHeader {
-        padding-top: max(16px, env(safe-area-inset-top)); // Handle notch
+        padding-top: max(16px, env(safe-area-inset-top));
     }
 
     .chatBody {
-        overscroll-behavior: contain; // Prevent pull-to-refresh on page
+        overscroll-behavior: contain;
     }
 
     .floatingBtn {
@@ -656,3 +537,5 @@ $shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.15);
         height: 50px;
     }
 }
+
+

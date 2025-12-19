@@ -1,30 +1,116 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from './ChatButton.module.scss';
 import ticketService from '~/services/ticket';
+import chatbotService from '~/services/chatbot';
 import { storage } from '~/services/utils';
 import { STORAGE_KEYS } from '~/services/config';
 
 const cx = classNames.bind(styles);
 
 function ChatButton() {
+    const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const [messages, setMessages] = useState([
         {
             id: 1,
             type: 'bot',
-            content: 'Xin chào! 👋 Chào mừng bạn đến với Nova Beauty. Tôi có thể giúp gì cho bạn?',
+            content: 'Xin chào! 👋 Tôi là trợ lý AI của Nova Beauty. Tôi có thể giúp bạn tư vấn sản phẩm, giải đáp thắc mắc về đơn hàng, chính sách đổi trả và nhiều hơn nữa. Bạn cần hỗ trợ gì hôm nay?',
             time: new Date()
         }
     ]);
     const [inputValue, setInputValue] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [showQuickReplies, setShowQuickReplies] = useState(true);
+    const [sessionId, setSessionId] = useState(null);
+    const [useAI, setUseAI] = useState(true); // Toggle giữa AI và ticket
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
 
     const currentUser = storage.get(STORAGE_KEYS.USER);
+
+    /**
+     * Parse message content để render links
+     * Format: [LINK:/promo] sẽ được convert thành clickable link
+     */
+    const renderMessageContent = (content) => {
+        if (!content) return null;
+        
+        // Pattern để tìm [LINK:/path]
+        const linkPattern = /\[LINK:([^\]]+)\]/g;
+        const parts = [];
+        let lastIndex = 0;
+        let match;
+        
+        while ((match = linkPattern.exec(content)) !== null) {
+            // Thêm text trước link
+            if (match.index > lastIndex) {
+                parts.push({
+                    type: 'text',
+                    content: content.substring(lastIndex, match.index)
+                });
+            }
+            
+            // Thêm link
+            const path = match[1];
+            let linkText = 'Xem tại đây';
+            if (path === '/promo') {
+                linkText = 'Xem trang Khuyến mãi';
+            } else if (path === '/vouchers') {
+                linkText = 'Xem trang Voucher';
+            }
+            
+            parts.push({
+                type: 'link',
+                path: path,
+                text: linkText
+            });
+            
+            lastIndex = match.index + match[0].length;
+        }
+        
+        // Thêm phần text còn lại
+        if (lastIndex < content.length) {
+            parts.push({
+                type: 'text',
+                content: content.substring(lastIndex)
+            });
+        }
+        
+        // Nếu không có link, trả về text thuần
+        if (parts.length === 0 || (parts.length === 1 && parts[0].type === 'text')) {
+            return <p>{content}</p>;
+        }
+        
+        // Render với links
+        return (
+            <p>
+                {parts.map((part, index) => {
+                    if (part.type === 'link') {
+                        return (
+                            <React.Fragment key={index}>
+                                {' '}
+                                <a
+                                    href={part.path}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        navigate(part.path);
+                                        setIsOpen(false); // Đóng chat khi click link
+                                    }}
+                                    className={cx('chatLink')}
+                                >
+                                    {part.text}
+                                </a>
+                            </React.Fragment>
+                        );
+                    }
+                    return <React.Fragment key={index}>{part.content}</React.Fragment>;
+                })}
+            </p>
+        );
+    };
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -103,7 +189,14 @@ function ChatButton() {
     };
 
     const handleSendMessage = async () => {
+        // Prevent multiple simultaneous requests
         if (!inputValue.trim() || isSending) return;
+        
+        // Debounce: Prevent rapid-fire requests
+        if (Date.now() - (handleSendMessage.lastCallTime || 0) < 1000) {
+            return; // Ignore if called within 1 second
+        }
+        handleSendMessage.lastCallTime = Date.now();
 
         const messageContent = inputValue.trim();
         setInputValue('');
@@ -121,34 +214,54 @@ function ChatButton() {
         setIsSending(true);
 
         try {
-            // Create ticket với thông tin user nếu đã đăng nhập
-            if (currentUser) {
-                await ticketService.createTicket({
-                    customerName: currentUser.name || currentUser.fullName || 'Khách hàng',
-                    email: currentUser.email || '',
-                    phone: currentUser.phone || '',
-                    orderCode: 'KHAC',
-                    topic: 'Chat hỗ trợ',
-                    content: messageContent,
-                });
+            // Sử dụng AI Chatbot để trả lời
+            if (useAI) {
+                const response = await chatbotService.ask(messageContent, sessionId);
+                
+                // Lưu sessionId nếu có
+                if (response.sessionId && !sessionId) {
+                    setSessionId(response.sessionId);
+                }
 
-                addBotMessage('Cảm ơn bạn! Tin nhắn của bạn đã được ghi nhận. Nhân viên CSKH sẽ phản hồi qua email hoặc điện thoại trong thời gian sớm nhất (trong giờ làm việc 8:00 - 22:00).');
+                // Add bot response từ AI
+                addBotMessage(response.reply);
             } else {
-                // Nếu chưa đăng nhập, hướng dẫn đăng nhập hoặc gửi form
-                addBotMessage('Để được hỗ trợ nhanh nhất, bạn vui lòng đăng nhập hoặc truy cập trang Hỗ trợ khách hàng để gửi yêu cầu chi tiết nhé!');
+                // Fallback: Create ticket với thông tin user nếu đã đăng nhập
+                if (currentUser) {
+                    // Chỉ gửi phone nếu có giá trị hợp lệ
+                    const ticketData = {
+                        customerName: currentUser.name || currentUser.fullName || 'Khách hàng',
+                        email: currentUser.email || '',
+                        orderCode: 'KHAC',
+                        topic: 'Chat hỗ trợ',
+                        content: messageContent,
+                    };
+                    
+                    // Chỉ thêm phone nếu có và không rỗng
+                    if (currentUser.phone && currentUser.phone.trim()) {
+                        ticketData.phone = currentUser.phone.trim();
+                    }
 
-                setTimeout(() => {
-                    setMessages(prev => [...prev, {
-                        id: Date.now(),
-                        type: 'bot',
-                        content: 'action_buttons',
-                        time: new Date()
-                    }]);
-                }, 1500);
+                    await ticketService.createTicket(ticketData);
+
+                    addBotMessage('Cảm ơn bạn! Tin nhắn của bạn đã được ghi nhận. Nhân viên CSKH sẽ phản hồi qua email hoặc điện thoại trong thời gian sớm nhất (trong giờ làm việc 8:00 - 22:00).');
+                } else {
+                    // Nếu chưa đăng nhập, hướng dẫn đăng nhập hoặc gửi form
+                    addBotMessage('Để được hỗ trợ nhanh nhất, bạn vui lòng đăng nhập hoặc truy cập trang Hỗ trợ khách hàng để gửi yêu cầu chi tiết nhé!');
+
+                    setTimeout(() => {
+                        setMessages(prev => [...prev, {
+                            id: Date.now(),
+                            type: 'bot',
+                            content: 'action_buttons',
+                            time: new Date()
+                        }]);
+                    }, 1500);
+                }
             }
         } catch (error) {
             console.error('Error sending message:', error);
-            addBotMessage('Xin lỗi, có lỗi xảy ra khi gửi tin nhắn. Vui lòng thử lại hoặc liên hệ hotline 1900 636 467.');
+            addBotMessage('Xin lỗi, có lỗi xảy ra khi xử lý tin nhắn của bạn. Vui lòng thử lại sau hoặc liên hệ hotline 1900 636 467 để được hỗ trợ.');
         } finally {
             setIsSending(false);
         }
@@ -179,7 +292,7 @@ function ChatButton() {
                                 </svg>
                             </div>
                             <div className={cx('headerText')}>
-                                <h4>Hỗ trợ khách hàng</h4>
+                                <h4>Trợ lý AI Nova Beauty</h4>
                                 <span className={cx('status')}>
                                     <span className={cx('statusDot')}></span>
                                     Trực tuyến
@@ -218,7 +331,7 @@ function ChatButton() {
                                         </div>
                                     ) : (
                                         <>
-                                            <p>{message.content}</p>
+                                            {renderMessageContent(message.content)}
                                             <span className={cx('messageTime')}>{formatTime(message.time)}</span>
                                         </>
                                     )}
@@ -269,7 +382,7 @@ function ChatButton() {
                             <input
                                 ref={inputRef}
                                 type="text"
-                                placeholder="Nhập tin nhắn..."
+                                placeholder="Nhập câu hỏi của bạn..."
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyPress={handleKeyPress}
@@ -287,7 +400,7 @@ function ChatButton() {
                             </button>
                         </div>
                         <p className={cx('inputHint')}>
-                            Nhấn Enter để gửi • Hỗ trợ 8:00 - 22:00
+                            Nhấn Enter để gửi • Trợ lý AI luôn sẵn sàng hỗ trợ bạn
                         </p>
                     </div>
                 </div>
@@ -312,7 +425,7 @@ function ChatButton() {
 
                 {/* Tooltip */}
                 {!isOpen && isHovered && (
-                    <span className={cx('tooltip')}>Chat với CSKH</span>
+                    <span className={cx('tooltip')}>Chat với AI</span>
                 )}
             </button>
 

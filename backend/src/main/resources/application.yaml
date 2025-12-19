@@ -70,6 +70,11 @@ cloudinary:
   api-secret: ${CLOUDINARY_API_SECRET}
   secure: true
 
+gemini:
+  apiKey: ${GEMINI_API_KEY}
+  model: gemini-2.5-flash-lite  # Model mới nhất, tối ưu cho chatbot
+
+
 # Layer1 - Controller: Quan ly cac mapping, endpoint
 # Layer2 - Service: Xu ly cac logic lien quan toi subdomain
 # Layer3 - Repository: Tang tuong tac truc tiep voi DBMS

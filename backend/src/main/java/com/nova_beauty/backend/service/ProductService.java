@@ -496,6 +496,18 @@ public class ProductService {
         return products.stream().map(productMapper::toResponse).toList();
     }
 
+    /**
+     * Get active products with all relationships loaded (for chatbot context)
+     * This method loads category, submittedBy to avoid LazyInitializationException
+     */
+    @Transactional(readOnly = true)
+    public List<ProductResponse> getActiveProductsForChatbot() {
+        List<Product> products = productRepository.findByStatusWithCategoryAndSubmittedBy(ProductStatus.APPROVED);
+        // Apply active promotions to each product
+        products.forEach(this::applyActivePromotionToProduct);
+        return products.stream().map(productMapper::toResponse).toList();
+    }
+
     public List<ProductResponse> getProductsByCategory(String categoryId) {
         // Lấy tất cả category IDs bao gồm category chính và tất cả descendant categories (đệ quy)
         Set<String> allCategoryIds = getAllDescendantCategoryIds(categoryId);
