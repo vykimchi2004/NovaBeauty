@@ -14,46 +14,47 @@ function BestSellers() {
   const trackRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
-useEffect(() => {
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      const data = await getActiveProducts();
+  const [visibleCards, setVisibleCards] = useState(new Set());
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const data = await getActiveProducts();
 
-      const productsList = Array.isArray(data)
-        ? data
-        : (data?.result && Array.isArray(data.result) ? data.result : []);
+        const productsList = Array.isArray(data)
+          ? data
+          : (data?.result && Array.isArray(data.result) ? data.result : []);
 
-      // Lọc các sản phẩm hợp lệ
-      const validProducts = productsList.filter(
-        p => p && p.id && (p.price !== null && p.price !== undefined)
-      );
+        // Lọc các sản phẩm hợp lệ
+        const validProducts = productsList.filter(
+          p => p && p.id && (p.price !== null && p.price !== undefined)
+        );
 
-      // 💥 Lọc sản phẩm bán chạy: quantitySold > 0
-      const soldProducts = validProducts.filter(
-        p => (p.quantitySold || 0) > 0
-      );
+        // 💥 Lọc sản phẩm bán chạy: quantitySold > 0
+        const soldProducts = validProducts.filter(
+          p => (p.quantitySold || 0) > 0
+        );
 
-      // 💥 Sắp xếp giảm dần theo số lượng bán
-      const sortedProducts = soldProducts.sort((a, b) => {
-        const aSold = a.quantitySold || 0;
-        const bSold = b.quantitySold || 0;
-        return bSold - aSold; // giảm dần
-      });
+        // 💥 Sắp xếp giảm dần theo số lượng bán
+        const sortedProducts = soldProducts.sort((a, b) => {
+          const aSold = a.quantitySold || 0;
+          const bSold = b.quantitySold || 0;
+          return bSold - aSold; // giảm dần
+        });
 
-      // 💥 Lấy top 8
-      setProducts(sortedProducts.slice(0, 8));
+        // 💥 Lấy top 8
+        setProducts(sortedProducts.slice(0, 8));
 
-    } catch (error) {
-      console.error("Error fetching best sellers:", error);
-      setProducts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+      } catch (error) {
+        console.error("Error fetching best sellers:", error);
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  fetchProducts();
-}, []);
+    fetchProducts();
+  }, []);
 
 
   const formatPrice = (price) => {
@@ -73,14 +74,14 @@ useEffect(() => {
     if (!product.promotionId || !product.promotionName) return null;
     if (!product.discountValue || product.discountValue <= 0) return null;
     if (!product.price || product.price <= 0) return null;
-    
+
     // Calculate original price: price + discountValue
     const originalPrice = product.price + product.discountValue;
     if (originalPrice <= 0) return null;
-    
+
     // Calculate percentage: (discountValue / originalPrice) * 100
     const percentage = Math.round((product.discountValue / originalPrice) * 100);
-    
+
     // Only return if percentage is greater than 0
     return percentage > 0 ? percentage : null;
   };
@@ -110,6 +111,35 @@ useEffect(() => {
     return () => {
       track.removeEventListener('scroll', check);
       window.removeEventListener('resize', check);
+    };
+  }, [products.length]);
+
+  // Intersection Observer for scroll animations
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || products.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const cardId = entry.target.dataset.cardId;
+            setVisibleCards((prev) => new Set([...prev, cardId]));
+          }
+        });
+      },
+      {
+        root: track,
+        threshold: 0.2,
+        rootMargin: '50px',
+      }
+    );
+
+    const cards = track.querySelectorAll(`.${styles.slide}`);
+    cards.forEach((card) => observer.observe(card));
+
+    return () => {
+      cards.forEach((card) => observer.unobserve(card));
     };
   }, [products.length]);
 
@@ -147,8 +177,13 @@ useEffect(() => {
             ) : products.length === 0 ? (
               <div className={cx('empty')}>Chưa có sản phẩm nào</div>
             ) : (
-              products.slice(0, 8).map((p) => (
-                <div key={p.id} className={cx('slide')}>
+              products.slice(0, 8).map((p, index) => (
+                <div
+                  key={p.id}
+                  className={cx('slide', { 'slide-visible': visibleCards.has(`${p.id}`) })}
+                  data-card-id={p.id}
+                  style={{ animationDelay: `${index * 0.08}s` }}
+                >
                   <Link to={`/product/${p.id}`} className={cx('card')} onClick={() => scrollToTop()}>
                     <div className={cx('img-wrap')}>
                       <img

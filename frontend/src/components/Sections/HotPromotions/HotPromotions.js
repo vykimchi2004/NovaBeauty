@@ -15,29 +15,43 @@ function HotPromotions() {
   const trackRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [visibleCards, setVisibleCards] = useState(new Set());
 
   useEffect(() => {
     const fetchPromoProducts = async () => {
       try {
         setLoading(true);
-        
+
         const data = await getActiveProducts();
         // Đảm bảo data là array
         const productsList = Array.isArray(data) ? data : (data?.result && Array.isArray(data.result) ? data.result : []);
-        
+
         // Lọc các sản phẩm có promotion active (có promotionId, promotionName và discountValue > 0)
         const promoProducts = (productsList || []).filter(
-          product => product && 
-                     product.id && 
-                     product.promotionId &&
-                     product.promotionName &&
-                     product.discountValue &&
-                     product.discountValue > 0 &&
-                     product.price &&
-                     product.price > 0 &&
-                     (product.price !== null && product.price !== undefined)
+          product => product &&
+            product.id &&
+            product.promotionId &&
+            product.promotionName &&
+            product.discountValue &&
+            product.discountValue > 0 &&
+            product.price &&
+            product.price > 0 &&
+            (product.price !== null && product.price !== undefined)
         );
-        
+
+        // Sắp xếp theo phần trăm giảm giá giảm dần (sản phẩm giảm giá nhiều nhất lên trước)
+        promoProducts.sort((a, b) => {
+          // Tính phần trăm giảm giá cho sản phẩm a
+          const originalPriceA = (a.price || 0) + (a.discountValue || 0);
+          const percentageA = originalPriceA > 0 ? ((a.discountValue || 0) / originalPriceA) * 100 : 0;
+          
+          // Tính phần trăm giảm giá cho sản phẩm b
+          const originalPriceB = (b.price || 0) + (b.discountValue || 0);
+          const percentageB = originalPriceB > 0 ? ((b.discountValue || 0) / originalPriceB) * 100 : 0;
+          
+          return percentageB - percentageA; // Sắp xếp theo phần trăm giảm dần
+        });
+
         setProducts(promoProducts);
       } catch (error) {
         console.error('Error fetching promotion products:', error);
@@ -67,14 +81,14 @@ function HotPromotions() {
     if (!product.promotionId || !product.promotionName) return null;
     if (!product.discountValue || product.discountValue <= 0) return null;
     if (!product.price || product.price <= 0) return null;
-    
+
     // Calculate original price: price + discountValue
     const originalPrice = product.price + product.discountValue;
     if (originalPrice <= 0) return null;
-    
+
     // Calculate percentage: (discountValue / originalPrice) * 100
     const percentage = Math.round((product.discountValue / originalPrice) * 100);
-    
+
     // Only return if percentage is greater than 0
     return percentage > 0 ? percentage : null;
   };
@@ -104,6 +118,35 @@ function HotPromotions() {
     return () => {
       track.removeEventListener('scroll', check);
       window.removeEventListener('resize', check);
+    };
+  }, [products.length]);
+
+  // Intersection Observer for scroll animations
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || products.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const cardId = entry.target.dataset.cardId;
+            setVisibleCards((prev) => new Set([...prev, cardId]));
+          }
+        });
+      },
+      {
+        root: track,
+        threshold: 0.2,
+        rootMargin: '50px',
+      }
+    );
+
+    const cards = track.querySelectorAll(`.${styles['card-wrapper']}`);
+    cards.forEach((card) => observer.observe(card));
+
+    return () => {
+      cards.forEach((card) => observer.unobserve(card));
     };
   }, [products.length]);
 
@@ -146,11 +189,16 @@ function HotPromotions() {
             ) : products.length === 0 ? (
               <div className={cx('empty')}>Chưa có sản phẩm khuyến mãi</div>
             ) : (
-              products.map((p) => {
+              products.map((p, index) => {
                 const discountPercent = calculateDiscountPercentage(p);
                 const originalPrice = (p.price || 0) + (p.discountValue || 0);
                 return (
-                  <div key={p.id} className={cx('card-wrapper')}>
+                  <div
+                    key={p.id}
+                    className={cx('card-wrapper', { 'card-visible': visibleCards.has(`${p.id}`) })}
+                    data-card-id={p.id}
+                    style={{ animationDelay: `${index * 0.08}s` }}
+                  >
                     <Link to={`/product/${p.id}`} className={cx('card')} onClick={() => scrollToTop()}>
                       <div className={cx('img-wrap')}>
                         <img

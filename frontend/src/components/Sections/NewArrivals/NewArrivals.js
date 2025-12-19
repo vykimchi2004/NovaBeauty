@@ -14,6 +14,7 @@ function NewArrivals() {
   const trackRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [visibleCards, setVisibleCards] = useState(new Set());
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -24,14 +25,14 @@ function NewArrivals() {
         const productsList = Array.isArray(data) ? data : (data?.result && Array.isArray(data.result) ? data.result : []);
         // Lọc các sản phẩm hợp lệ (có id và price)
         const validProducts = productsList.filter(p => p && p.id && (p.price !== null && p.price !== undefined));
-        
+
         // Sắp xếp theo ngày tạo mới nhất (createdAt hoặc createdDate)
         const sortedProducts = validProducts.sort((a, b) => {
           const dateA = a.createdAt || a.createdDate || 0;
           const dateB = b.createdAt || b.createdDate || 0;
           return new Date(dateB) - new Date(dateA);
         });
-        
+
         // Lấy 20 sản phẩm mới nhất
         setProducts(sortedProducts.slice(0, 20));
       } catch (error) {
@@ -62,14 +63,14 @@ function NewArrivals() {
     if (!product.promotionId || !product.promotionName) return null;
     if (!product.discountValue || product.discountValue <= 0) return null;
     if (!product.price || product.price <= 0) return null;
-    
+
     // Calculate original price: price + discountValue
     const originalPrice = product.price + product.discountValue;
     if (originalPrice <= 0) return null;
-    
+
     // Calculate percentage: (discountValue / originalPrice) * 100
     const percentage = Math.round((product.discountValue / originalPrice) * 100);
-    
+
     // Only return if percentage is greater than 0
     return percentage > 0 ? percentage : null;
   };
@@ -101,6 +102,35 @@ function NewArrivals() {
     return () => {
       track.removeEventListener('scroll', check);
       window.removeEventListener('resize', check);
+    };
+  }, [showCarousel, products.length]);
+
+  // Intersection Observer for scroll animations
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track || !showCarousel || products.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const cardId = entry.target.dataset.cardId;
+            setVisibleCards((prev) => new Set([...prev, cardId]));
+          }
+        });
+      },
+      {
+        root: track,
+        threshold: 0.2,
+        rootMargin: '50px',
+      }
+    );
+
+    const cards = track.querySelectorAll(`.${styles['card-wrapper']}`);
+    cards.forEach((card) => observer.observe(card));
+
+    return () => {
+      cards.forEach((card) => observer.unobserve(card));
     };
   }, [showCarousel, products.length]);
 
@@ -139,12 +169,17 @@ function NewArrivals() {
               ) : products.length === 0 ? (
                 <div className={cx('empty')}>Chưa có sản phẩm nào</div>
               ) : (
-                products.map((p) => (
-                  <div key={p.id} className={cx('card-wrapper')}>
+                products.map((p, index) => (
+                  <div
+                    key={p.id}
+                    className={cx('card-wrapper', { 'card-visible': visibleCards.has(`${p.id}`) })}
+                    data-card-id={p.id}
+                    style={{ animationDelay: `${index * 0.08}s` }}
+                  >
                     <Link to={`/product/${p.id}`} className={cx('card')} onClick={() => scrollToTop()}>
                       <div className={cx('img-wrap')}>
-                        <img 
-                          src={getProductImage(p)} 
+                        <img
+                          src={getProductImage(p)}
                           alt={p.name}
                           onError={(e) => {
                             e.target.onerror = null;
@@ -201,8 +236,8 @@ function NewArrivals() {
               products.map((p) => (
                 <Link key={p.id} to={`/product/${p.id}`} className={cx('card')} onClick={() => scrollToTop()}>
                   <div className={cx('img-wrap')}>
-                    <img 
-                      src={getProductImage(p)} 
+                    <img
+                      src={getProductImage(p)}
                       alt={p.name}
                       onError={(e) => {
                         e.target.onerror = null;

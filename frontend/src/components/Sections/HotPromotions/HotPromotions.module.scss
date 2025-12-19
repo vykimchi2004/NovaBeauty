@@ -1,7 +1,8 @@
 .container {
   padding: 10px 10px;
   background: linear-gradient(180deg, #fff5f8 0%, #ffffff 100%);
-  overflow-x: hidden; /* Prevent horizontal scroll */
+  overflow-x: hidden;
+  /* Prevent horizontal scroll */
 }
 
 .inner {
@@ -21,7 +22,7 @@
   color: #e5677d;
   letter-spacing: -0.5px;
   font-family: 'Inter', sans-serif;
-  
+
   @media (max-width: 768px) {
     font-size: 24px;
   }
@@ -69,18 +70,19 @@
   animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
   /* Smooth transitions với GPU acceleration */
   transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-              box-shadow 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
-              border-color 0.4s ease;
+    box-shadow 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    border-color 0.4s ease;
   /* Tối ưu performance */
   will-change: transform;
   backface-visibility: hidden;
   -webkit-font-smoothing: antialiased;
-  transform: translateZ(0); /* Force GPU acceleration */
+  transform: translateZ(0);
+  /* Force GPU acceleration */
 
   &:hover {
     transform: translateY(-10px) translateZ(0);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12),
-                0 8px 16px rgba(255, 128, 181, 0.15);
+      0 8px 16px rgba(255, 128, 181, 0.15);
     border-color: #ff80b5;
 
     .img-wrap img {
@@ -132,10 +134,13 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     box-shadow: 0 3px 10px rgba(255, 107, 107, 0.4);
   }
+
   50% {
     transform: scale(1.05);
     box-shadow: 0 4px 15px rgba(255, 107, 107, 0.6);
@@ -284,12 +289,16 @@
 
 .track {
   overflow-x: auto;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE 10+ */
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+
+  /* IE 10+ */
   &::-webkit-scrollbar {
     display: none;
     height: 0;
   }
+
   scroll-behavior: smooth;
   display: flex;
   gap: 24px;
@@ -311,19 +320,80 @@
   margin: 0 12px;
   font-size: 20px;
   font-weight: 600;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   box-shadow: 0 4px 12px rgba(229, 103, 125, 0.25);
   z-index: 10;
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  will-change: transform;
+  backface-visibility: hidden;
+
+  /* Ripple effect */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.4);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s ease-out, height 0.6s ease-out, opacity 0.6s ease-out;
+    opacity: 0;
+  }
+
+  /* Shine effect */
+  &::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.3) 50%,
+        transparent 70%);
+    transform: translateX(-100%) translateY(-100%);
+    transition: transform 0.6s ease;
+  }
 
   &:hover:not(:disabled) {
-    transform: scale(1.1);
-    box-shadow: 0 6px 20px rgba(229, 103, 125, 0.35);
+    transform: scale(1.15) translateZ(0);
+    box-shadow: 0 8px 24px rgba(229, 103, 125, 0.4);
     background: linear-gradient(135deg, #f5788e 0%, #e5677d 100%);
+    animation: arrowPulse 1.5s ease-in-out infinite;
+
+    &::before {
+      width: 100px;
+      height: 100px;
+      opacity: 1;
+      transition: width 0.4s ease-out, height 0.4s ease-out, opacity 0.4s ease-out;
+    }
+
+    &::after {
+      transform: translateX(100%) translateY(100%);
+    }
   }
 
   &:active:not(:disabled) {
-    transform: scale(0.95);
+    transform: scale(0.92) translateZ(0);
+    transition: all 0.1s ease;
+    box-shadow: 0 2px 8px rgba(229, 103, 125, 0.3);
+  }
+}
+
+@keyframes arrowPulse {
+
+  0%,
+  100% {
+    box-shadow: 0 8px 24px rgba(229, 103, 125, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 8px 24px rgba(229, 103, 125, 0.6), 0 0 0 8px rgba(229, 103, 125, 0.1);
   }
 }
 
@@ -338,6 +408,15 @@
 .carousel .card-wrapper {
   width: 240px;
   flex: 0 0 auto;
+  opacity: 0;
+  transform: translateX(30px);
+  transition: opacity 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  &.card-visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .carousel .card-wrapper .card {
@@ -370,4 +449,3 @@
     margin: 0 4px;
   }
 }
-
