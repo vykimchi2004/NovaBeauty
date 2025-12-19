@@ -14,6 +14,7 @@ import { verifyCode, resetPassword, sendVerificationCode, logout } from '~/servi
 import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom';
 import { STORAGE_KEYS } from '~/services/config';
 import { storage } from '~/services/utils';
+import ChatButton from '~/components/Common/ChatButton';
 
 const ADMIN_EMAILS = ['admin@novabeauty.com', 'admin@novabeuty.com'];
 
@@ -265,6 +266,9 @@ function DefaultLayout({ children }) {
       {/* Main content */}
       <main className={cx('content', 'main-content')}>{children}</main>
       <Footer />
+
+      {/* Chat Button */}
+      <ChatButton />
 
       {/* ----- Modals ----- */}
 

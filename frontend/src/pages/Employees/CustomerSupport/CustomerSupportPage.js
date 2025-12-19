@@ -14,6 +14,7 @@ import RefundManagementPage from './RefundManagement/RefundManagementPage';
 import RefundDetailPage from './RefundManagement/RefundDetail/RefundDetailPage';
 import ViewRefundDetailPage from './RefundManagement/ViewRefundDetail/ViewRefundDetailPage';
 import ProfileCustomerSupportPage from './ProfileCustomerSupport/ProfileCustomerSupportPage';
+import ChatSupportPage from './ChatSupport/ChatSupportPage';
 import ticketService from '~/services/ticket';
 import { getAllReviews } from '~/services/review';
 import { getApiBaseUrl, getStoredToken } from '~/services/utils';
@@ -21,6 +22,7 @@ import { getApiBaseUrl, getStoredToken } from '~/services/utils';
 const cx = classNames.bind(styles);
 
 const MENU_ITEMS = [
+    { title: 'Hỗ trợ Chat', path: '/customer-support/chat-support' },
     { title: 'Khiếu nại', path: '/customer-support/complaints' },
     { title: 'Đánh giá & bình luận', path: '/customer-support/reviews' },
     { title: 'Trả hàng / Hoàn tiền', path: '/customer-support/refund-management' },
@@ -36,6 +38,16 @@ function Dashboard() {
             <h1 className={cx('dashboardTitle')}>Trung tâm hỗ trợ khách hàng</h1>
 
             <div className={cx('dashboardGrid')}>
+                <div
+                    className={cx('card')}
+                    onClick={() => navigate('/customer-support/chat-support')}
+                >
+                    <h2 className={cx('cardTitle')}>Hỗ trợ Chat</h2>
+                    <p className={cx('cardDescription')}>
+                        Quản lý và trả lời tin nhắn từ khách hàng qua ChatButton trên website.
+                    </p>
+                </div>
+
                 <div
                     className={cx('card')}
                     onClick={() => navigate('/customer-support/complaints')}
@@ -135,8 +147,8 @@ export default function CustomerSupportPage() {
                     (t) => t.status === 'NEW' || t.status === 'PENDING' || t.status === 'IN_PROGRESS'
                 );
                 pendingTickets.forEach((ticket) => {
-                    const statusText = ticket.status === 'NEW' ? 'mới' : 
-                                       ticket.status === 'PENDING' ? 'chờ xử lý' : 'đang xử lý';
+                    const statusText = ticket.status === 'NEW' ? 'mới' :
+                        ticket.status === 'PENDING' ? 'chờ xử lý' : 'đang xử lý';
                     notificationList.push({
                         id: `ticket-${ticket.id}`,
                         type: 'complaint',
@@ -187,12 +199,12 @@ export default function CustomerSupportPage() {
                 if (response.ok) {
                     const data = await response.json();
                     const refundOrders = data?.result || data || [];
-                    
+
                     // Chỉ lấy các yêu cầu đang chờ CSKH xử lý
                     const pendingRefunds = refundOrders.filter(
                         (order) => order.status === 'RETURN_REQUESTED' || order.status === 'RETURN_CS_CONFIRMED'
                     );
-                    
+
                     pendingRefunds.forEach((order) => {
                         const statusText = order.status === 'RETURN_REQUESTED' ? 'mới' : 'đã xác nhận';
                         notificationList.push({
@@ -242,7 +254,7 @@ export default function CustomerSupportPage() {
     const handleLogout = async () => {
         setShowLogoutConfirm(false);
         try {
-            await logout().catch(() => {});
+            await logout().catch(() => { });
         } finally {
             storage.remove(STORAGE_KEYS.USER);
             navigate('/', { replace: true });
@@ -405,6 +417,7 @@ export default function CustomerSupportPage() {
                 <section className={cx('content')}>
                     <Routes>
                         <Route index element={<Dashboard />} />
+                        <Route path="chat-support" element={<ChatSupportPage />} />
                         <Route path="complaints" element={<ComplaintManagementPage />} />
                         <Route path="reviews" element={<ReviewCommentManagementPage />} />
                         <Route path="refund-management" element={<RefundManagementPage />} />

@@ -6,7 +6,7 @@
 
 .hero {
   background:
-    linear-gradient( rgba(255, 255, 255, 0.259), rgba(255, 255, 255, 0.68)),
+    linear-gradient(rgba(255, 255, 255, 0.259), rgba(255, 255, 255, 0.68)),
     url('../../assets/images/banners/banner3.png') center/cover no-repeat;
   border-radius: 20px;
   padding: 64px 24px 96px;
@@ -42,7 +42,7 @@
 
 .heroSearchBox {
   position: relative;
-  
+
 }
 
 .suggestList {
@@ -56,7 +56,7 @@
   padding: 8px;
   display: flex;
   flex-direction: column;
-  
+
   z-index: 5;
   max-height: 200px;
   overflow-y: auto;
@@ -463,4 +463,3 @@
     padding: 24px 18px;
   }
 }
-

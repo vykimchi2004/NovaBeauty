@@ -131,20 +131,20 @@ function Support() {
     );
   };
 
-const filteredSuggestions = useMemo(() => {
-  if (!searchTerm.trim()) return POPULAR_QUESTIONS;
-  const term = searchTerm.toLowerCase();
-  return POPULAR_QUESTIONS.filter((q) => q.label.toLowerCase().includes(term));
-}, [searchTerm]);
+  const filteredSuggestions = useMemo(() => {
+    if (!searchTerm.trim()) return POPULAR_QUESTIONS;
+    const term = searchTerm.toLowerCase();
+    return POPULAR_QUESTIONS.filter((q) => q.label.toLowerCase().includes(term));
+  }, [searchTerm]);
 
-const goToQuestion = (code, labelForInput) => {
-  if (labelForInput) {
-    setSearchTerm(labelForInput);
-  }
+  const goToQuestion = (code, labelForInput) => {
+    if (labelForInput) {
+      setSearchTerm(labelForInput);
+    }
     navigate(
       {
         pathname: '/support',
-      search: `?section=faq&question=${encodeURIComponent(code)}`
+        search: `?section=faq&question=${encodeURIComponent(code)}`
       },
       { replace: true }
     );
@@ -152,8 +152,8 @@ const goToQuestion = (code, labelForInput) => {
     // Giữ suggestions hiển thị sau khi chọn câu hỏi
   };
 
-const handleSelectSuggestion = (sug) => {
-  goToQuestion(sug.code, sug.label);
+  const handleSelectSuggestion = (sug) => {
+    goToQuestion(sug.code, sug.label);
   };
 
   const renderSectionContent = () => {
@@ -169,18 +169,18 @@ const handleSelectSuggestion = (sug) => {
             Chọn trang chính sách/hướng dẫn mà bạn cần:
           </p>
           <div className={cx('policiesList')}>
-              <Link to="/support/payment-policy">
-                <span>Chính sách thanh toán</span>
-                <small>Hỗ trợ MoMo và COD, quy trình thanh toán an toàn.</small>
-              </Link>
-              <Link to="/support/shipping-policy">
-                <span>Chính sách vận chuyển</span>
-                <small>Phạm vi giao hàng, phí, thời gian và quy trình giao.</small>
-              </Link>
-              <Link to="/support/return-policy">
-                <span>Chính sách đổi trả</span>
-                <small>Điều kiện, quy trình đổi trả/hoàn tiền rõ ràng.</small>
-              </Link>
+            <Link to="/support/payment-policy">
+              <span>Chính sách thanh toán</span>
+              <small>Hỗ trợ MoMo và COD, quy trình thanh toán an toàn.</small>
+            </Link>
+            <Link to="/support/shipping-policy">
+              <span>Chính sách vận chuyển</span>
+              <small>Phạm vi giao hàng, phí, thời gian và quy trình giao.</small>
+            </Link>
+            <Link to="/support/return-policy">
+              <span>Chính sách đổi trả</span>
+              <small>Điều kiện, quy trình đổi trả/hoàn tiền rõ ràng.</small>
+            </Link>
           </div>
         </div>
       );
@@ -201,26 +201,26 @@ const handleSelectSuggestion = (sug) => {
           <div className={cx('heroSearchBox')}>
             <form
               className={cx('heroSearch')}
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!searchTerm.trim()) return;
-              const term = searchTerm.toLowerCase();
-              const match = POPULAR_QUESTIONS.find((q) => q.label.toLowerCase().includes(term));
-              if (match) {
-                goToQuestion(match.code, match.label);
-              } else {
-                const fallbackSlug = encodeURIComponent(searchTerm.trim());
-                navigate(
-                  {
-                    pathname: '/support',
-                    search: `?section=faq&question=${fallbackSlug}`
-                  },
-                  { replace: true }
-                );
-                setActiveSection('faq');
-                setShowSuggestions(false);
-              }
-            }}
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!searchTerm.trim()) return;
+                const term = searchTerm.toLowerCase();
+                const match = POPULAR_QUESTIONS.find((q) => q.label.toLowerCase().includes(term));
+                if (match) {
+                  goToQuestion(match.code, match.label);
+                } else {
+                  const fallbackSlug = encodeURIComponent(searchTerm.trim());
+                  navigate(
+                    {
+                      pathname: '/support',
+                      search: `?section=faq&question=${fallbackSlug}`
+                    },
+                    { replace: true }
+                  );
+                  setActiveSection('faq');
+                  setShowSuggestions(false);
+                }
+              }}
             >
               <FontAwesomeIcon icon={faSearch} className={cx('searchIcon')} />
               <input
@@ -275,7 +275,7 @@ const handleSelectSuggestion = (sug) => {
         <div className={cx('contentWrapper')} ref={contentWrapperRef}>
           <div className={cx('contentHeader')}>
             <button type="button" className={cx('backButton')} onClick={handleBackToMenu}>
-              <FontAwesomeIcon icon = {faArrowLeft} />
+              <FontAwesomeIcon icon={faArrowLeft} />
             </button>
             <h3 className={cx('contentTitle')}>{SECTION_LABELS[activeSection]}</h3>
           </div>
