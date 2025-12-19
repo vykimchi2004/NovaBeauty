@@ -306,11 +306,16 @@ public class ChatbotService {
         }
 
         // Tạo system prompt với thông tin sản phẩm
-        // Nếu user hỏi về sản phẩm cụ thể, filter sản phẩm theo keyword
-        String productsContext = getProductsContextForMessage(userMessage);
+        // CHỈ thêm products context nếu câu hỏi thực sự liên quan đến sản phẩm (không phải chào hỏi)
         String systemPrompt = SYSTEM_PROMPT_BASE;
-        if (!productsContext.isEmpty() && !productsContext.contains("chưa có sản phẩm")) {
-            systemPrompt += "\n\n" + productsContext;
+        
+        // Kiểm tra xem câu hỏi có phải là chào hỏi không
+        if (!isGreetingMessage(userMessage) && isProductRelatedQuestion(userMessage)) {
+            // Chỉ lấy products context nếu câu hỏi liên quan đến sản phẩm
+            String productsContext = getProductsContextForMessage(userMessage);
+            if (!productsContext.isEmpty() && !productsContext.contains("chưa có sản phẩm")) {
+                systemPrompt += "\n\n" + productsContext;
+            }
         }
 
         // Nếu chưa có history, thêm system prompt vào đầu conversation
@@ -324,10 +329,12 @@ public class ChatbotService {
             // Thêm message hiện tại với context sản phẩm nếu cần
             String messageWithContext = userMessage;
             // Nếu user hỏi về sản phẩm và có context, thêm vào
-            if (isProductRelatedQuestion(userMessage) && !productsContext.isEmpty() 
-                && !productsContext.contains("chưa có sản phẩm")) {
-                messageWithContext = "Thông tin sản phẩm hiện có:\n" + productsContext 
-                    + "\n\nCâu hỏi của khách hàng: " + userMessage;
+            if (!isGreetingMessage(userMessage) && isProductRelatedQuestion(userMessage)) {
+                String productsContext = getProductsContextForMessage(userMessage);
+                if (!productsContext.isEmpty() && !productsContext.contains("chưa có sản phẩm")) {
+                    messageWithContext = "Thông tin sản phẩm hiện có:\n" + productsContext 
+                        + "\n\nCâu hỏi của khách hàng: " + userMessage;
+                }
             }
             contents.add(new GeminiContent("user", messageWithContext));
         }
@@ -360,6 +367,26 @@ public class ChatbotService {
             contents.isEmpty() ? 0 : contents.get(0).getParts().get(0).getText().length());
         
         return request;
+    }
+
+    /**
+     * Kiểm tra xem câu hỏi có phải là chào hỏi không
+     */
+    private boolean isGreetingMessage(String message) {
+        String lowerMessage = message.toLowerCase().trim();
+        String[] greetingKeywords = {
+            "hi", "hello", "xin chào", "chào", "chào bạn", "chào anh", "chào chị",
+            "hey", "hế lô", "hế lô", "alo", "alo alo",
+            "good morning", "good afternoon", "good evening",
+            "chào buổi sáng", "chào buổi chiều", "chào buổi tối"
+        };
+        for (String keyword : greetingKeywords) {
+            if (lowerMessage.equals(keyword) || lowerMessage.startsWith(keyword + " ") 
+                || lowerMessage.startsWith(keyword + ",") || lowerMessage.startsWith(keyword + ".")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -414,8 +441,9 @@ public class ChatbotService {
             }
         }
         
-        // Nếu không có keyword cụ thể, dùng cached context (100 sản phẩm đầu)
-        return getProductsContext();
+        // Nếu không có keyword cụ thể, KHÔNG trả về toàn bộ danh sách sản phẩm
+        // Chỉ trả về empty string để chatbot tự trả lời mà không cần context sản phẩm
+        return "";
     }
 
     /**

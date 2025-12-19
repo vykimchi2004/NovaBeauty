@@ -7,6 +7,17 @@
   overflow-x: hidden; /* Khóa độ rộng, không cho phép cuộn ngang */
 }
 
+.stickyHeader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  width: 100%;
+  background: transparent;
+  /* Để Header và Navbar tự quản lý background của chúng */
+}
+
 .container {
   width: 100%;
   display: flex;
@@ -17,6 +28,13 @@
   width: 100%;
   min-height: 500px;
   background: #fff;
+  /* Thêm padding-top để tránh content bị che bởi fixed header và navbar */
+  padding-top: 150px;
+  
+  @media (max-width: 992px) {
+    /* Trên mobile, header có padding-bottom thêm 72px cho search */
+    padding-top: 220px;
+  }
 }
 
 .breadcrumb {

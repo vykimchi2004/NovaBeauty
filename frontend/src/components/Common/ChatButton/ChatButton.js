@@ -37,13 +37,13 @@ function ChatButton() {
      */
     const renderMessageContent = (content) => {
         if (!content) return null;
-        
+
         // Pattern để tìm [LINK:/path]
         const linkPattern = /\[LINK:([^\]]+)\]/g;
         const parts = [];
         let lastIndex = 0;
         let match;
-        
+
         while ((match = linkPattern.exec(content)) !== null) {
             // Thêm text trước link
             if (match.index > lastIndex) {
@@ -52,7 +52,7 @@ function ChatButton() {
                     content: content.substring(lastIndex, match.index)
                 });
             }
-            
+
             // Thêm link
             const path = match[1];
             let linkText = 'Xem tại đây';
@@ -61,16 +61,16 @@ function ChatButton() {
             } else if (path === '/vouchers') {
                 linkText = 'Xem trang Voucher';
             }
-            
+
             parts.push({
                 type: 'link',
                 path: path,
                 text: linkText
             });
-            
+
             lastIndex = match.index + match[0].length;
         }
-        
+
         // Thêm phần text còn lại
         if (lastIndex < content.length) {
             parts.push({
@@ -78,12 +78,12 @@ function ChatButton() {
                 content: content.substring(lastIndex)
             });
         }
-        
+
         // Nếu không có link, trả về text thuần
         if (parts.length === 0 || (parts.length === 1 && parts[0].type === 'text')) {
             return <p>{content}</p>;
         }
-        
+
         // Render với links
         return (
             <p>
@@ -128,6 +128,21 @@ function ChatButton() {
 
     const toggleChat = () => {
         setIsOpen(!isOpen);
+    };
+
+    const handleRefreshChat = () => {
+        // Reset messages to initial state
+        setMessages([
+            {
+                id: 1,
+                type: 'bot',
+                content: 'Xin chào! 👋 Tôi là trợ lý AI của Nova Beauty. Tôi có thể giúp bạn tư vấn sản phẩm, giải đáp thắc mắc về đơn hàng, chính sách đổi trả và nhiều hơn nữa. Bạn cần hỗ trợ gì hôm nay?',
+                time: new Date()
+            }
+        ]);
+        setInputValue('');
+        setShowQuickReplies(true);
+        setSessionId(null);
     };
 
     const quickReplies = [
@@ -191,7 +206,7 @@ function ChatButton() {
     const handleSendMessage = async () => {
         // Prevent multiple simultaneous requests
         if (!inputValue.trim() || isSending) return;
-        
+
         // Debounce: Prevent rapid-fire requests
         if (Date.now() - (handleSendMessage.lastCallTime || 0) < 1000) {
             return; // Ignore if called within 1 second
@@ -217,7 +232,7 @@ function ChatButton() {
             // Sử dụng AI Chatbot để trả lời
             if (useAI) {
                 const response = await chatbotService.ask(messageContent, sessionId);
-                
+
                 // Lưu sessionId nếu có
                 if (response.sessionId && !sessionId) {
                     setSessionId(response.sessionId);
@@ -236,7 +251,7 @@ function ChatButton() {
                         topic: 'Chat hỗ trợ',
                         content: messageContent,
                     };
-                    
+
                     // Chỉ thêm phone nếu có và không rỗng
                     if (currentUser.phone && currentUser.phone.trim()) {
                         ticketData.phone = currentUser.phone.trim();
@@ -299,11 +314,18 @@ function ChatButton() {
                                 </span>
                             </div>
                         </div>
-                        <button className={cx('closeBtn')} onClick={toggleChat}>
-                            <svg viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-                            </svg>
-                        </button>
+                        <div className={cx('headerActions')}>
+                            <button className={cx('refreshBtn')} onClick={handleRefreshChat} title="Làm mới cuộc trò chuyện">
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+                                </svg>
+                            </button>
+                            <button className={cx('closeBtn')} onClick={toggleChat}>
+                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     <div className={cx('chatBody')}>
@@ -342,19 +364,16 @@ function ChatButton() {
                         {/* Quick Replies */}
                         {showQuickReplies && (
                             <div className={cx('quickReplies')}>
-                                <p className={cx('quickRepliesTitle')}>Bạn cần hỗ trợ về:</p>
-                                <div className={cx('quickReplyButtons')}>
-                                    {quickReplies.map((reply) => (
-                                        <button
-                                            key={reply.id}
-                                            className={cx('quickReplyBtn')}
-                                            onClick={() => handleQuickReply(reply)}
-                                        >
-                                            <span>{reply.icon}</span>
-                                            {reply.text}
-                                        </button>
-                                    ))}
-                                </div>
+                                {quickReplies.map((reply) => (
+                                    <button
+                                        key={reply.id}
+                                        className={cx('quickReplyBtn')}
+                                        onClick={() => handleQuickReply(reply)}
+                                    >
+                                        <span>{reply.icon}</span>
+                                        {reply.text}
+                                    </button>
+                                ))}
                             </div>
                         )}
 

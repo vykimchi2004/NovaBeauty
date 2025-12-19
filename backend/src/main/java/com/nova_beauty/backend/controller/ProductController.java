@@ -8,7 +8,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.nova_beauty.backend.dto.request.ApiResponse;
-import com.nova_beauty.backend.dto.request.ApproveProductRequest;
 import com.nova_beauty.backend.dto.request.ProductCreationRequest;
 import com.nova_beauty.backend.dto.request.ProductUpdateRequest;
 import com.nova_beauty.backend.dto.response.ProductResponse;
@@ -105,15 +104,6 @@ public class ProductController {
             @PathVariable String productId, @RequestBody @Valid ProductUpdateRequest request) {
         return ApiResponse.<ProductResponse>builder()
                 .result(productService.updateProduct(productId, request))
-                .build();
-    }
-
-    @PostMapping("/approve")
-    @PreAuthorize("hasRole('ADMIN')")
-    ApiResponse<ProductResponse> approveProduct(@RequestBody @Valid ApproveProductRequest request) {
-        log.info("Controller: approve/reject Product");
-        return ApiResponse.<ProductResponse>builder()
-                .result(productService.approveProduct(request))
                 .build();
     }
 

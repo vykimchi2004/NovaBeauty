@@ -1,12 +1,15 @@
 @import 'normalize.css';
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 :root {
   --primary: #fe2c55;
 }
+
 html {
   font-size: 62.5%;
   scroll-behavior: smooth;
 }
+
 * {
   box-sizing: border-box;
 }
@@ -14,22 +17,26 @@ html {
 /* Lock minimum page width to prevent layout collapse */
 html {
   min-width: 675px;
-  overflow-x: hidden; /* Khóa độ rộng, không cho phép cuộn ngang */
+  overflow-x: hidden;
+  /* Khóa độ rộng, không cho phép cuộn ngang */
   scroll-behavior: smooth;
 }
 
 body {
   min-width: 675px;
   width: 100%;
-  overflow-x: hidden; /* Khóa độ rộng, không cho phép cuộn ngang */
+  overflow-x: hidden;
+  /* Khóa độ rộng, không cho phép cuộn ngang */
   font-family: 'Inter', sans-serif;
   font-weight: 400;
+  /* Padding-top được quản lý bởi .content trong DefaultLayout */
 }
 
 .main-content {
   width: 100%;
   min-width: 675px;
-  overflow-x: hidden; /* Khóa độ rộng, không cho phép cuộn ngang */
+  overflow-x: hidden;
+  /* Khóa độ rộng, không cho phép cuộn ngang */
 }
 
 /* Prevent images from exceeding their containers */

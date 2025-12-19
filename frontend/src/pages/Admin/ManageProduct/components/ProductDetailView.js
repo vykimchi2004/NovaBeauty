@@ -17,11 +17,7 @@ function ProductDetailView({
   selectedImageUrl,
   onBack,
   onClose,
-
-  processingApproval,
-  processingRejection,
   processingDelete,
-
   formatPrice,
   formatWeight,
   textureInfo,
@@ -130,13 +126,6 @@ function ProductDetailView({
     { label: 'Ngày gửi', value: formatDateTime(product.createdAt) }
   );
 
-  if (product.approvedAt) {
-    infoRows.push({ label: 'Ngày duyệt', value: formatDateTime(product.approvedAt) });
-  }
-
-  if (product.approvedByName) {
-    infoRows.push({ label: 'Người duyệt', value: product.approvedByName });
-  }
 
   if (product.quantitySold !== undefined && product.quantitySold !== null) {
     infoRows.push({ label: 'Số lượng đã bán', value: product.quantitySold });
@@ -287,19 +276,12 @@ function ProductDetailView({
             </div>
           )}
 
-          {product.rejectionReason && (
-            <div className={cx('detailTextGroup')}>
-              <span className={cx('detailInfoLabel')}>Lý do từ chối</span>
-              <p className={cx('detailParagraph', 'rejectionReason')}>{product.rejectionReason}</p>
-            </div>
-          )}
-
           <div className={cx('detailActions')}>
             <button
               type="button"
               className={cx('cancelBtn')}
               onClick={onClose}
-              disabled={processingApproval || processingRejection || processingDelete}
+              disabled={processingDelete}
             >
               Đóng
             </button>

@@ -17,6 +17,15 @@
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.3s ease;
+  width: 100%;
+  box-sizing: border-box;
+  /* Đảm bảo navbar luôn ở trên cùng khi sticky */
+  z-index: 1000;
+
+  &.scrolled {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
 
   /* Desktop: keep all menu items on a single row and allow horizontal scrolling if they overflow */
   .menu {

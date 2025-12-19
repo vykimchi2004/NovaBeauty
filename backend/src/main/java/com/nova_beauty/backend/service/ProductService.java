@@ -26,7 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.nova_beauty.backend.entity.*;
 
-import com.nova_beauty.backend.dto.request.ApproveProductRequest;
 import com.nova_beauty.backend.dto.request.ProductCreationRequest;
 import com.nova_beauty.backend.dto.request.ProductUpdateRequest;
 import com.nova_beauty.backend.dto.response.ProductResponse;
@@ -600,42 +599,6 @@ public class ProductService {
     public List<ProductResponse> getPendingProducts() {
         List<Product> products = productRepository.findByStatus(ProductStatus.PENDING);
         return products.stream().map(productMapper::toResponse).toList();
-    }
-
-    // ========== APPROVAL OPERATIONS ==========
-
-    @Transactional
-    @PreAuthorize("hasRole('ADMIN')")
-    public ProductResponse approveProduct(ApproveProductRequest request) {
-        var context = SecurityContextHolder.getContext();
-        String adminEmail = context.getAuthentication().getName();
-        User admin = userRepository.findByEmail(adminEmail)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-
-        Product product = productRepository
-                .findById(request.getProductId())
-                .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
-
-
-        if ("APPROVE".equals(request.getAction())) {
-            product.setStatus(ProductStatus.APPROVED);
-            product.setApprovedBy(admin);
-            product.setApprovedAt(LocalDateTime.now());
-            product.setRejectionReason(null);
-            product.setUpdatedAt(LocalDateTime.now());
-            log.info("Product approved: {} by admin: {}", product.getId(), adminEmail);
-        } else if ("REJECT".equals(request.getAction())) {
-            product.setStatus(ProductStatus.REJECTED);
-
-            product.setApprovedBy(null);
-            product.setApprovedAt(null);
-            product.setRejectionReason(request.getReason());
-            product.setUpdatedAt(LocalDateTime.now());
-            log.info("Product rejected: {} by admin: {}", product.getId(), adminEmail);
-        }
-
-        Product savedProduct = productRepository.save(product);
-        return productMapper.toResponse(savedProduct);
     }
 
     // ========== MEDIA OPERATIONS ==========

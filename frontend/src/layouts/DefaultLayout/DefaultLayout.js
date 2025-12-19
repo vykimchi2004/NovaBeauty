@@ -230,21 +230,23 @@ function DefaultLayout({ children }) {
 
   return (
     <div className={cx('wrapper')}>
-      {/* Header + Navbar */}
-      <Header
-        cartCount={cartCount}
-        open={open}
-        setOpen={setOpen}
-        onLoginClick={() => setActiveModal('login')}
-        user={currentUser}
-        onLogoutClick={() => {
-          setShowLogoutConfirm(true);
-        }}
-        onProfileClick={() => {
-          if (navigate) navigate('/profile');
-        }}
-      />
-      <Navbar open={open} setOpen={setOpen} onLoginClick={() => setActiveModal('login')} />
+      {/* Header + Navbar - Sticky Container */}
+      <div className={cx('stickyHeader')}>
+        <Header
+          cartCount={cartCount}
+          open={open}
+          setOpen={setOpen}
+          onLoginClick={() => setActiveModal('login')}
+          user={currentUser}
+          onLogoutClick={() => {
+            setShowLogoutConfirm(true);
+          }}
+          onProfileClick={() => {
+            if (navigate) navigate('/profile');
+          }}
+        />
+        <Navbar open={open} setOpen={setOpen} onLoginClick={() => setActiveModal('login')} />
+      </div>
 
       {/* Breadcrumb across pages (hidden on home) */}
       {path !== '/' && (

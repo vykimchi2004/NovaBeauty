@@ -1,6 +1,13 @@
 .wrapper {
   // background: #fde0e5;
   padding: 17px 24px;
+  position: relative;
+  background: #fff;
+  transition: box-shadow 0.3s ease;
+  width: 100%;
+  box-sizing: border-box;
+  /* Đảm bảo header luôn ở trên cùng khi sticky */
+  z-index: 1001;
 }
 
 .inner {
@@ -8,6 +15,7 @@
   justify-content: space-between;
   align-items: center;
 }
+
 .header-hamburger {
   display: none;
   background: none;
@@ -24,14 +32,16 @@
     border-radius: 2px;
   }
 }
-.icon{
+
+.icon {
   color: #e5677d;
 }
+
 .support {
   text-decoration: none;
   color: black;
 }
-    
+
 .search {
   display: flex;
   align-items: center;
@@ -51,7 +61,8 @@
     height: 40px;
     padding: 0 20px;
     border: 1px solid #e5677d;
-    border-radius: 20px 0 0 20px; /* bo góc bên trái */
+    border-radius: 20px 0 0 20px;
+    /* bo góc bên trái */
     font-size: 15px;
     outline: none;
   }
@@ -61,14 +72,16 @@
     height: 40px;
     width: 40px;
     border: 1px solid #e5677d;
-    border-left: none; /* gắn liền với input */
-    border-radius: 0 20px 20px 0; /* bo góc bên phải */
+    border-left: none;
+    /* gắn liền với input */
+    border-radius: 0 20px 20px 0;
+    /* bo góc bên phải */
     background: #e5677d;
     cursor: pointer;
     display: flex;
     justify-content: center;
     align-items: center;
-    
+
     &:hover {
       background: #d4566c;
     }
@@ -150,159 +163,162 @@
   }
 }
 
-  @media (max-width: 992px) {
-    .support {
-      display: none; // ẩn support
-    }
-    /* show search under header on mobile */
-    .search {
-      position: absolute;
-      width: calc(100% - 40px);
-      left: 20px;
-      top: 80px;
-      margin: 0;
-      z-index: 10;
-    }
-
-    .search input {
-      width: calc(100% - 40px);
-    }
-
-    .search .search-results {
-      width: 100%; // Trên mobile/tablet, dropdown bằng width của form (100%)
-    }
-
-    .actions .text {
-      display: none; // chỉ ẩn chữ, giữ icon lại
-    }
-
-    .inner {
-      justify-content: center; 
-      position: relative;
-      flex-wrap: wrap;
-    }
-
-    /* give extra space under header so search doesn't overlap page content */
-    .wrapper { 
-      padding-bottom: 72px; 
-    }
-
-    /* show header hamburger in mobile, position top-left */
-    .header-hamburger {
-      display: block;
-      position: absolute;
-      left: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-    }
-
-    // Đặt actions cố định bên phải
-    .actions {
-      position: absolute;
-      right: 20px;  // cách mép phải 20px
-      top: 60%;
-      transform: translateY(-50%);
-      gap: 12px;
-    }
-
-    .logo {
-      width: 120px;
-    }
+@media (max-width: 992px) {
+  .support {
+    display: none; // ẩn support
   }
 
-  @media (max-width: 768px) {
-    .wrapper {
-      padding: 12px 16px;
-    }
-
-    .search {
-      width: calc(100% - 32px);
-      left: 16px;
-      top: 70px;
-    }
-
-    .search input {
-      font-size: 14px;
-      padding: 0 15px;
-      height: 36px;
-    }
-
-    .search-btn {
-      height: 36px;
-      width: 36px;
-    }
-
-    .search .search-results {
-      width: 100%; // Trên mobile, dropdown bằng width của form (100%)
-    }
-
-    .logo {
-      width: 100px;
-    }
-
-    .actions {
-      right: 16px;
-      gap: 10px;
-    }
-
-    .actions .icon {
-      font-size: 16px;
-    }
+  /* show search under header on mobile */
+  .search {
+    position: absolute;
+    width: calc(100% - 40px);
+    left: 20px;
+    top: 80px;
+    margin: 0;
+    z-index: 10;
   }
 
-  @media (max-width: 480px) {
-    .wrapper {
-      padding: 10px 12px;
-    }
-
-    .search {
-      width: calc(100% - 24px);
-      left: 12px;
-      top: 65px;
-    }
-
-    .search input {
-      font-size: 13px;
-      padding: 0 12px;
-      height: 34px;
-    }
-
-    .search-btn {
-      height: 34px;
-      width: 34px;
-    }
-
-    .logo {
-      width: 90px;
-    }
-
-    .actions {
-      right: 12px;
-      gap: 8px;
-    }
-
-    .actions .icon {
-      font-size: 14px;
-    }
-
-    .header-hamburger {
-      left: 12px;
-    }
+  .search input {
+    width: calc(100% - 40px);
   }
-  
+
+  .search .search-results {
+    width: 100%; // Trên mobile/tablet, dropdown bằng width của form (100%)
+  }
+
+  .actions .text {
+    display: none; // chỉ ẩn chữ, giữ icon lại
+  }
+
+  .inner {
+    justify-content: center;
+    position: relative;
+    flex-wrap: wrap;
+  }
+
+  /* give extra space under header so search doesn't overlap page content */
+  .wrapper {
+    padding-bottom: 72px;
+  }
+
+  /* show header hamburger in mobile, position top-left */
+  .header-hamburger {
+    display: block;
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  // Đặt actions cố định bên phải
+  .actions {
+    position: absolute;
+    right: 20px; // cách mép phải 20px
+    top: 60%;
+    transform: translateY(-50%);
+    gap: 12px;
+  }
+
+  .logo {
+    width: 120px;
+  }
+}
+
+@media (max-width: 768px) {
+  .wrapper {
+    padding: 12px 16px;
+  }
+
+  .search {
+    width: calc(100% - 32px);
+    left: 16px;
+    top: 70px;
+  }
+
+  .search input {
+    font-size: 14px;
+    padding: 0 15px;
+    height: 36px;
+  }
+
+  .search-btn {
+    height: 36px;
+    width: 36px;
+  }
+
+  .search .search-results {
+    width: 100%; // Trên mobile, dropdown bằng width của form (100%)
+  }
+
+  .logo {
+    width: 100px;
+  }
+
+  .actions {
+    right: 16px;
+    gap: 10px;
+  }
+
+  .actions .icon {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .wrapper {
+    padding: 10px 12px;
+  }
+
+  .search {
+    width: calc(100% - 24px);
+    left: 12px;
+    top: 65px;
+  }
+
+  .search input {
+    font-size: 13px;
+    padding: 0 12px;
+    height: 34px;
+  }
+
+  .search-btn {
+    height: 34px;
+    width: 34px;
+  }
+
+  .logo {
+    width: 90px;
+  }
+
+  .actions {
+    right: 12px;
+    gap: 8px;
+  }
+
+  .actions .icon {
+    font-size: 14px;
+  }
+
+  .header-hamburger {
+    left: 12px;
+  }
+}
+
 .actions {
-      display: flex;
-      gap: 19px;
-      font-size: 17px;
-      font-weight: 500;
-      cursor: pointer;
+  display: flex;
+  gap: 19px;
+  font-size: 17px;
+  font-weight: 500;
+  cursor: pointer;
 
-  .cart, .account, .support {
+  .cart,
+  .account,
+  .support {
     display: flex;
     align-items: center;
     gap: 9px;
     text-decoration: none;
-    
+
     &:hover {
       text-decoration: none;
     }
@@ -312,17 +328,18 @@
 .cart {
   text-decoration: none !important;
   color: inherit;
-  
+
   &:hover {
     text-decoration: none !important;
   }
-  
+
   .text {
     text-decoration: none !important;
   }
 }
+
 .logo {
-  width: 140px;       // chỉnh theo size bạn muốn
+  width: 140px; // chỉnh theo size bạn muốn
   display: block;
   object-fit: contain;
   cursor: pointer;
@@ -334,7 +351,8 @@
 .text:hover {
   transform: translateY(-4px);
   text-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
-  color: #e5677d; /* match icon color */
+  color: #e5677d;
+  /* match icon color */
   text-decoration: none;
 }
 

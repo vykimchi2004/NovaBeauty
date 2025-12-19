@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faEye, faTimes, faTrash } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from './ManageProduct.module.scss';
-import { getProducts, processProductApproval, deleteProduct } from '~/services/product';
+import { getProducts, deleteProduct } from '~/services/product';
 import notify from '~/utils/notification';
 import fallbackImage from '~/assets/images/products/image1.jpg';
 import ProductDetailView from './components/ProductDetailView';
@@ -53,12 +53,7 @@ function ManageProduct() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewingProduct, setViewingProduct] = useState(null);
-  const [showApproveConfirm, setShowApproveConfirm] = useState(false);
-  const [showRejectModal, setShowRejectModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
-  const [processingApproval, setProcessingApproval] = useState(false);
-  const [processingRejection, setProcessingRejection] = useState(false);
   const [processingDelete, setProcessingDelete] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const viewingMediaList = viewingProduct ? getProductMediaList(viewingProduct) : [];
@@ -150,81 +145,17 @@ function ManageProduct() {
   const openDeletePrompt = (product) => {
     setViewingProduct(product);
     setSelectedImageIndex(0);
-    setShowApproveConfirm(false);
-    setShowRejectModal(false);
     setShowDeleteConfirm(true);
   };
 
   const handleCloseViewDetail = () => {
-    if (processingApproval || processingRejection) return;
     setViewingProduct(null);
-    setShowApproveConfirm(false);
-    setShowRejectModal(false);
     setShowDeleteConfirm(false);
-    setRejectReason('');
     setSelectedImageIndex(0);
-  };
-
-  const handleApproveClick = () => {
-    setShowApproveConfirm(true);
-  };
-
-  const handleApproveConfirm = async () => {
-    if (!viewingProduct) return;
-
-    try {
-      setProcessingApproval(true);
-      await processProductApproval({
-        productId: viewingProduct.id,
-        action: 'APPROVE'
-      });
-      notify.success('Sản phẩm đã được duyệt thành công!');
-      setShowApproveConfirm(false);
-      setViewingProduct(null);
-      setRejectReason('');
-      await fetchProducts();
-    } catch (err) {
-      console.error('Error approving product:', err);
-      notify.error('Không thể duyệt sản phẩm. Vui lòng thử lại.');
-    } finally {
-      setProcessingApproval(false);
-    }
-  };
-
-  const handleRejectClick = () => {
-    setShowRejectModal(true);
-    setRejectReason('');
   };
 
   const handleDeleteClick = () => {
     setShowDeleteConfirm(true);
-  };
-
-  const handleRejectSubmit = async () => {
-    if (!viewingProduct) return;
-    if (!rejectReason.trim()) {
-      notify.warning('Vui lòng nhập lý do không duyệt.');
-      return;
-    }
-
-    try {
-      setProcessingRejection(true);
-      await processProductApproval({
-        productId: viewingProduct.id,
-        action: 'REJECT',
-        reason: rejectReason.trim()
-      });
-      notify.success('Sản phẩm không được duyệt. Lý do đã được lưu.');
-      setShowRejectModal(false);
-      setRejectReason('');
-      setViewingProduct(null);
-      await fetchProducts();
-    } catch (err) {
-      console.error('Error rejecting product:', err);
-      notify.error('Không thể từ chối sản phẩm. Vui lòng thử lại.');
-    } finally {
-      setProcessingRejection(false);
-    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -257,7 +188,7 @@ function ManageProduct() {
       {!viewingProduct && (
         <>
           <div className={cx('header')}>
-            <h2 className={cx('title')}>Duyệt sản phẩm</h2>
+            <h2 className={cx('title')}>Quản lý sản phẩm</h2>
             <div className={cx('headerActions')}>
               <div className={cx('searchBox')}>
                 <input
@@ -347,12 +278,8 @@ function ManageProduct() {
           selectedImageUrl={selectedImageUrl || fallbackImage}
           onBack={handleCloseViewDetail}
           onClose={handleCloseViewDetail}
-          onApprove={handleApproveClick}
-          onReject={handleRejectClick}
           onDelete={handleDeleteClick}
-          processingApproval={processingApproval}
-          processingRejection={processingRejection}
-           processingDelete={processingDelete}
+          processingDelete={processingDelete}
           getStatusBadge={(status) => getStatusBadge(status, viewingProduct)}
           getNormalizedStatus={getNormalizedProductStatus}
           formatPrice={formatPrice}
@@ -392,73 +319,6 @@ function ManageProduct() {
         </div>
       )}
 
-      {/* Modal Xác Nhận Duyệt */}
-      {showApproveConfirm && (
-        <div className={cx('modalOverlay')} onClick={() => setShowApproveConfirm(false)}>
-          <div className={cx('modal')} onClick={(e) => e.stopPropagation()}>
-            <div className={cx('modalHeader')}>
-              <h3>Xác nhận duyệt sản phẩm</h3>
-              <button type="button" className={cx('closeBtn')} onClick={() => setShowApproveConfirm(false)}>
-                <FontAwesomeIcon icon={faTimes} />
-              </button>
-            </div>
-            <div className={cx('form')}>
-              <p>Bạn có chắc chắn muốn duyệt sản phẩm này không?</p>
-              <div className={cx('formActions')}>
-                <button type="button" className={cx('cancelBtn')} onClick={() => setShowApproveConfirm(false)}>
-                  Hủy
-                </button>
-                <button
-                  type="button"
-                  className={cx('approveBtn')}
-                  onClick={handleApproveConfirm}
-                  disabled={processingApproval}
-                >
-                  {processingApproval ? 'Đang duyệt...' : 'Xác nhận'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Nhập Lý Do Từ Chối */}
-      {showRejectModal && (
-        <div className={cx('modalOverlay')} onClick={() => setShowRejectModal(false)}>
-          <div className={cx('modal')} onClick={(e) => e.stopPropagation()}>
-            <div className={cx('modalHeader')}>
-              <h3>Nhập lý do không duyệt</h3>
-              <button type="button" className={cx('closeBtn')} onClick={() => setShowRejectModal(false)}>
-                <FontAwesomeIcon icon={faTimes} />
-              </button>
-            </div>
-            <div className={cx('form')}>
-              <div className={cx('formGroup')}>
-                <label>Lý do không duyệt *</label>
-                <textarea
-                  rows="4"
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="Nhập lý do không duyệt sản phẩm..."
-                />
-              </div>
-              <div className={cx('formActions')}>
-                <button type="button" className={cx('cancelBtn')} onClick={() => setShowRejectModal(false)}>
-                  Hủy
-                </button>
-                <button
-                  type="button"
-                  className={cx('rejectBtn')}
-                  onClick={handleRejectSubmit}
-                  disabled={processingRejection}
-                >
-                  {processingRejection ? 'Đang gửi...' : 'Gửi'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

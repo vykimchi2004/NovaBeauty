@@ -36,6 +36,9 @@ function ManageVouchersPromotions() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [itemToReject, setItemToReject] = useState(null);
 
   useEffect(() => {
     fetchCategories();
@@ -157,7 +160,7 @@ function ManageVouchersPromotions() {
       'Xóa',
       'Hủy'
     );
-    
+
     if (!confirmed) return;
 
     try {
@@ -185,7 +188,7 @@ function ManageVouchersPromotions() {
       'Duyệt',
       'Hủy'
     );
-    
+
     if (!confirmed) return;
 
     try {
@@ -208,25 +211,35 @@ function ManageVouchersPromotions() {
   };
 
   const handleReject = async (item) => {
-    const reason = window.prompt('Nhập lý do từ chối', '');
-    if (reason === null) return;
-    const trimmed = reason.trim();
-    if (!trimmed) return;
+    setItemToReject(item);
+    setRejectReason('');
+    setShowRejectModal(true);
+  };
+
+  const confirmReject = async () => {
+    const trimmed = rejectReason.trim();
+    if (!trimmed) {
+      notify.error('Vui lòng nhập lý do từ chối');
+      return;
+    }
     try {
       if (activeTab === 'promotion') {
         await approvePromotion({
-          promotionId: item.id,
+          promotionId: itemToReject.id,
           action: 'REJECT',
           reason: trimmed,
         });
       } else {
         await approveVoucher({
-          voucherId: item.id,
+          voucherId: itemToReject.id,
           action: 'REJECT',
           reason: trimmed,
         });
       }
       notify.success(`Đã từ chối ${activeTab === 'promotion' ? 'khuyến mãi' : 'voucher'}.`);
+      setShowRejectModal(false);
+      setRejectReason('');
+      setItemToReject(null);
       closeModal();
       if (activeTab === 'promotion') {
         fetchPromotions(filterStatus);
@@ -237,6 +250,12 @@ function ManageVouchersPromotions() {
       console.error(`Error rejecting ${activeTab}:`, err);
       notify.error(`Không thể từ chối ${activeTab === 'promotion' ? 'khuyến mãi' : 'voucher'}. Vui lòng thử lại.`);
     }
+  };
+
+  const cancelReject = () => {
+    setShowRejectModal(false);
+    setRejectReason('');
+    setItemToReject(null);
   };
 
   const buildPromotionPayload = (promotion, overrides = {}) => ({
@@ -385,8 +404,8 @@ function ManageVouchersPromotions() {
                   <td className={cx('codeCell')}>{item.code}</td>
                   <td className={cx('nameCell')}>{item.name || '-'}</td>
                   <td>
-                    {item.discountValueType === 'PERCENTAGE' 
-                      ? `${item.discountValue}%` 
+                    {item.discountValueType === 'PERCENTAGE'
+                      ? `${item.discountValue}%`
                       : `${new Intl.NumberFormat('vi-VN').format(item.discountValue)}₫`}
                   </td>
                   <td>{formatDate(item.startDate)}</td>
@@ -397,8 +416,8 @@ function ManageVouchersPromotions() {
                   <td>{getStatusBadge(item.status)}</td>
                   <td>
                     <div className={cx('actions')}>
-                        <button
-                          type="button"
+                      <button
+                        type="button"
                         className={cx('actionBtn', 'viewBtn')}
                         onClick={() => handleViewDetail(item)}
                         title="Chi tiết"
@@ -456,8 +475,8 @@ function ManageVouchersPromotions() {
                         selectedItem.applyScope === 'PRODUCT'
                           ? 'Theo sản phẩm'
                           : selectedItem.applyScope === 'CATEGORY'
-                          ? 'Theo danh mục'
-                          : 'Toàn bộ đơn hàng',
+                            ? 'Theo danh mục'
+                            : 'Toàn bộ đơn hàng',
                     },
                     {
                       label: 'Giá trị giảm',
@@ -492,9 +511,9 @@ function ManageVouchersPromotions() {
                     <div className={cx('detailInfoRow')} key={item.label}>
                       <span className={cx('detailInfoLabel')}>{item.label}</span>
                       <span className={cx('detailInfoValue')}>{item.value}</span>
-                </div>
+                    </div>
                   ))}
-              </div>
+                </div>
 
                 <div className={cx('detailTextGroup')}>
                   <span className={cx('detailInfoLabel')}>Mô tả</span>
@@ -506,26 +525,26 @@ function ManageVouchersPromotions() {
                   <div className={cx('chipGroup')}>
                     {selectedItem.categoryIds?.length
                       ? selectedItem.categoryIds.map((id) => (
-                          <span key={id} className={cx('chip')}>
-                            {categories.find((c) => c.id === id)?.name || id}
-                          </span>
-                        ))
+                        <span key={id} className={cx('chip')}>
+                          {categories.find((c) => c.id === id)?.name || id}
+                        </span>
+                      ))
                       : 'Không áp dụng'}
+                  </div>
                 </div>
-              </div>
 
                 <div className={cx('detailTextGroup')}>
                   <span className={cx('detailInfoLabel')}>Sản phẩm áp dụng</span>
                   <div className={cx('chipGroup')}>
                     {selectedItem.productIds?.length
                       ? selectedItem.productIds.map((id) => (
-                          <span key={id} className={cx('chip')}>
-                            {products.find((p) => p.id === id)?.name || id}
-                          </span>
-                        ))
+                        <span key={id} className={cx('chip')}>
+                          {products.find((p) => p.id === id)?.name || id}
+                        </span>
+                      ))
                       : 'Không áp dụng'}
+                  </div>
                 </div>
-              </div>
                 <div className={cx('detailActions')}>
                   <button type="button" className={cx('cancelBtn')} onClick={closeModal}>
                     Đóng
@@ -560,7 +579,47 @@ function ManageVouchersPromotions() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rejection Modal */}
+      {showRejectModal && (
+        <div className={cx('modalOverlay')} onClick={cancelReject}>
+          <div className={cx('modal')} onClick={(e) => e.stopPropagation()}>
+            <div className={cx('modalHeader')}>
+              <h3>Nhập lý do không duyệt</h3>
+              <button type="button" className={cx('closeBtn')} onClick={cancelReject}>
+                <FontAwesomeIcon icon={faTimes} />
+              </button>
+            </div>
+            <div className={cx('form')}>
+              <div className={cx('formGroup')}>
+                <label>Lý do không duyệt *</label>
+                <textarea
+                  rows="5"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Nhập lý do từ chối..."
+                  autoFocus
+                />
               </div>
+              <div className={cx('formActions')}>
+                <button type="button" className={cx('cancelBtn')} onClick={cancelReject}>
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  className={cx('rejectBtn')}
+                  onClick={confirmReject}
+                  disabled={!rejectReason.trim()}
+                >
+                  <FontAwesomeIcon icon={faTimes} />
+                  Xác nhận từ chối
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

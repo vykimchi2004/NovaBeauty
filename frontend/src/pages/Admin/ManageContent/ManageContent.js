@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faTrash, faCheck, faTimes, faEye } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faTrash, faEye } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from './ManageContent.module.scss';
-import { getBanners, deleteBanner, updateBanner } from '~/services/banner';
+import { getBanners, deleteBanner } from '~/services/banner';
 import notify from '~/utils/notification';
 import fallbackImage from '~/assets/images/products/image1.jpg';
 
@@ -88,48 +88,6 @@ function ManageContent() {
     }
   };
 
-  const handleApprove = async (bannerId) => {
-    const confirmed = await notify.confirm(
-      'Bạn có chắc muốn duyệt banner này?',
-      'Xác nhận duyệt banner',
-      'Duyệt',
-      'Hủy'
-    );
-
-    if (!confirmed) return;
-
-    try {
-      await updateBanner(bannerId, {
-        status: true,
-        rejectionReason: null,
-      });
-      notify.success('Đã duyệt banner thành công!');
-      closeModal();
-      fetchBanners();
-    } catch (err) {
-      console.error('Error approving banner:', err);
-      notify.error('Không thể duyệt banner. Vui lòng thử lại.');
-    }
-  };
-
-  const handleReject = async (banner) => {
-    const reason = window.prompt('Nhập lý do từ chối', '');
-    if (reason === null) return;
-    const trimmed = reason.trim();
-    if (!trimmed) return;
-    try {
-      await updateBanner(banner.id, {
-        status: false,
-        rejectionReason: trimmed,
-      });
-      notify.success('Đã từ chối banner.');
-      closeModal();
-      fetchBanners();
-    } catch (err) {
-      console.error('Error rejecting banner:', err);
-      notify.error('Không thể từ chối banner. Vui lòng thử lại.');
-    }
-  };
 
   const formatDate = (dateString) => {
     if (!dateString) return '-';
@@ -294,44 +252,18 @@ function ManageContent() {
                       <span className={cx('detailValue')}>{item.value}</span>
                     </div>
                   ))}
-                  {selectedBanner.rejectionReason && (
-                    <div className={cx('detailInfoItem')}>
-                      <span className={cx('detailLabel')}>Lý do từ chối:</span>
-                      <span className={cx('detailValue', 'rejectionReason')}>
-                        {selectedBanner.rejectionReason}
-                      </span>
-                    </div>
-                )}
               </div>
 
-                {selectedBanner.pendingReview === true && (
-                  <div className={cx('detailActions')}>
-                    <button
-                      type="button"
-                      className={cx('actionBtn', 'approveBtn')}
-                      onClick={() => handleApprove(selectedBanner.id)}
-                    >
-                      <FontAwesomeIcon icon={faCheck} />
-                      Duyệt
-                    </button>
-                    <button
-                      type="button"
-                      className={cx('actionBtn', 'rejectBtn')}
-                      onClick={() => handleReject(selectedBanner)}
-                    >
-                      <FontAwesomeIcon icon={faTimes} />
-                      Từ chối
-                </button>
-                    <button
-                      type="button"
-                      className={cx('actionBtn', 'deleteBtn')}
-                      onClick={() => handleDelete(selectedBanner.id)}
-                    >
-                      <FontAwesomeIcon icon={faTrash} />
-                      Xóa
+              <div className={cx('detailActions')}>
+                <button
+                  type="button"
+                  className={cx('actionBtn', 'deleteBtn')}
+                  onClick={() => handleDelete(selectedBanner.id)}
+                >
+                  <FontAwesomeIcon icon={faTrash} />
+                  Xóa
                 </button>
               </div>
-                )}
               </div>
             </div>
           </div>
