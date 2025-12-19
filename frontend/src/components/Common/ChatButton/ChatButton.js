@@ -60,6 +60,8 @@ function ChatButton() {
                 linkText = 'Xem trang Khuyến mãi';
             } else if (path === '/vouchers') {
                 linkText = 'Xem trang Voucher';
+            } else if (path === '/profile?section=orders') {
+                linkText = 'truy cập mục "Lịch sử mua hàng"';
             }
 
             parts.push({
@@ -186,7 +188,7 @@ function ChatButton() {
         let botResponse = '';
         switch (reply.id) {
             case 1:
-                botResponse = 'Để kiểm tra tình trạng đơn hàng, bạn vui lòng cung cấp mã đơn hàng hoặc truy cập mục "Đơn hàng của tôi" trong tài khoản nhé!';
+                botResponse = 'Để kiểm tra tình trạng đơn hàng, bạn vui lòng cung cấp mã đơn hàng hoặc [LINK:/profile?section=orders] để xem lịch sử mua hàng trong tài khoản nhé!';
                 break;
             case 2:
                 botResponse = 'Nova Beauty hỗ trợ đổi trả trong vòng 7 ngày với sản phẩm còn nguyên seal. Bạn muốn đổi trả sản phẩm nào ạ?';
@@ -242,37 +244,31 @@ function ChatButton() {
                 addBotMessage(response.reply);
             } else {
                 // Fallback: Create ticket với thông tin user nếu đã đăng nhập
-                if (currentUser) {
-                    // Chỉ gửi phone nếu có giá trị hợp lệ
-                    const ticketData = {
-                        customerName: currentUser.name || currentUser.fullName || 'Khách hàng',
-                        email: currentUser.email || '',
-                        orderCode: 'KHAC',
-                        topic: 'Chat hỗ trợ',
-                        content: messageContent,
-                    };
-
-                    // Chỉ thêm phone nếu có và không rỗng
-                    if (currentUser.phone && currentUser.phone.trim()) {
-                        ticketData.phone = currentUser.phone.trim();
-                    }
-
-                    await ticketService.createTicket(ticketData);
-
-                    addBotMessage('Cảm ơn bạn! Tin nhắn của bạn đã được ghi nhận. Nhân viên CSKH sẽ phản hồi qua email hoặc điện thoại trong thời gian sớm nhất (trong giờ làm việc 8:00 - 22:00).');
-                } else {
-                    // Nếu chưa đăng nhập, hướng dẫn đăng nhập hoặc gửi form
-                    addBotMessage('Để được hỗ trợ nhanh nhất, bạn vui lòng đăng nhập hoặc truy cập trang Hỗ trợ khách hàng để gửi yêu cầu chi tiết nhé!');
-
-                    setTimeout(() => {
-                        setMessages(prev => [...prev, {
-                            id: Date.now(),
-                            type: 'bot',
-                            content: 'action_buttons',
-                            time: new Date()
-                        }]);
-                    }, 1500);
+                // Yêu cầu đăng nhập để gửi ticket
+                if (!currentUser) {
+                    addBotMessage('Vui lòng đăng nhập để gửi yêu cầu hỗ trợ/khiếu nại. Bạn có thể đăng nhập bằng cách click vào biểu tượng tài khoản ở góc trên bên phải.');
+                    // Mở modal đăng nhập
+                    window.dispatchEvent(new Event('openLoginModal'));
+                    return;
                 }
+
+                // Chỉ gửi phone nếu có giá trị hợp lệ
+                const ticketData = {
+                    customerName: currentUser.name || currentUser.fullName || 'Khách hàng',
+                    email: currentUser.email || '',
+                    orderCode: 'KHAC',
+                    topic: 'Chat hỗ trợ',
+                    content: messageContent,
+                };
+
+                // Chỉ thêm phone nếu có và không rỗng
+                if (currentUser.phone && currentUser.phone.trim()) {
+                    ticketData.phone = currentUser.phone.trim();
+                }
+
+                await ticketService.createTicket(ticketData);
+
+                addBotMessage('Cảm ơn bạn! Tin nhắn của bạn đã được ghi nhận. Nhân viên CSKH sẽ phản hồi qua email hoặc điện thoại trong thời gian sớm nhất (trong giờ làm việc 8:00 - 22:00).');
             }
         } catch (error) {
             console.error('Error sending message:', error);

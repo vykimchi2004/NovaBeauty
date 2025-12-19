@@ -17,6 +17,7 @@ function SupportRequestSection() {
   
   // Lấy thông tin user để tự động điền
   const [userInfo, setUserInfo] = useState({ name: '', email: '', phone: '' });
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   
   // Lỗi validation cho từng trường
   const [errors, setErrors] = useState({
@@ -32,11 +33,14 @@ function SupportRequestSection() {
     // Lấy thông tin user từ storage để tự động điền form
     const user = storage.get(STORAGE_KEYS.USER, null);
     if (user) {
+      setIsLoggedIn(true);
       setUserInfo({
         name: user.fullName || user.name || '',
         email: user.email || '',
         phone: user.phoneNumber || user.phone || '',
       });
+    } else {
+      setIsLoggedIn(false);
     }
 
     const fetchOrders = async () => {
@@ -72,6 +76,15 @@ function SupportRequestSection() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    
+    // Kiểm tra đăng nhập trước khi gửi
+    const user = storage.get(STORAGE_KEYS.USER, null);
+    if (!user) {
+      notify.warning('Vui lòng đăng nhập để gửi yêu cầu hỗ trợ/khiếu nại.');
+      // Dispatch event để mở modal đăng nhập
+      window.dispatchEvent(new Event('openLoginModal'));
+      return;
+    }
     
     const form = event.target;
     const name = form.elements['name']?.value?.trim() || '';
@@ -164,6 +177,25 @@ function SupportRequestSection() {
       setSubmitting(false);
     }
   };
+
+  // Nếu chưa đăng nhập, hiển thị thông báo
+  if (!isLoggedIn) {
+    return (
+      <div className={cx('wrapper')}>
+        <div className={cx('loginRequired')}>
+          <p className={cx('loginMessage')}>
+            Vui lòng <button 
+              type="button" 
+              className={cx('loginLink')} 
+              onClick={() => window.dispatchEvent(new Event('openLoginModal'))}
+            >
+              đăng nhập
+            </button> để gửi yêu cầu hỗ trợ/khiếu nại.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cx('wrapper')}>
