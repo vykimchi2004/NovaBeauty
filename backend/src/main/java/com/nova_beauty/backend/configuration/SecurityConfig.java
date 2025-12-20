@@ -33,7 +33,9 @@ public class SecurityConfig {
         "/shipments/ghn/fees",
         "/shipments/ghn/leadtime",
         "/api/momo/ipn-handler",
-        "/api/chatbot/ask"
+        "/api/chatbot/ask",
+        "/api/tickets",  // Cho phép tạo ticket từ chatbot mà không cần authentication
+        "/chat/chatbot/send"  // Cho phép gửi chat message từ chatbot mà không cần authentication
     };
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {

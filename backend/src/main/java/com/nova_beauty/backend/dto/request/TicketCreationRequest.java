@@ -22,7 +22,7 @@ public class TicketCreationRequest {
     @NotBlank
     String email;
 
-    @NotBlank
+    // phone is optional - used when user doesn't have phone (e.g., chatbot chat)
     String phone;
 
     // topic is optional - used when orderCode is 'KHAC' (Khác)

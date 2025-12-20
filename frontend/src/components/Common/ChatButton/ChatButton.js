@@ -2,10 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import classNames from 'classnames/bind';
 import styles from './ChatButton.module.scss';
-import ticketService from '~/services/ticket';
 import chatbotService from '~/services/chatbot';
+import chatService from '~/services/chat';
 import { storage } from '~/services/utils';
 import { STORAGE_KEYS } from '~/services/config';
+import { notify } from '~/utils/notification';
+import StaffChat from '~/components/Common/StaffChat';
 
 const cx = classNames.bind(styles);
 
@@ -25,7 +27,8 @@ function ChatButton() {
     const [isSending, setIsSending] = useState(false);
     const [showQuickReplies, setShowQuickReplies] = useState(true);
     const [sessionId, setSessionId] = useState(null);
-    const [useAI, setUseAI] = useState(true); // Toggle giữa AI và ticket
+    const [useAI, setUseAI] = useState(true); // Toggle giữa AI và staff chat
+    const [staffChatKey, setStaffChatKey] = useState(0); // Key để force re-mount StaffChat
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
 
@@ -128,8 +131,62 @@ function ChatButton() {
         }
     }, [isOpen]);
 
-    const toggleChat = () => {
+    const toggleChat = async () => {
+        const wasOpen = isOpen;
+        
+        // Nếu đang đóng chat và đang ở chế độ staff chat, hiển thị popup xác nhận
+        if (wasOpen && !useAI) {
+            const confirmed = await notify.confirm(
+                'Bạn muốn ngắt kết nối?',
+                'Ngắt kết nối',
+                'Ngắt kết nối',
+                'Hủy'
+            );
+            
+            if (!confirmed) {
+                return; // Không đóng nếu hủy
+            }
+            
+            // Gửi thông báo ngắt kết nối cho CSKH
+            const currentUser = storage.get(STORAGE_KEYS.USER);
+            if (currentUser) {
+                try {
+                    const senderName = currentUser.name || currentUser.fullName || 'Khách hàng';
+                    await chatService.sendMessageFromChatbot(
+                        '[Khách hàng đã ngắt kết nối]',
+                        currentUser.email,
+                        senderName
+                    );
+                } catch (error) {
+                    console.warn('Failed to send disconnect message:', error);
+                }
+            }
+        }
+        
+        // Nếu đang đóng chat, reset về trạng thái ban đầu NGAY LẬP TỨC
+        if (wasOpen) {
+            // Reset ngay lập tức trước khi đóng
+            setMessages([
+                {
+                    id: 1,
+                    type: 'bot',
+                    content: 'Xin chào! 👋 Tôi là trợ lý AI của Nova Beauty. Tôi có thể giúp bạn tư vấn sản phẩm, giải đáp thắc mắc về đơn hàng, chính sách đổi trả và nhiều hơn nữa. Bạn cần hỗ trợ gì hôm nay?',
+                    time: new Date()
+                }
+            ]);
+            setInputValue('');
+            setShowQuickReplies(true);
+            setSessionId(null);
+            setUseAI(true); // Reset về AI chat
+            setStaffChatKey(prev => prev + 1); // Force re-mount StaffChat (unmount component cũ)
+        }
+        
         setIsOpen(!isOpen);
+        
+        // Nếu mở lại và đang ở chế độ staff chat, force re-mount
+        if (!wasOpen && !useAI) {
+            setStaffChatKey(prev => prev + 1);
+        }
     };
 
     const handleRefreshChat = () => {
@@ -145,6 +202,17 @@ function ChatButton() {
         setInputValue('');
         setShowQuickReplies(true);
         setSessionId(null);
+        setUseAI(true);
+    };
+
+    const handleConnectToStaff = () => {
+        setUseAI(false);
+    };
+
+    const handleBackToAI = () => {
+        setUseAI(true);
+        // Force re-mount StaffChat khi quay lại AI để đảm bảo reset hoàn toàn
+        setStaffChatKey(prev => prev + 1);
     };
 
     const quickReplies = [
@@ -231,7 +299,7 @@ function ChatButton() {
         setIsSending(true);
 
         try {
-            // Sử dụng AI Chatbot để trả lời
+            // Chỉ xử lý khi đang dùng AI (chat với nhân viên đã được tách ra StaffChat component)
             if (useAI) {
                 const response = await chatbotService.ask(messageContent, sessionId);
 
@@ -242,33 +310,6 @@ function ChatButton() {
 
                 // Add bot response từ AI
                 addBotMessage(response.reply);
-            } else {
-                // Fallback: Create ticket với thông tin user nếu đã đăng nhập
-                // Yêu cầu đăng nhập để gửi ticket
-                if (!currentUser) {
-                    addBotMessage('Vui lòng đăng nhập để gửi yêu cầu hỗ trợ/khiếu nại. Bạn có thể đăng nhập bằng cách click vào biểu tượng tài khoản ở góc trên bên phải.');
-                    // Mở modal đăng nhập
-                    window.dispatchEvent(new Event('openLoginModal'));
-                    return;
-                }
-
-                // Chỉ gửi phone nếu có giá trị hợp lệ
-                const ticketData = {
-                    customerName: currentUser.name || currentUser.fullName || 'Khách hàng',
-                    email: currentUser.email || '',
-                    orderCode: 'KHAC',
-                    topic: 'Chat hỗ trợ',
-                    content: messageContent,
-                };
-
-                // Chỉ thêm phone nếu có và không rỗng
-                if (currentUser.phone && currentUser.phone.trim()) {
-                    ticketData.phone = currentUser.phone.trim();
-                }
-
-                await ticketService.createTicket(ticketData);
-
-                addBotMessage('Cảm ơn bạn! Tin nhắn của bạn đã được ghi nhận. Nhân viên CSKH sẽ phản hồi qua email hoặc điện thoại trong thời gian sớm nhất (trong giờ làm việc 8:00 - 22:00).');
             }
         } catch (error) {
             console.error('Error sending message:', error);
@@ -303,11 +344,13 @@ function ChatButton() {
                                 </svg>
                             </div>
                             <div className={cx('headerText')}>
-                                <h4>Trợ lý AI Nova Beauty</h4>
-                                <span className={cx('status')}>
-                                    <span className={cx('statusDot')}></span>
-                                    Trực tuyến
-                                </span>
+                                <h4>{useAI ? 'Trợ lý AI Nova Beauty' : 'Nhân viên hỗ trợ Nova Beauty'}</h4>
+                                {useAI && (
+                                    <span className={cx('status')}>
+                                        <span className={cx('statusDot')}></span>
+                                        Trực tuyến
+                                    </span>
+                                )}
                             </div>
                         </div>
                         <div className={cx('headerActions')}>
@@ -324,7 +367,33 @@ function ChatButton() {
                         </div>
                     </div>
 
-                    <div className={cx('chatBody')}>
+                    {useAI ? (
+                        <>
+                            <div className={cx('chatBody')}>
+                                {/* Nút Chat với nhân viên - chỉ hiển thị khi đang dùng AI */}
+                                <div className={cx('staffSupportCard')}>
+                                    <div className={cx('supportCardContent')}>
+                                        <div className={cx('supportIcon')}>
+                                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                                            </svg>
+                                        </div>
+                                        <div className={cx('supportText')}>
+                                            <h5>Cần hỗ trợ từ con người?</h5>
+                                            <p>Nhân viên tư vấn sẵn sàng giải đáp thắc mắc chuyên sâu của bạn.</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        className={cx('connectStaffBtn')}
+                                        onClick={handleConnectToStaff}
+                                    >
+                                        <span>Kết nối ngay</span>
+                                        <svg viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+                                        </svg>
+                                    </button>
+                                </div>
+
                         {messages.map((message) => (
                             <div
                                 key={message.id}
@@ -389,35 +458,45 @@ function ChatButton() {
                             </div>
                         )}
 
-                        <div ref={messagesEndRef} />
-                    </div>
+                                <div ref={messagesEndRef} />
+                            </div>
 
-                    <div className={cx('chatInputArea')}>
-                        <div className={cx('inputWrapper')}>
-                            <input
-                                ref={inputRef}
-                                type="text"
-                                placeholder="Nhập câu hỏi của bạn..."
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                onKeyPress={handleKeyPress}
-                                disabled={isSending}
-                                className={cx('chatInput')}
+                            <div className={cx('chatInputArea')}>
+                                <div className={cx('inputWrapper')}>
+                                    <input
+                                        ref={inputRef}
+                                        type="text"
+                                        placeholder="Nhập câu hỏi của bạn..."
+                                        value={inputValue}
+                                        onChange={(e) => setInputValue(e.target.value)}
+                                        onKeyPress={handleKeyPress}
+                                        disabled={isSending}
+                                        className={cx('chatInput')}
+                                    />
+                                    <button
+                                        className={cx('sendBtn', { disabled: !inputValue.trim() || isSending })}
+                                        onClick={handleSendMessage}
+                                        disabled={!inputValue.trim() || isSending}
+                                    >
+                                        <svg viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <p className={cx('inputHint')}>
+                                    Nhấn Enter để gửi • Trợ lý AI luôn sẵn sàng hỗ trợ bạn
+                                </p>
+                            </div>
+                        </>
+                    ) : (
+                        isOpen && (
+                            <StaffChat 
+                                key={staffChatKey}
+                                onBack={handleBackToAI}
+                                onClose={toggleChat}
                             />
-                            <button
-                                className={cx('sendBtn', { disabled: !inputValue.trim() || isSending })}
-                                onClick={handleSendMessage}
-                                disabled={!inputValue.trim() || isSending}
-                            >
-                                <svg viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-                                </svg>
-                            </button>
-                        </div>
-                        <p className={cx('inputHint')}>
-                            Nhấn Enter để gửi • Trợ lý AI luôn sẵn sàng hỗ trợ bạn
-                        </p>
-                    </div>
+                        )
+                    )}
                 </div>
             )}
 

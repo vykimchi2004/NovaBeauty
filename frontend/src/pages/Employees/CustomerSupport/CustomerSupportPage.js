@@ -15,6 +15,7 @@ import RefundDetailPage from './RefundManagement/RefundDetail/RefundDetailPage';
 import ViewRefundDetailPage from './RefundManagement/ViewRefundDetail/ViewRefundDetailPage';
 import ProfileCustomerSupportPage from './ProfileCustomerSupport/ProfileCustomerSupportPage';
 import ChatSupportPage from './ChatSupport/ChatSupportPage';
+import ChatDetailPage from './ChatSupport/ChatDetailPage';
 import ticketService from '~/services/ticket';
 import { getAllReviews } from '~/services/review';
 import { getApiBaseUrl, getStoredToken } from '~/services/utils';
@@ -418,6 +419,7 @@ export default function CustomerSupportPage() {
                     <Routes>
                         <Route index element={<Dashboard />} />
                         <Route path="chat-support" element={<ChatSupportPage />} />
+                        <Route path="chat-support/:partnerId" element={<ChatDetailPage />} />
                         <Route path="complaints" element={<ComplaintManagementPage />} />
                         <Route path="reviews" element={<ReviewCommentManagementPage />} />
                         <Route path="refund-management" element={<RefundManagementPage />} />

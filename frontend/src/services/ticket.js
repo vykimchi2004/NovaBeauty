@@ -30,11 +30,22 @@ const ticketService = {
     },
 
     /**
-     * Tạo ticket mới
+     * Tạo ticket mới (public endpoint - không cần token)
      */
     async createTicket(ticketData) {
         try {
-            return await apiClient.post('/api/tickets', ticketData);
+            // Không dùng apiClient.post() vì nó sẽ tự động thêm token vào header
+            // Endpoint create ticket là public, không cần token, và token cũ có thể gây lỗi nếu không hợp lệ
+            const url = apiClient.buildURL('/api/tickets');
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(ticketData),
+            });
+
+            return await apiClient.handleResponse(response);
         } catch (error) {
             console.error('[Ticket Service] createTicket error:', error);
             throw error;

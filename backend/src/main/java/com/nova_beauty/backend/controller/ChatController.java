@@ -5,11 +5,14 @@ import java.util.List;
 import org.springframework.web.bind.annotation.*;
 
 import com.nova_beauty.backend.dto.request.ApiResponse;
+import com.nova_beauty.backend.dto.request.ChatbotChatRequest;
 import com.nova_beauty.backend.dto.request.SendMessageRequest;
 import com.nova_beauty.backend.dto.response.ChatConversationResponse;
 import com.nova_beauty.backend.dto.response.ChatMessageResponse;
 import com.nova_beauty.backend.dto.response.UserResponse;
 import com.nova_beauty.backend.service.ChatService;
+
+import jakarta.validation.Valid;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -64,6 +67,18 @@ public class ChatController {
         log.info("Getting first customer support for customer");
         UserResponse cs = chatService.getFirstCustomerSupport();
         return ApiResponse.<UserResponse>builder().result(cs).build();
+    }
+
+    // Public endpoint: Gửi tin nhắn từ chatbot vào hệ thống chat hỗ trợ
+    @PostMapping("/chatbot/send")
+    public ApiResponse<ChatMessageResponse> sendMessageFromChatbot(@Valid @RequestBody ChatbotChatRequest request) {
+        log.info("Sending chat message from chatbot: senderEmail={}, message length={}", 
+                request.getSenderEmail(), request.getMessage().length());
+        ChatMessageResponse response = chatService.sendMessageFromChatbot(
+                request.getMessage(), 
+                request.getSenderEmail(), 
+                request.getSenderName());
+        return ApiResponse.<ChatMessageResponse>builder().result(response).build();
     }
 }
 

@@ -88,6 +88,54 @@ public class ChatService {
         return toResponse(saved);
     }
 
+    /**
+     * Gửi tin nhắn từ chatbot (public endpoint - không cần authentication)
+     * Tự động tìm CSKH đầu tiên và gửi tin nhắn
+     */
+    @Transactional
+    public ChatMessageResponse sendMessageFromChatbot(String message, String senderEmail, String senderName) {
+        // Tìm user sender theo email
+        User sender = userRepository.findByEmail(senderEmail)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED, "Không tìm thấy người dùng với email: " + senderEmail));
+
+        // Tìm CSKH đầu tiên
+        List<User> csUsers = userRepository.findAll().stream()
+                .filter(u -> u.getRole() != null && "CUSTOMER_SUPPORT".equals(u.getRole().getName()))
+                .filter(User::isActive)
+                .toList();
+
+        if (csUsers.isEmpty()) {
+            throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "Không tìm thấy nhân viên CSKH");
+        }
+
+        User receiver = csUsers.get(0);
+
+        // Tạo chat message
+        ChatMessage chatMessage = ChatMessage.builder()
+                .message(message.trim())
+                .sender(sender)
+                .receiver(receiver)
+                .isRead(false)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        ChatMessage saved = chatMessageRepository.save(chatMessage);
+
+        // Gửi notification cho CSKH
+        try {
+            notificationService.sendToUsers(
+                    "Tin nhắn mới từ chatbot",
+                    String.format("Bạn có tin nhắn mới từ %s (qua chatbot)", 
+                            senderName != null ? senderName : sender.getFullName() != null ? sender.getFullName() : sender.getEmail()),
+                    "CHAT",
+                    java.util.Set.of(receiver.getId()));
+        } catch (Exception e) {
+            log.error("Failed to send notification for chatbot message: {}", e.getMessage());
+        }
+
+        return toResponse(saved);
+    }
+
     @PreAuthorize("hasAnyRole('CUSTOMER', 'CUSTOMER_SUPPORT')")
     public List<ChatMessageResponse> getConversation(String partnerId) {
         String currentUserEmail = SecurityUtil.getCurrentUserEmail();
