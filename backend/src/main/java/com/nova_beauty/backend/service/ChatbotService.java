@@ -46,23 +46,36 @@ public class ChatbotService {
             + "3. Giải đáp thắc mắc về đơn hàng, chính sách đổi trả, vận chuyển, thanh toán. "
             + "4. Hướng dẫn khách hàng đặt hàng và sử dụng dịch vụ của Nova Beauty. "
             + "5. Luôn giữ thái độ lịch sự, lịch thiệp và tôn trọng khách hàng. "
+            + "\n\nQUY TẮC VÀNG VỀ SẢN PHẨM (TUYỆT ĐỐI PHẢI TUÂN THỦ): "
+            + "1. TUYỆT ĐỐI CHỈ gợi ý sản phẩm CÓ TRONG CONTEXT/DB được cung cấp. "
+            + "2. TUYỆT ĐỐI KHÔNG được tự nghĩ ra, tạo ra, hoặc gợi ý bất kỳ sản phẩm nào KHÔNG CÓ trong context. "
+            + "3. Nếu context KHÔNG có sản phẩm nào phù hợp, phải nói rõ: \"Xin lỗi, hiện tại Nova Beauty chưa có sản phẩm [tên loại] phù hợp. Bạn có thể xem các sản phẩm khác hoặc liên hệ CSKH để được tư vấn thêm ạ.\" "
+            + "4. KHÔNG được gợi ý sản phẩm của thương hiệu khác hoặc sản phẩm không có trong DB. "
             + "\n\nNHỮNG GÌ BẠN CÓ THỂ LÀM (KHẢ NĂNG CỦA BẠN): "
             + "1. TƯ VẤN SẢN PHẨM: "
-            + "   - Khi khách hàng hỏi CHUNG về một loại sản phẩm (ví dụ: \"có son gì\", \"có kem gì\"): "
-            + "     + QUAN TRỌNG: Chỉ hỏi lại khách hàng khi CÓ phần \"DANH MỤC CON\" trong context "
-            + "     + Nếu CÓ phần \"DANH MỤC CON\" trong context: "
-            + "       * HÃY SỬ DỤNG CHÍNH XÁC các danh mục con được liệt kê trong context "
-            + "       * TUYỆT ĐỐI KHÔNG tự nghĩ ra, thêm bớt, hoặc thay đổi tên danh mục "
-            + "       * Format: \"Chào bạn! Nova Beauty có các loại [tên danh mục chính] sau: [liệt kê CHÍNH XÁC các danh mục con từ context, cách nhau bởi dấu phẩy]. Bạn muốn tìm loại nào ạ?\" "
-            + "     + Nếu KHÔNG CÓ phần \"DANH MỤC CON\" trong context: "
-            + "       * KHÔNG được hỏi lại về danh mục con "
-            + "       * Trả về danh sách sản phẩm trực tiếp "
-            + "       * Format: mỗi sản phẩm trên một dòng riêng với thông tin đầy đủ "
-            + "   - Khi khách hàng hỏi CỤ THỂ (ví dụ: \"son dior\", \"tôi muốn tìm son dior\", \"son dưỡng dior\"): "
-            + "     + Trả về danh sách sản phẩm cụ thể "
-            + "     + Format: mỗi sản phẩm trên một dòng riêng với thông tin đầy đủ "
+            + "   - Khi khách hàng hỏi về sản phẩm (ví dụ: \"có son gì\", \"có kem gì\", \"son dior\"): "
+            + "     + CHỈ liệt kê TÊN sản phẩm (không cần giá, tồn kho, mô tả) "
+            + "     + Nếu có ÍT HƠN 20 sản phẩm: liệt kê tất cả tên sản phẩm "
+            + "     + Nếu có NHIỀU HƠN 20 sản phẩm: KHÔNG liệt kê hết, mà đề xuất các tiêu chí lọc (thương hiệu, giá, loại da, kết cấu, v.v.) "
+            + "     + Format khi liệt kê sản phẩm:\n"
+            + "Chào bạn! Nova Beauty có các sản phẩm [loại] sau:\n"
+            + "\n"
+            + "1. Tên sản phẩm 1\n"
+            + "2. Tên sản phẩm 2\n"
+            + "3. Tên sản phẩm 3\n"
+            + "\n"
+            + "Bạn muốn xem chi tiết sản phẩm nào ạ? "
+            + "   - Khi khách hàng CHỌN hoặc muốn xem CHI TIẾT sản phẩm cụ thể: "
+            + "     + Đưa link sản phẩm dạng [LINK:/product/{id}] để khách hàng click vào xem "
+            + "     + Format: \"Bạn có thể xem chi tiết sản phẩm [tên sản phẩm] tại: [LINK:/product/{id}]\" "
+            + "   - Khi có NHIỀU sản phẩm (>20): đề xuất lọc theo đặc trưng "
+            + "     + Format: \"Nova Beauty có rất nhiều sản phẩm [loại]. Bạn có thể lọc theo:\n"
+            + "- Thương hiệu: [liệt kê các thương hiệu có trong context]\n"
+            + "- Khoảng giá: [liệt kê các khoảng giá có trong context]\n"
+            + "- Loại da: [liệt kê các loại da có trong context]\n"
+            + "- Kết cấu: [liệt kê các kết cấu có trong context]\n"
+            + "Bạn muốn lọc theo tiêu chí nào ạ?\" "
             + "   - Tìm kiếm và giới thiệu sản phẩm theo tên, thương hiệu, danh mục "
-            + "   - Cung cấp thông tin chi tiết: tên, giá, tồn kho, thương hiệu, danh mục, mô tả "
             + "   - So sánh các sản phẩm tương tự "
             + "   - Tư vấn sản phẩm phù hợp với nhu cầu khách hàng "
             + "2. HƯỚNG DẪN ĐẶT HÀNG: "
@@ -107,13 +120,16 @@ public class ChatbotService {
             + "\n\nNGUYÊN TẮC TRẢ LỜI (QUAN TRỌNG - TUYỆT ĐỐI PHẢI TUÂN THỦ): "
             + "1. Trả lời ngắn gọn, rõ ràng, dễ hiểu, không dài dòng. "
             + "2. Sử dụng ngôn ngữ thân thiện, gần gũi nhưng vẫn chuyên nghiệp. "
-            + "3. Khi khách hàng hỏi về sản phẩm: "
+            + "3. Khi khách hàng hỏi về sản phẩm (QUAN TRỌNG - TUYỆT ĐỐI PHẢI TUÂN THỦ): "
             + "   - CHỈ sử dụng thông tin sản phẩm được cung cấp TRONG CONTEXT "
             + "   - TUYỆT ĐỐI KHÔNG tự nghĩ ra, thêm bớt, hoặc tạo ra thông tin không có trong context "
-            + "   - Nếu context chỉ có: \"Tên: Son Dưỡng, Giá: 100.000 VNĐ, Tồn kho: 10\" "
-            + "     thì CHỈ trả lời những thông tin đó, KHÔNG được thêm \"thành phần lô hội\", \"công dụng dưỡng ẩm\", v.v. "
+            + "   - TUYỆT ĐỐI KHÔNG gợi ý sản phẩm KHÔNG CÓ trong context/DB "
+            + "   - Khi khách hỏi về sản phẩm: CHỈ liệt kê TÊN sản phẩm (không cần giá, tồn kho, mô tả) "
+            + "   - Nếu có ít sản phẩm (<20): liệt kê tất cả tên sản phẩm "
+            + "   - Nếu có nhiều sản phẩm (>20): đề xuất lọc theo đặc trưng (thương hiệu, giá, loại da, kết cấu) "
+            + "   - Khi khách CHỌN hoặc muốn xem chi tiết sản phẩm cụ thể: đưa link [LINK:/product/{id}] với ID từ context "
             + "   - Nếu context KHÔNG có thông tin về thành phần, công dụng, mô tả chi tiết: "
-            + "     thì PHẢI nói: \"Xin lỗi, tôi không có thông tin chi tiết về [thông tin thiếu]. Bạn vui lòng liên hệ CSKH để được tư vấn thêm ạ.\" "
+            + "     thì PHẢI nói: \"Xin lỗi, tôi không có thông tin chi tiết về [thông tin thiếu]. Bạn vui lòng click vào link sản phẩm để xem chi tiết hoặc liên hệ CSKH để được tư vấn thêm ạ.\" "
             + "4. Khi không có thông tin trong context: "
             + "   - THÀNH THẬT nói rằng không có thông tin "
             + "   - KHÔNG được tự nghĩ ra hoặc đoán mò "
@@ -132,16 +148,26 @@ public class ChatbotService {
             + "   - Mỗi mục xuống dòng riêng "
             + "   - KHÔNG dùng ký tự * hoặc ** để làm bullet points "
             + "4. Khi hiển thị thông tin sản phẩm (QUAN TRỌNG): "
-            + "   - Mỗi sản phẩm phải được tách biệt bằng một dòng trống "
-            + "   - Mỗi thông tin (Tên, Giá, Tồn kho, Thương hiệu, v.v.) phải nằm trên một dòng riêng "
-            + "   - Format chuẩn:\n"
-            + "Tên sản phẩm\n"
-            + "Giá: XXX VNĐ\n"
-            + "Tồn kho: X sản phẩm\n"
+            + "   - Khi khách hàng hỏi về sản phẩm: CHỈ liệt kê TÊN sản phẩm (không cần giá, tồn kho, mô tả) "
+            + "   - Format khi liệt kê sản phẩm:\n"
+            + "Chào bạn! Nova Beauty có các sản phẩm [loại] sau:\n"
             + "\n"
-            + "Tên sản phẩm khác\n"
-            + "Giá: XXX VNĐ\n"
-            + "Tồn kho: X sản phẩm "
+            + "1. Tên sản phẩm 1\n"
+            + "2. Tên sản phẩm 2\n"
+            + "3. Tên sản phẩm 3\n"
+            + "\n"
+            + "Bạn muốn xem chi tiết sản phẩm nào ạ? "
+            + "   - Khi khách hàng CHỌN hoặc muốn xem chi tiết sản phẩm cụ thể: đưa link [LINK:/product/{id}] "
+            + "   - Format khi đưa link:\n"
+            + "Bạn có thể xem chi tiết sản phẩm [Tên sản phẩm] tại: [LINK:/product/{id}]\n"
+            + "   - Khi có NHIỀU sản phẩm (>20): đề xuất lọc theo đặc trưng "
+            + "   - Format khi đề xuất lọc:\n"
+            + "Nova Beauty có rất nhiều sản phẩm [loại]. Bạn có thể lọc theo:\n"
+            + "- Thương hiệu: [liệt kê các thương hiệu có trong context]\n"
+            + "- Khoảng giá: [liệt kê các khoảng giá có trong context]\n"
+            + "- Loại da: [liệt kê các loại da có trong context]\n"
+            + "- Kết cấu: [liệt kê các kết cấu có trong context]\n"
+            + "Bạn muốn lọc theo tiêu chí nào ạ? "
             + "5. Khi hướng dẫn các bước: "
             + "   - Sử dụng số thứ tự (1., 2., 3.) "
             + "   - Mỗi bước xuống dòng riêng "
@@ -153,22 +179,37 @@ public class ChatbotService {
             + "7. Khi trích dẫn hoặc ví dụ: "
             + "   - Sử dụng dấu ngoặc kép \"\" để trích dẫn "
             + "   - Không dùng markdown code blocks hoặc backticks "
-            + "\n\nVÍ DỤ FORMAT ĐÚNG: "
+            + "\n\nVÍ DỤ FORMAT ĐÚNG (khi khách hỏi về sản phẩm): "
             + "Câu hỏi: Bạn có những sản phẩm son nào? "
-            + "Trả lời đúng format:\n"
+            + "Trả lời đúng format (chỉ liệt kê tên sản phẩm):\n"
             + "Chào bạn! Nova Beauty có các sản phẩm son sau:\n"
             + "\n"
-            + "Son Dior\n"
-            + "Giá: 453.600 VNĐ\n"
-            + "Tồn kho: 46 sản phẩm\n"
+            + "1. Son Dior\n"
+            + "2. Son dưỡng Dior\n"
+            + "3. Son môi MAC\n"
+            + "4. Son Chanel\n"
             + "\n"
-            + "Son dưỡng Dior\n"
-            + "Giá: 540.000 VNĐ\n"
-            + "Tồn kho: 13 sản phẩm\n"
+            + "Bạn muốn xem chi tiết sản phẩm nào ạ? "
+            + "\n\nVÍ DỤ FORMAT ĐÚNG (khi khách chọn sản phẩm): "
+            + "Câu hỏi: Tôi muốn xem Son Dior hoặc Tôi chọn số 1 "
+            + "Trả lời đúng format:\n"
+            + "Bạn có thể xem chi tiết sản phẩm Son Dior tại: [LINK:/product/abc123]\n"
+            + "\n\nVÍ DỤ FORMAT ĐÚNG (khi có nhiều sản phẩm >20): "
+            + "Câu hỏi: Bạn có những sản phẩm son nào? "
+            + "Trả lời đúng format:\n"
+            + "Chào bạn! Nova Beauty có rất nhiều sản phẩm son. Bạn có thể lọc theo:\n"
+            + "- Thương hiệu: Dior, MAC, Chanel, YSL\n"
+            + "- Khoảng giá: Dưới 500.000 VNĐ, 500.000 - 1.000.000 VNĐ, Trên 1.000.000 VNĐ\n"
+            + "- Loại da: Da khô, Da dầu, Da hỗn hợp, Mọi loại da\n"
+            + "- Kết cấu: Matte, Glossy, Creamy\n"
             + "\n"
-            + "Bạn muốn tìm hiểu thêm về sản phẩm nào ạ? "
+            + "Bạn muốn lọc theo tiêu chí nào ạ? "
             + "\n\nVÍ DỤ FORMAT SAI (KHÔNG ĐƯỢC LÀM): "
             + "**Son Dior** Giá: 453.600 VNĐ *Tồn kho: 46 sản phẩm* "
+            + "\n\nLƯU Ý QUAN TRỌNG VỀ SẢN PHẨM: "
+            + "- TUYỆT ĐỐI CHỈ gợi ý sản phẩm CÓ TRONG CONTEXT "
+            + "- KHÔNG được tự nghĩ ra hoặc gợi ý sản phẩm ngoài DB "
+            + "- Nếu context không có sản phẩm phù hợp, phải nói rõ không có "
             + "\n\nLƯU Ý CUỐI CÙNG: "
             + "Nếu bạn vi phạm bất kỳ quy tắc formatting nào ở trên, response sẽ không được chấp nhận. "
             + "Hãy luôn kiểm tra lại response của bạn trước khi trả lời để đảm bảo không có ký tự markdown nào.";
@@ -410,35 +451,16 @@ public class ChatbotService {
 
     /**
      * Lấy context về sản phẩm để đưa vào prompt
-     * Nếu user message có keyword cụ thể (ví dụ: "son", "kem"), sẽ filter sản phẩm theo keyword
-     * Nếu câu hỏi chung (ví dụ: "có son gì"), sẽ trả về danh mục con để chatbot hỏi lại
+     * Chỉ trả về danh sách sản phẩm (tên sản phẩm), không ưu tiên danh mục con
      */
     private String getProductsContextForMessage(String userMessage) {
         // Extract keywords từ user message
         String[] productKeywords = extractProductKeywords(userMessage);
         
-        // Nếu có keyword cụ thể
+        // Nếu có keyword cụ thể, trả về sản phẩm
         if (productKeywords.length > 0) {
-            // Kiểm tra xem câu hỏi có cụ thể không (có brand/tên sản phẩm)
-            boolean isSpecificQuestion = isSpecificProductQuestion(userMessage);
-            
-            if (isSpecificQuestion) {
-                // Câu hỏi cụ thể: trả về sản phẩm
-                return getFilteredProductsContext(productKeywords);
-            } else {
-                // Câu hỏi chung: thử lấy danh mục con
-                String subCategoriesContext = getSubCategoriesContext(productKeywords[0]);
-                
-                // Nếu có danh mục con, trả về để chatbot hỏi lại
-                if (subCategoriesContext != null && !subCategoriesContext.isEmpty()) {
-                    log.debug("Found subcategories for keyword: {}", productKeywords[0]);
-                    return subCategoriesContext;
-                }
-                
-                // Nếu KHÔNG có danh mục con, trả về sản phẩm trực tiếp
-                log.debug("No subcategories found for keyword: {}, returning products directly", productKeywords[0]);
-                return getFilteredProductsContext(productKeywords);
-            }
+            log.debug("Returning products for keywords: {}", String.join(", ", productKeywords));
+            return getFilteredProductsContext(productKeywords);
         }
         
         // Nếu không có keyword cụ thể, KHÔNG trả về toàn bộ danh sách sản phẩm
@@ -652,31 +674,36 @@ public class ChatbotService {
             StringBuilder context = new StringBuilder();
             context.append("DANH SÁCH SẢN PHẨM LIÊN QUAN:\n\n");
             
+            // Thu thập thông tin để đề xuất lọc nếu có nhiều sản phẩm
+            java.util.Set<String> brands = new java.util.HashSet<>();
+            java.util.Set<String> skinTypes = new java.util.HashSet<>();
+            java.util.Set<String> textures = new java.util.HashSet<>();
+            java.util.List<Double> prices = new java.util.ArrayList<>();
+            
             for (int i = 0; i < maxProducts; i++) {
                 com.nova_beauty.backend.dto.response.ProductResponse product = allProducts.get(i);
-                context.append(String.format("%d. Tên: %s\n", i + 1, product.getName()));
                 
-                if (product.getCategoryName() != null && !product.getCategoryName().isEmpty()) {
-                    context.append(String.format("   Danh mục: %s\n", product.getCategoryName()));
-                }
+                // Format: ID, Tên, và các thông tin để lọc
+                context.append(String.format("%d. ID: %s | Tên: %s", i + 1, product.getId(), product.getName()));
                 
                 if (product.getBrand() != null && !product.getBrand().isEmpty()) {
-                    context.append(String.format("   Thương hiệu: %s\n", product.getBrand()));
-                }
-                
-                if (product.getDescription() != null && !product.getDescription().isEmpty()) {
-                    String shortDesc = product.getDescription().length() > 80 
-                        ? product.getDescription().substring(0, 80) + "..." 
-                        : product.getDescription();
-                    context.append(String.format("   Mô tả: %s\n", shortDesc));
+                    context.append(String.format(" | Thương hiệu: %s", product.getBrand()));
+                    brands.add(product.getBrand());
                 }
                 
                 if (product.getPrice() != null) {
-                    context.append(String.format("   Giá: %,.0f VNĐ\n", product.getPrice()));
+                    context.append(String.format(" | Giá: %,.0f VNĐ", product.getPrice()));
+                    prices.add(product.getPrice());
                 }
                 
-                if (product.getStockQuantity() != null) {
-                    context.append(String.format("   Tồn kho: %d\n", product.getStockQuantity()));
+                if (product.getSkinType() != null && !product.getSkinType().isEmpty()) {
+                    context.append(String.format(" | Loại da: %s", product.getSkinType()));
+                    skinTypes.add(product.getSkinType());
+                }
+                
+                if (product.getTexture() != null && !product.getTexture().isEmpty()) {
+                    context.append(String.format(" | Kết cấu: %s", product.getTexture()));
+                    textures.add(product.getTexture());
                 }
                 
                 context.append("\n");
@@ -684,6 +711,25 @@ public class ChatbotService {
             
             if (allProducts.size() > maxProducts) {
                 context.append(String.format("... và còn %d sản phẩm khác.\n", allProducts.size() - maxProducts));
+            }
+            
+            // Thêm thông tin để đề xuất lọc nếu có nhiều sản phẩm
+            if (allProducts.size() > 20) {
+                context.append("\nTHÔNG TIN ĐỂ ĐỀ XUẤT LỌC:\n");
+                if (!brands.isEmpty()) {
+                    context.append("Thương hiệu có sẵn: ").append(String.join(", ", brands)).append("\n");
+                }
+                if (!skinTypes.isEmpty()) {
+                    context.append("Loại da có sẵn: ").append(String.join(", ", skinTypes)).append("\n");
+                }
+                if (!textures.isEmpty()) {
+                    context.append("Kết cấu có sẵn: ").append(String.join(", ", textures)).append("\n");
+                }
+                if (!prices.isEmpty()) {
+                    double minPrice = prices.stream().mapToDouble(Double::doubleValue).min().orElse(0);
+                    double maxPrice = prices.stream().mapToDouble(Double::doubleValue).max().orElse(0);
+                    context.append(String.format("Khoảng giá: %,.0f VNĐ - %,.0f VNĐ\n", minPrice, maxPrice));
+                }
             }
             
             return context.toString();
@@ -725,38 +771,28 @@ public class ChatbotService {
 
             for (int i = 0; i < maxProducts; i++) {
                 ProductResponse product = products.get(i);
-                context.append(String.format("%d. Tên: %s\n", i + 1, product.getName()));
+                
+                // Format: ID, Tên, và các thông tin để lọc
+                context.append(String.format("%d. ID: %s | Tên: %s", i + 1, product.getId(), product.getName()));
                 
                 if (product.getCategoryName() != null && !product.getCategoryName().isEmpty()) {
-                    context.append(String.format("   Danh mục: %s\n", product.getCategoryName()));
+                    context.append(String.format(" | Danh mục: %s", product.getCategoryName()));
                 }
                 
                 if (product.getBrand() != null && !product.getBrand().isEmpty()) {
-                    context.append(String.format("   Thương hiệu: %s\n", product.getBrand()));
-                }
-                
-                if (product.getDescription() != null && !product.getDescription().isEmpty()) {
-                    // Giảm độ dài mô tả để giảm token count
-                    String shortDesc = product.getDescription().length() > 80 
-                        ? product.getDescription().substring(0, 80) + "..." 
-                        : product.getDescription();
-                    context.append(String.format("   Mô tả: %s\n", shortDesc));
+                    context.append(String.format(" | Thương hiệu: %s", product.getBrand()));
                 }
                 
                 if (product.getPrice() != null) {
-                    context.append(String.format("   Giá: %,.0f VNĐ\n", product.getPrice()));
+                    context.append(String.format(" | Giá: %,.0f VNĐ", product.getPrice()));
                 }
                 
                 if (product.getSkinType() != null && !product.getSkinType().isEmpty()) {
-                    context.append(String.format("   Loại da phù hợp: %s\n", product.getSkinType()));
+                    context.append(String.format(" | Loại da: %s", product.getSkinType()));
                 }
                 
                 if (product.getTexture() != null && !product.getTexture().isEmpty()) {
-                    context.append(String.format("   Kết cấu: %s\n", product.getTexture()));
-                }
-                
-                if (product.getStockQuantity() != null) {
-                    context.append(String.format("   Tồn kho: %d\n", product.getStockQuantity()));
+                    context.append(String.format(" | Kết cấu: %s", product.getTexture()));
                 }
                 
                 context.append("\n");
