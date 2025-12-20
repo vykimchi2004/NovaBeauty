@@ -6,21 +6,12 @@
   gap: 24px;
 }
 
-// Theme colors
-$primary: #f25f7c;
-$primary-600: #e04d6a;
-$primary-700: #ce3d58;
-$primary-50: #fef0f3;
-$border-soft: #f8c4d0;
-$text-dark: #212529;
-$white: #fff;
-
 .sidebar {
   width: 320px;
 }
 
 .sidebarBox {
-  border: 1px solid $border-soft;
+  border: 1px solid #ffd1e4;
   border-radius: 16px;
   background: #fff;
   box-shadow: 0 8px 24px rgba(242, 95, 124, 0.08);
@@ -46,7 +37,7 @@ $white: #fff;
   margin: 0;
   font-size: 20px;
   font-weight: 600;
-  color: $text-dark;
+  color: #212529;
 }
 
 .sidebarEmail {
@@ -68,19 +59,19 @@ $white: #fff;
   align-items: center;
   gap: 12px;
   border-radius: 12px;
-  color: $text-dark;
+  color: #212529;
   transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
 
   &:hover {
-    background: $primary-50;
-    color: $primary-700;
+    background: #fff0f6;
+    color: #e5677d;
     transform: translateX(2px);
   }
 }
 
 .sidebarItemActive {
-  background: $primary-50;
-  color: $primary-700;
+  background: #fff0f6;
+  color: #e5677d;
   font-weight: 600;
 }
 
@@ -101,7 +92,7 @@ $white: #fff;
 }
 
 .card {
-  border: 1px solid $border-soft;
+  border: 1px solid #ffd1e4;
   border-radius: 16px;
   background: #fff;
   padding: 24px;
@@ -116,7 +107,7 @@ $white: #fff;
   h2 {
     margin: 0;
     padding:  0 0 20px 0;
-    color: $primary-700;
+    color: #e5677d;
   }
 }
 
@@ -134,23 +125,23 @@ $white: #fff;
 }
 
 .btnPrimary {
-  background: $primary;
-  color: $white;
+  background: #e5677d;
+  color: #fff;
   box-shadow: 0 2px 6px rgba(242, 95, 124, 0.3);
 
   &:hover {
-    background: $primary-600;
+    background: #e5677d;
   }
 
   &:active {
-    background: $primary-700;
+    background: #e5677d;
     transform: translateY(1px);
   }
 }
 
 .btnSecondary {
   background: #f1f3f5;
-  color: $text-dark;
+  color: #212529;
   border: 1px solid #e9ecef;
 
   &:hover {
@@ -159,12 +150,12 @@ $white: #fff;
 }
 
 .btnDark {
-  background: $primary-700;
-  color: $white;
+  background: #e5677d;
+  color: #fff;
   box-shadow: 0 2px 6px rgba(206, 61, 88, 0.25);
 
   &:hover {
-    background: $primary-600;
+    background: #e5677d;
   }
 }
 
@@ -184,7 +175,7 @@ $white: #fff;
 
   &:focus {
     outline: none;
-    border-color: $primary;
+    border-color: #e5677d;
     box-shadow: 0 0 0 3px rgba(242, 95, 124, 0.15);
   }
 }
@@ -224,7 +215,7 @@ $white: #fff;
     height: 32px;
 
     &:hover {
-      color: $primary-700;
+      color: #e5677d;
     }
 
     &:active {
@@ -271,7 +262,7 @@ $white: #fff;
   h2 {
     margin: 0;
     font-size: 24px;
-    color: $primary-700;
+    color: #e5677d;
   }
 
   p {
@@ -299,15 +290,15 @@ $white: #fff;
   transition: all 0.2s ease;
 
   &:hover {
-    background: $primary-50;
-    color: $primary-700;
+    background: #fff0f6;
+    color: #e5677d;
   }
 }
 
 .ordersTabActive {
-  background: $primary-600;
-  color: $white;
-  border-color: $primary-600;
+  background: #e5677d;
+  color: #fff;
+  border-color: #e5677d;
   box-shadow: 0 4px 10px rgba(242, 95, 124, 0.2);
 }
 
@@ -361,7 +352,7 @@ $white: #fff;
 
     &:focus {
       outline: none;
-      border-color: $primary;
+      border-color: #e5677d;
       box-shadow: 0 0 0 3px rgba(242, 95, 124, 0.15);
     }
   }
@@ -394,7 +385,7 @@ $white: #fff;
 .orderCode {
   margin: 0 0 4px;
   font-weight: 600;
-  color: $text-dark;
+  color: #212529;
 }
 
 .orderDate {
@@ -417,7 +408,7 @@ $white: #fff;
 
 .ready {
   background: #fef0f3;
-  color: $primary-700;
+  color: #e5677d;
 }
 
 .shipping {
@@ -474,7 +465,7 @@ $white: #fff;
 .orderItemName {
   margin: 0;
   font-weight: 500;
-  color: $text-dark;
+  color: #212529;
 }
 
 .orderItemQuantity {
@@ -495,7 +486,7 @@ $white: #fff;
 
   strong {
     font-size: 18px;
-    color: $text-dark;
+    color: #212529;
   }
 }
 
@@ -510,7 +501,7 @@ $white: #fff;
 .orderActionBtn {
   border: none;
   background: rgba(224, 77, 106, 0.12);
-  color: $primary-700;
+  color: #e5677d;
   padding: 8px 18px;
   border-radius: 999px;
   font-weight: 600;
@@ -534,9 +525,9 @@ $white: #fff;
 }
 
 .orderDetailBtn {
-  border: 1px solid $primary-600;
+  border: 1px solid #e5677d;
   background: transparent;
-  color: $primary-600;
+  color: #e5677d;
   padding: 8px 18px;
   border-radius: 999px;
   font-weight: 600;
@@ -547,7 +538,7 @@ $white: #fff;
   transition: all 0.2s ease;
 
   &:hover {
-    background: $primary-600;
+    background: #e5677d;
     color: #fff;
   }
 
@@ -589,7 +580,7 @@ $white: #fff;
 }
 
 .orderModalContent {
-  background: $white;
+  background: #fff;
   border-radius: 16px;
   max-width: 900px;
   width: 100%;
@@ -623,7 +614,7 @@ $white: #fff;
     margin: 0;
     font-size: 20px;
     font-weight: 600;
-    color: $text-dark;
+    color: #212529;
   }
 }
 
@@ -642,7 +633,7 @@ $white: #fff;
 
   &:hover {
     background: #f1f3f5;
-    color: $text-dark;
+    color: #212529;
   }
 }
 
@@ -672,7 +663,7 @@ $white: #fff;
 }
 
 .refundModalContent {
-  background: $white;
+  background: #fff;
   border-radius: 16px;
   max-width: 1000px;
   width: 100%;
@@ -694,7 +685,7 @@ $white: #fff;
     margin: 0;
     font-size: 20px;
     font-weight: 600;
-    color: $text-dark;
+    color: #212529;
   }
 }
 
@@ -715,7 +706,7 @@ $white: #fff;
 
   &:hover {
     background: #f1f3f5;
-    color: $text-dark;
+    color: #212529;
   }
 }
 
@@ -730,7 +721,7 @@ $white: #fff;
   p {
     margin: 0 0 12px 0;
     font-size: 15px;
-    color: $text-dark;
+    color: #212529;
     line-height: 1.6;
 
     &:last-child {
@@ -1146,7 +1137,7 @@ $white: #fff;
   h2 {
     margin: 0;
     padding: 0;
-    color: $primary-700;
+    color: #e5677d;
   }
 }
 
@@ -1168,13 +1159,13 @@ $white: #fff;
 
   thead {
     background: #f8f9fa;
-    border-bottom: 2px solid $border-soft;
+    border-bottom: 2px solid #ffd1e4;
 
     th {
       padding: 16px;
       text-align: left;
       font-weight: 600;
-      color: $text-dark;
+      color: #212529;
       font-size: 14px;
       white-space: nowrap;
     }
@@ -1186,7 +1177,7 @@ $white: #fff;
       transition: background-color 0.15s ease;
 
       &:hover {
-        background: $primary-50;
+        background: #fff0f6;
       }
 
       &:last-child {
@@ -1196,7 +1187,7 @@ $white: #fff;
 
     td {
       padding: 16px;
-      color: $text-dark;
+      color: #212529;
       font-size: 14px;
       vertical-align: middle;
     }
@@ -1206,7 +1197,7 @@ $white: #fff;
 .complaintId,
 .complaintOrder {
   font-weight: 600;
-  color: $text-dark;
+  color: #212529;
 }
 
 .complaintDate {
@@ -1222,7 +1213,7 @@ $white: #fff;
 }
 
 .statusProcessing {
-  color: #1c7ed6;
+  color: #d61c8f;
   background: rgba(28, 126, 214, 0.1);
 }
 
@@ -1237,8 +1228,8 @@ $white: #fff;
 }
 
 .btnViewDetails {
-  background: #1c7ed6;
-  color: $white;
+  background: #005af6;
+  color: #fff;
   border: none;
   padding: 8px 16px;
   border-radius: 6px;
@@ -1266,6 +1257,132 @@ $white: #fff;
   font-size: 14px;
 }
 
+// Modal chi tiết khiếu nại
+.complaintModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+  backdrop-filter: blur(2px);
+}
+
+.complaintModalContent {
+  background: #fff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+}
+
+.complaintModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid #f0f0f0;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 10;
+  border-radius: 16px 16px 0 0;
+}
+
+.complaintModalTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.complaintModalCloseBtn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #666;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #e0e0e0;
+    color: #333;
+  }
+}
+
+.complaintModalBody {
+  padding: 24px;
+  flex: 1;
+}
+
+.complaintDetailSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.complaintDetailRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.complaintDetailLabel {
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.complaintDetailValue {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.complaintContentRow {
+  .complaintContent {
+    background: #f9fafb;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    color: #374151;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+}
+
+.complaintNoteRow {
+  .complaintNote {
+    background: #f0f9ff;
+    padding: 16px;
+    border-radius: 8px;
+    border-left: 4px solid #1c7ed6;
+    color: #374151;
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  .complaintAdminNote {
+    background: #fef3c7;
+    border-left-color: #f59e0b;
+  }
+}
+
 @media (max-width: 1024px) {
   .complaintsHeader {
     flex-direction: column;
@@ -1291,7 +1408,7 @@ $white: #fff;
 }
 
 .logoutModal {
-  background: $white;
+  background: #fff;
   border-radius: 16px;
   padding: 32px;
   width: 90%;
@@ -1304,7 +1421,7 @@ $white: #fff;
   margin: 0 0 16px 0;
   font-size: 20px;
   font-weight: 600;
-  color: $text-dark;
+  color: #212529;
   text-align: center;
 }
 
@@ -1333,7 +1450,7 @@ $white: #fff;
 
 .btnLogout {
   background: #e03131;
-  color: $white;
+  color: #fff;
   border: none;
   box-shadow: 0 2px 6px rgba(224, 49, 49, 0.3);
 
@@ -1371,38 +1488,50 @@ $white: #fff;
 .vouchersCard {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
 .vouchersHeader {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+  margin-bottom: 16px;
 
   h2 {
     margin: 0;
     padding: 0;
-    color: $primary-700;
+    color: #e5677d;
+    font-size: 20px;
   }
 
   p {
     margin: 0;
     color: #6c757d;
-    font-size: 14px;
+    font-size: 13px;
   }
+}
+
+.vouchersTabsAndFilters {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid #f1f3f5;
+  padding-bottom: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
 .vouchersTabs {
   display: flex;
   gap: 8px;
-  border-bottom: 1px solid #f1f3f5;
-  padding-bottom: 12px;
+  flex: 0 0 auto;
 }
 
 .vouchersTab {
   padding: 8px 16px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: 8px;
   background: #f8f9fa;
   color: #495057;
   cursor: pointer;
@@ -1411,46 +1540,62 @@ $white: #fff;
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  border: none;
+  font-weight: 500;
 
   svg {
     font-size: 14px;
   }
 
   &:hover {
-    background: $primary-50;
-    color: $primary-700;
+    background: #fff0f6;
+    color: #e5677d;
   }
 }
 
 .vouchersTabActive {
-  background: $primary-600;
-  color: $white;
-  border-color: $primary-600;
-  box-shadow: 0 4px 10px rgba(242, 95, 124, 0.2);
+  background: #e5677d;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(229, 103, 125, 0.25);
 }
 
 .vouchersFilters {
-  display: grid;
-  grid-template-columns: 2fr 1fr auto 1fr;
-  gap: 12px;
+  display: flex;
+  gap: 10px;
   align-items: center;
+  flex: 1;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
 .vouchersSearchField,
 .vouchersDateField {
   display: flex;
   align-items: center;
-  padding: 0 0 5px 10px;
+  padding: 8px 12px;
   border: 1px solid #e9ecef;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #fafbfc;
+  transition: all 0.2s ease;
+  min-width: 200px;
+  flex: 0 1 auto;
+
+  &:focus-within {
+    border-color: #e5677d;
+    background: #fff;
+  }
 
   input {
     border: none;
     flex: 1;
-    padding: 5px 0 5px 10px;
+    padding: 0 0 0 8px;
     background: transparent;
+    font-size: 14px;
+    color: #212529;
+    min-width: 0;
+
+    &::placeholder {
+      color: #adb5bd;
+    }
 
     &:focus {
       outline: none;
@@ -1458,6 +1603,12 @@ $white: #fff;
   }
   svg {
     color: #adb5bd;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  &:focus-within svg {
+    color: #e5677d;
   }
 }
 
@@ -1465,47 +1616,54 @@ $white: #fff;
   display: flex;
   align-items: center;
   gap: 8px;
-  justify-self: end;
+  flex: 0 0 auto;
 
   label {
     font-size: 14px;
     color: #495057;
+    white-space: nowrap;
+    display: none;
   }
 
   select {
     padding: 8px 12px;
-    border-radius: 10px;
+    border-radius: 8px;
     border: 1px solid #dee2e6;
     background: #fff;
+    font-size: 14px;
+    color: #212529;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 120px;
 
     &:focus {
       outline: none;
-      border-color: $primary;
-      box-shadow: 0 0 0 3px rgba(242, 95, 124, 0.15);
+      border-color: #e5677d;
+      box-shadow: 0 0 0 3px rgba(229, 103, 125, 0.1);
     }
   }
 }
 
 .vouchersList {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
 }
 
 .voucherCard {
-  border: 1px solid $border-soft;
-  border-radius: 16px;
-  padding: 20px;
+  border: 1px solid #ffd1e4;
+  border-radius: 10px;
+  padding: 14px;
   background: linear-gradient(135deg, #fff 0%, #fff5f8 100%);
-  box-shadow: 0 4px 16px rgba(242, 95, 124, 0.1);
-  transition: all 0.3s ease;
+  box-shadow: 0 1px 4px rgba(229, 103, 125, 0.1);
+  transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
 
   &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(242, 95, 124, 0.2);
-    border-color: $primary-600;
+    transform: translateY(-2px);
+    box-shadow: 0 3px 10px rgba(229, 103, 125, 0.2);
+    border-color: #e5677d;
   }
 
   &::before {
@@ -1513,29 +1671,29 @@ $white: #fff;
     position: absolute;
     top: 0;
     right: 0;
-    width: 80px;
-    height: 80px;
-    background: linear-gradient(135deg, rgba(242, 95, 124, 0.1) 0%, rgba(224, 77, 106, 0.05) 100%);
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, rgba(229, 103, 125, 0.06) 0%, rgba(229, 103, 125, 0.02) 100%);
     border-radius: 50%;
     transform: translate(30%, -30%);
   }
 }
 
 .voucherCardType {
-  border-left: 4px solid #1976d2;
-  background: linear-gradient(135deg, #fff 0%, #e3f2fd 100%);
+  border-left: 3px solid #e5677d;
+  background: linear-gradient(135deg, #fff 0%, #fff0f6 100%);
 
   &::before {
-    background: linear-gradient(135deg, rgba(25, 118, 210, 0.1) 0%, rgba(25, 118, 210, 0.05) 100%);
+    background: linear-gradient(135deg, rgba(229, 103, 125, 0.08) 0%, rgba(229, 103, 125, 0.03) 100%);
   }
 }
 
 .promotionCardType {
-  border-left: 4px solid #7b1fa2;
+  border-left: 3px solid #7b1fa2;
   background: linear-gradient(135deg, #fff 0%, #f3e5f5 100%);
 
   &::before {
-    background: linear-gradient(135deg, rgba(123, 31, 162, 0.1) 0%, rgba(123, 31, 162, 0.05) 100%);
+    background: linear-gradient(135deg, rgba(123, 31, 162, 0.08) 0%, rgba(123, 31, 162, 0.03) 100%);
   }
 }
 
@@ -1551,9 +1709,9 @@ $white: #fff;
 }
 
 .voucherLabel {
-  background: #e3f2fd;
-  color: #1976d2;
-  border: 1px solid #90caf9;
+  background: linear-gradient(135deg, #fff0f6 0%, #ffeef4 100%);
+  color: #e5677d;
+  border: 1px solid #ffd1e4;
 }
 
 .promotionLabel {
@@ -1563,7 +1721,7 @@ $white: #fff;
 }
 
 .voucherIconType {
-  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  background: linear-gradient(135deg, #e5677d 0%, #d85a6f 100%);
 }
 
 .promotionIconType {
@@ -1574,7 +1732,7 @@ $white: #fff;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
+  gap: 12px;
   position: relative;
   z-index: 1;
 }
@@ -1583,30 +1741,31 @@ $white: #fff;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .voucherTitle {
   margin: 0;
-  font-size: 16px;
-  font-weight: 700;
-  color: $text-dark;
-  line-height: 1.4;
+  font-size: 15px;
+  font-weight: 600;
+  color: #212529;
+  line-height: 1.3;
 }
 
 .voucherExpiry {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   color: #6c757d;
 }
 
 .voucherCode {
   margin: 0 0 8px 0;
   font-size: 14px;
-  color: $primary-700;
+  color: #e5677d;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
+  font-family: 'Courier New', monospace;
 }
 
 .voucherCodeRow {
@@ -1617,21 +1776,23 @@ $white: #fff;
 }
 
 .copyBtn {
-  padding: 4px 8px;
-  background: $primary-50;
-  border: 1px solid $primary;
+  padding: 6px 10px;
+  background: #fff0f6;
+  border: 1px solid #e5677d;
   border-radius: 6px;
-  color: $primary-700;
+  color: #e5677d;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   font-size: 12px;
+  font-weight: 600;
 
   &:hover {
-    background: $primary;
-    color: $white;
+    background: #e5677d;
+    color: #fff;
   }
 
   &:active {
@@ -1649,7 +1810,7 @@ $white: #fff;
 .saveBtn {
   padding: 8px;
   background: transparent;
-  border: 1px solid $border-soft;
+  border: 1px solid #ffd1e4;
   border-radius: 8px;
   color: #6c757d;
   cursor: pointer;
@@ -1660,15 +1821,15 @@ $white: #fff;
   font-size: 16px;
 
   &:hover {
-    background: $primary-50;
-    border-color: $primary;
-    color: $primary-700;
+    background: #fff0f6;
+    border-color: #e5677d;
+    color: #e5677d;
   }
 
   &.saved {
-    background: $primary-50;
-    border-color: $primary;
-    color: $primary-700;
+    background: #fff0f6;
+    border-color: #e5677d;
+    color: #e5677d;
   }
 
   &:active {
@@ -1677,27 +1838,54 @@ $white: #fff;
 }
 
 .voucherIcon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, $primary-600 0%, $primary-700 100%);
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #e5677d 0%, #d85a6f 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: $white;
-  font-size: 20px;
+  color: #fff;
+  font-size: 16px;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(224, 77, 106, 0.3);
+  box-shadow: 0 2px 6px rgba(229, 103, 125, 0.25);
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 3px 10px rgba(229, 103, 125, 0.35);
+  }
 }
 
 @media (max-width: 1024px) {
+  .vouchersTabsAndFilters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .vouchersTabs {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
   .vouchersFilters {
-    grid-template-columns: 1fr;
+    width: 100%;
+    flex-direction: column;
     align-items: stretch;
   }
 
+  .vouchersSearchField {
+    width: 100%;
+    min-width: 0;
+  }
+
   .vouchersSortField {
-    justify-self: stretch;
+    width: 100%;
+
+    select {
+      width: 100%;
+    }
   }
 
   .vouchersList {
@@ -1708,30 +1896,33 @@ $white: #fff;
 // Promotions Table Styles
 .promotionsTableWrapper {
   overflow-x: auto;
-  margin-top: 20px;
+  margin-top: 0;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .promotionsTable {
   width: 100%;
-  border-collapse: collapse;
-  background: $white;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fff;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   font-size: 14px;
 
   thead {
-    background: linear-gradient(135deg, $primary 0%, $primary-600 100%);
-    color: $white;
+    background: linear-gradient(135deg, #e5677d 0%, #d85a6f 100%);
+    color: #fff;
 
     th {
-      padding: 16px 12px;
+      padding: 14px 16px;
       text-align: left;
       font-weight: 600;
       font-size: 13px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       white-space: nowrap;
+      position: relative;
 
       &:first-child {
         padding-left: 20px;
@@ -1741,16 +1932,28 @@ $white: #fff;
         padding-right: 20px;
         text-align: center;
       }
+
+      &:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        top: 20%;
+        height: 60%;
+        width: 1px;
+        background: rgba(255, 255, 255, 0.3);
+      }
     }
   }
 
   tbody {
     tr {
-      border-bottom: 1px solid #f0f0f0;
-      transition: background-color 0.2s ease;
+      border-bottom: 1px solid #f5f5f5;
+      transition: all 0.2s ease;
+      background: #fff;
 
       &:hover {
-        background-color: #fff5f8;
+        background: linear-gradient(135deg, #fff5f8 0%, #fff0f6 100%);
+        box-shadow: 0 2px 8px rgba(229, 103, 125, 0.08);
       }
 
       &:last-child {
@@ -1758,8 +1961,10 @@ $white: #fff;
       }
 
       td {
-        padding: 16px 12px;
+        padding: 16px;
         vertical-align: middle;
+        font-size: 14px;
+        color: #212529;
 
         &:first-child {
           padding-left: 20px;
@@ -1774,13 +1979,34 @@ $white: #fff;
   }
 }
 
+.promotionName {
+  font-size: 15px;
+  font-weight: 700;
+  color: #212529;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.promotionsTable tbody tr td:first-child .promotionLabel {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+  color: #7b1fa2;
+  border: 1px solid #ce93d8;
+  margin-top: 4px;
+  font-style: normal;
+}
+
 .codeCell {
   display: flex;
   align-items: center;
   gap: 8px;
 
   strong {
-    color: $primary-700;
+    color: #e5677d;
     font-weight: 600;
   }
 }
@@ -1788,7 +2014,7 @@ $white: #fff;
 .copyBtnInline {
   background: none;
   border: none;
-  color: $primary-600;
+  color: #e5677d;
   cursor: pointer;
   padding: 4px 6px;
   border-radius: 4px;
@@ -1798,8 +2024,8 @@ $white: #fff;
   justify-content: center;
 
   &:hover {
-    background: $primary-50;
-    color: $primary-700;
+    background: #fff0f6;
+    color: #e5677d;
   }
 
   svg {
@@ -1826,7 +2052,7 @@ $white: #fff;
 }
 
 .discountCell {
-  color: $primary-700;
+  color: #e5677d;
   font-weight: 600;
   font-size: 15px;
 }
@@ -1881,12 +2107,12 @@ $white: #fff;
   justify-content: center;
 
   &:hover {
-    background: $primary-50;
-    color: $primary-600;
+    background: #fff0f6;
+    color: #e5677d;
   }
 
   &.saved {
-    color: $primary-600;
+    color: #e5677d;
   }
 
   svg {
@@ -1996,7 +2222,7 @@ $white: #fff;
     margin: 0;
     font-size: 20px;
     font-weight: 600;
-    color: $text-dark;
+    color: #212529;
   }
 }
 
@@ -2017,7 +2243,7 @@ $white: #fff;
 
   &:hover {
     background: #f1f3f5;
-    color: $text-dark;
+    color: #212529;
   }
 }
 
@@ -2052,18 +2278,18 @@ $white: #fff;
   transition: all 0.2s ease;
 
   &:hover {
-    border-color: $primary;
+    border-color: #e5677d;
     box-shadow: 0 2px 8px rgba(242, 95, 124, 0.1);
   }
 
   &.active {
-    border-color: $primary-600;
-    background: $primary-50;
+    border-color: #e5677d;
+    background: #fff0f6;
     box-shadow: 0 4px 12px rgba(242, 95, 124, 0.15);
   }
 
   &.default {
-    border-color: $primary-600;
+    border-color: #e5677d;
   }
 }
 
@@ -2086,7 +2312,7 @@ $white: #fff;
 
 .addressRecipient {
   font-weight: 600;
-  color: $text-dark;
+  color: #212529;
 }
 
 .addressDivider {
@@ -2104,14 +2330,14 @@ $white: #fff;
   border-radius: 12px;
   font-size: 12px;
   font-weight: 600;
-  background: $primary-50;
-  color: $primary-700;
-  border: 1px solid $border-soft;
+  background: #fff0f6;
+  color: #e5677d;
+  border: 1px solid #ffd1e4;
 
   &.selected {
-    background: $primary-600;
-    color: $white;
-    border-color: $primary-600;
+    background: #e5677d;
+    color: #fff;
+    border-color: #e5677d;
   }
 }
 
@@ -2157,12 +2383,12 @@ $white: #fff;
   }
 
   &.primary {
-    background: $primary;
-    color: $white;
+    background: #e5677d;
+    color: #fff;
     box-shadow: 0 2px 6px rgba(242, 95, 124, 0.3);
 
     &:hover {
-      background: $primary-600;
+      background: #e5677d;
       box-shadow: 0 4px 12px rgba(242, 95, 124, 0.4);
     }
 
@@ -2173,7 +2399,7 @@ $white: #fff;
 
   &.secondary {
     background: #f1f3f5;
-    color: $text-dark;
+    color: #212529;
     border: 1px solid #e9ecef;
 
     &:hover {
@@ -2188,7 +2414,7 @@ $white: #fff;
 
     &:hover {
       background: #f8f9fa;
-      color: $text-dark;
+      color: #212529;
     }
   }
 }
@@ -2218,7 +2444,7 @@ $white: #fff;
     margin: 0;
     font-size: 18px;
     font-weight: 600;
-    color: $text-dark;
+    color: #212529;
   }
 }
 
@@ -2438,13 +2664,13 @@ $white: #fff;
   &:hover:not(.active) {
     background: #f8f9fa;
     border-color: #dee2e6;
-    color: $primary-700;
+    color: #e5677d;
   }
 
   &.active {
-    background: $primary-600;
+    background: #e5677d;
     color: #fff;
-    border-color: $primary-600;
+    border-color: #e5677d;
     font-weight: 600;
     box-shadow: 0 2px 4px rgba(224, 77, 106, 0.2);
   }
@@ -2464,7 +2690,7 @@ $white: #fff;
   padding: 0 12px;
   border: none;
   border-radius: 6px;
-  background: $primary;
+  background: #e5677d;
   color: #fff;
   font-size: 16px;
   cursor: pointer;
@@ -2474,7 +2700,7 @@ $white: #fff;
   justify-content: center;
 
   &:hover {
-    background: $primary-600;
+    background: #e5677d;
     box-shadow: 0 2px 8px rgba(242, 95, 124, 0.3);
   }
 

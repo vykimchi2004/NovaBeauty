@@ -923,6 +923,25 @@
   border: 1px solid #e0e7ff;
 }
 
+.rejectionRow {
+  background: #ffe1e5;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border-left: 4px solid #c62828;
+  margin-bottom: 4px;
+  
+  span {
+    font-weight: 600;
+    color: #c62828;
+  }
+}
+
+.rejectionReason {
+  color: #c62828 !important;
+  font-style: italic;
+  font-weight: 500;
+}
+
 /* --- Responsive --- */
 @media (max-width: 768px) {
   .wrapper {

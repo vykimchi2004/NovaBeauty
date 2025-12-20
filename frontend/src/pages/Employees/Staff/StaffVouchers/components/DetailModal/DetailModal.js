@@ -83,6 +83,12 @@ function DetailModal({ item, onClose, formatScope, resolveItemType }) {
           </button>
         </div>
         <div className={cx('detailBody')}>
+          {(item.status === 'REJECTED' || item.rejectionReason) && item.rejectionReason && (
+            <div className={cx('detailRow', 'rejectionRow')}>
+              <span>Lý do từ chối:</span>
+              <p className={cx('rejectionReason')}>{item.rejectionReason}</p>
+            </div>
+          )}
           {(item.imageUrl || item.previewUrl) && (
             <div className={cx('detailRow')}>
               <span>Hình ảnh:</span>
