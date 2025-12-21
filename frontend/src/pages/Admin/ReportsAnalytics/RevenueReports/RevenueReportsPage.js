@@ -90,8 +90,40 @@ function RevenueReportsPage({ dateRange, timeMode, loading, setLoading }) {
             );
         }
 
+        // Nếu là week mode, cần group dữ liệu theo tuần để tránh lặp
+        let processedData = data;
+        if (timeMode === TIME_MODES.WEEK) {
+            // Group theo tuần: key là string "YYYY-MM-DD" của ngày đầu tuần (thứ 2)
+            const weekMap = new Map();
+            data.forEach(item => {
+                if (item.date) {
+                    const date = new Date(item.date);
+                    // Tính ngày đầu tuần (thứ 2)
+                    const dayOfWeek = date.getDay(); // 0 = Chủ nhật, 1 = Thứ 2, ..., 6 = Thứ 7
+                    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                    const weekStart = new Date(date);
+                    weekStart.setDate(date.getDate() - daysToMonday);
+                    weekStart.setHours(0, 0, 0, 0);
+                    
+                    const weekKey = weekStart.toISOString().split('T')[0];
+                    
+                    if (!weekMap.has(weekKey)) {
+                        weekMap.set(weekKey, {
+                            date: weekStart.toISOString().split('T')[0],
+                            total: 0
+                        });
+                    }
+                    weekMap.get(weekKey).total += (item.total || 0);
+                }
+            });
+            
+            // Chuyển Map thành Array và sắp xếp theo date
+            processedData = Array.from(weekMap.values())
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+        }
+
         // Sắp xếp dữ liệu theo thời gian (từ sớm đến muộn)
-        const sortedData = [...data].sort((a, b) => {
+        const sortedData = [...processedData].sort((a, b) => {
             const dateA = a.dateTime ? new Date(a.dateTime) : (a.date ? new Date(a.date) : new Date(0));
             const dateB = b.dateTime ? new Date(b.dateTime) : (b.date ? new Date(b.date) : new Date(0));
             return dateA.getTime() - dateB.getTime();
@@ -164,10 +196,28 @@ function RevenueReportsPage({ dateRange, timeMode, loading, setLoading }) {
                 return `${hours}:${minutes} ${day}-${month}`;
             }
             if (item.date) {
+                if (timeMode === TIME_MODES.WEEK) {
+                    // Hiển thị label tuần: "16-11 - 22/11/2025"
+                    const date = new Date(item.date);
+                    const dayOfWeek = date.getDay();
+                    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                    const weekStart = new Date(date);
+                    weekStart.setDate(date.getDate() - daysToMonday);
+                    const weekEnd = new Date(weekStart);
+                    weekEnd.setDate(weekStart.getDate() + 6);
+                    return `${weekStart.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })} - ${weekEnd.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+                } else if (timeMode === TIME_MODES.MONTH) {
+                    const date = new Date(item.date);
+                    return date.toLocaleDateString('vi-VN', { 
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+                } else {
                 const date = new Date(item.date);
                 const day = date.getDate().toString().padStart(2, '0');
                 const month = (date.getMonth() + 1).toString().padStart(2, '0');
                 return `${day}-${month}`;
+                }
             }
             return '-';
         };
@@ -345,11 +395,173 @@ function RevenueReportsPage({ dateRange, timeMode, loading, setLoading }) {
         </div>
     );
 
+    // Export to Excel function
+    const exportToExcel = async () => {
+        try {
+            // Dynamic import để tránh lỗi nếu chưa cài đặt thư viện
+            const XLSX = await import('xlsx');
+            const { saveAs } = await import('file-saver');
+            
+            // Tạo workbook mới
+            const wb = XLSX.utils.book_new();
+
+            // Sheet 1: Tổng quan
+            const summaryData = [
+                ['BÁO CÁO DOANH THU'],
+                [''],
+                ['Khoảng thời gian', `${dateRange?.start || ''} đến ${dateRange?.end || ''}`],
+                ['Chế độ', timeMode === TIME_MODES.DAY ? 'Theo ngày' : timeMode === TIME_MODES.WEEK ? 'Theo tuần' : 'Theo tháng'],
+                [''],
+                ['TỔNG QUAN'],
+                ['Tổng doanh thu', revenueSummary?.totalRevenue || 0],
+                ['Tổng đơn hàng', revenueSummary?.totalOrders || 0],
+                ['Giá trị trung bình', revenueSummary?.averageOrderValue || 0],
+                [''],
+            ];
+
+            const summaryWS = XLSX.utils.aoa_to_sheet(summaryData);
+            XLSX.utils.book_append_sheet(wb, summaryWS, 'Tổng quan');
+
+            // Sheet 2: Chi tiết doanh thu theo thời gian
+            // Process data giống như trong bảng (group theo tuần nếu cần)
+            let processedData = revenueByDay;
+            if (timeMode === TIME_MODES.WEEK) {
+                const weekMap = new Map();
+                revenueByDay.forEach(item => {
+                    if (item.date) {
+                        const date = new Date(item.date);
+                        const dayOfWeek = date.getDay();
+                        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                        const weekStart = new Date(date);
+                        weekStart.setDate(date.getDate() - daysToMonday);
+                        weekStart.setHours(0, 0, 0, 0);
+                        
+                        const weekKey = weekStart.toISOString().split('T')[0];
+                        
+                        if (!weekMap.has(weekKey)) {
+                            weekMap.set(weekKey, {
+                                date: weekStart.toISOString().split('T')[0],
+                                total: 0
+                            });
+                        }
+                        weekMap.get(weekKey).total += (item.total || 0);
+                    }
+                });
+                
+                processedData = Array.from(weekMap.values())
+                    .sort((a, b) => new Date(a.date) - new Date(b.date));
+            }
+
+            const totalRevenue = processedData.reduce((sum, item) => sum + (item.total || 0), 0);
+            const detailData = [
+                ['STT', 'Thời gian', 'Doanh thu (VNĐ)', 'Tỷ lệ (%)']
+            ];
+
+            processedData.forEach((item, index) => {
+                const percentage = totalRevenue > 0 
+                    ? ((item.total || 0) / totalRevenue * 100).toFixed(2)
+                    : '0.00';
+                
+                let dateLabel = '-';
+                if (item.date) {
+                    if (timeMode === TIME_MODES.MONTH) {
+                        dateLabel = new Date(item.date).toLocaleDateString('vi-VN', { 
+                            month: '2-digit',
+                            year: 'numeric'
+                        });
+                    } else if (timeMode === TIME_MODES.WEEK) {
+                        const date = new Date(item.date);
+                        const dayOfWeek = date.getDay();
+                        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                        const weekStart = new Date(date);
+                        weekStart.setDate(date.getDate() - daysToMonday);
+                        const weekEnd = new Date(weekStart);
+                        weekEnd.setDate(weekStart.getDate() + 6);
+                        dateLabel = `${weekStart.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })} - ${weekEnd.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;
+                    } else {
+                        dateLabel = new Date(item.date).toLocaleDateString('vi-VN', { 
+                            day: '2-digit', 
+                            month: '2-digit',
+                            year: 'numeric'
+                        });
+                    }
+                }
+
+                detailData.push([
+                    index + 1,
+                    dateLabel,
+                    item.total || 0,
+                    parseFloat(percentage)
+                ]);
+            });
+
+            // Thêm dòng tổng cộng
+            detailData.push([
+                '',
+                'TỔNG CỘNG',
+                totalRevenue,
+                100
+            ]);
+
+            const detailWS = XLSX.utils.aoa_to_sheet(detailData);
+            XLSX.utils.book_append_sheet(wb, detailWS, 'Chi tiết doanh thu');
+
+            // Sheet 3: Doanh thu theo phương thức thanh toán
+            const paymentData = [
+                ['Phương thức thanh toán', 'Doanh thu (VNĐ)']
+            ];
+
+            revenueByPayment.forEach(item => {
+                const paymentMethodName = item.paymentMethod || '-';
+                const displayName = paymentMethodName === 'MOMO' 
+                    ? 'Thanh toán qua MoMo' 
+                    : paymentMethodName === 'COD' 
+                    ? 'Thanh toán khi nhận hàng (COD)'
+                    : paymentMethodName;
+                paymentData.push([
+                    displayName,
+                    item.total || 0
+                ]);
+            });
+
+            const paymentWS = XLSX.utils.aoa_to_sheet(paymentData);
+            XLSX.utils.book_append_sheet(wb, paymentWS, 'Theo phương thức');
+
+            // Tạo tên file với ngày tháng
+            const now = new Date();
+            const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
+            const fileName = `BaoCaoDoanhThu_${dateStr}.xlsx`;
+
+            // Xuất file
+            const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            saveAs(blob, fileName);
+        } catch (error) {
+            console.error('Error exporting to Excel:', error);
+            if (error.message && error.message.includes('Cannot find module')) {
+                alert('Vui lòng cài đặt thư viện: npm install xlsx file-saver\n\nSau đó khởi động lại ứng dụng.');
+            } else {
+                alert('Có lỗi xảy ra khi xuất file Excel. Vui lòng thử lại.');
+            }
+        }
+    };
+
     return (
         <div className={cx('tabContent')}>
             <div className={cx('tabHeader')}>
-                <h3 className={cx('tabTitle')}>Báo cáo doanh thu</h3>
-                <p className={cx('tabSubtitle')}>Tổng quan doanh thu theo thời gian</p>
+                <div>
+                    <h3 className={cx('tabTitle')}>Báo cáo doanh thu</h3>
+                    <p className={cx('tabSubtitle')}>Tổng quan doanh thu theo thời gian</p>
+                </div>
+                {(!loading && revenueByDay.length > 0) && (
+                    <button 
+                        className={cx('exportBtn')}
+                        onClick={exportToExcel}
+                        title="Xuất file Excel"
+                    >
+                        📊 Xuất Excel
+                    </button>
+                )}
             </div>
 
             {loading ? (
@@ -405,8 +617,40 @@ function RevenueReportsPage({ dateRange, timeMode, loading, setLoading }) {
                                         </tr>
                                     ) : (
                                         (() => {
-                                            const totalRevenue = revenueByDay.reduce((sum, item) => sum + (item.total || 0), 0);
-                                            return revenueByDay.map((item, index) => {
+                                            // Nếu là week mode, cần group dữ liệu theo tuần để tránh lặp
+                                            let processedData = revenueByDay;
+                                            if (timeMode === TIME_MODES.WEEK) {
+                                                // Group theo tuần: key là string "YYYY-MM-DD" của ngày đầu tuần (thứ 2)
+                                                const weekMap = new Map();
+                                                revenueByDay.forEach(item => {
+                                                    if (item.date) {
+                                                        const date = new Date(item.date);
+                                                        // Tính ngày đầu tuần (thứ 2)
+                                                        const dayOfWeek = date.getDay(); // 0 = Chủ nhật, 1 = Thứ 2, ..., 6 = Thứ 7
+                                                        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                                                        const weekStart = new Date(date);
+                                                        weekStart.setDate(date.getDate() - daysToMonday);
+                                                        weekStart.setHours(0, 0, 0, 0);
+                                                        
+                                                        const weekKey = weekStart.toISOString().split('T')[0];
+                                                        
+                                                        if (!weekMap.has(weekKey)) {
+                                                            weekMap.set(weekKey, {
+                                                                date: weekStart.toISOString().split('T')[0],
+                                                                total: 0
+                                                            });
+                                                        }
+                                                        weekMap.get(weekKey).total += (item.total || 0);
+                                                    }
+                                                });
+                                                
+                                                // Chuyển Map thành Array và sắp xếp theo date
+                                                processedData = Array.from(weekMap.values())
+                                                    .sort((a, b) => new Date(a.date) - new Date(b.date));
+                                            }
+                                            
+                                            const totalRevenue = processedData.reduce((sum, item) => sum + (item.total || 0), 0);
+                                            return processedData.map((item, index) => {
                                                 const percentage = totalRevenue > 0 
                                                     ? ((item.total || 0) / totalRevenue * 100).toFixed(2)
                                                     : '0.00';
@@ -429,8 +673,11 @@ function RevenueReportsPage({ dateRange, timeMode, loading, setLoading }) {
                                                         });
                                                     } else if (timeMode === TIME_MODES.WEEK) {
                                                         const date = new Date(item.date);
+                                                        // Tính ngày đầu tuần (thứ 2)
+                                                        const dayOfWeek = date.getDay(); // 0 = Chủ nhật, 1 = Thứ 2, ..., 6 = Thứ 7
+                                                        const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
                                                         const weekStart = new Date(date);
-                                                        weekStart.setDate(date.getDate() - date.getDay());
+                                                        weekStart.setDate(date.getDate() - daysToMonday);
                                                         const weekEnd = new Date(weekStart);
                                                         weekEnd.setDate(weekStart.getDate() + 6);
                                                         dateLabel = `${weekStart.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })} - ${weekEnd.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}`;

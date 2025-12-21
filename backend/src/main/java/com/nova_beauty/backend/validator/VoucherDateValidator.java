@@ -23,7 +23,7 @@ public class VoucherDateValidator implements ConstraintValidator<VoucherDateCons
 
         if (startDate != null && expiryDate != null && expiryDate.isBefore(startDate)) {
             context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate("NgÃ y káº¿t thÃºc pháº£i sau ngÃ y báº¯t Ä‘áº§u")
+            context.buildConstraintViolationWithTemplate("Ngày kết thúc phải sau ngày bắt đầu")
                     .addPropertyNode("expiryDate")
                     .addConstraintViolation();
             return false;

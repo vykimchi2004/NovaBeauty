@@ -3,6 +3,10 @@
 .tabContent {
   .tabHeader {
     margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
 
     .tabTitle {
       margin: 0 0 8px 0;
@@ -15,6 +19,30 @@
       margin: 0;
       font-size: 14px;
       color: #666;
+    }
+
+    .exportBtn {
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #e5677d 0%, #d4506a 100%);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(229, 103, 125, 0.3);
+
+      &:hover {
+        background: linear-gradient(135deg, #d4506a 0%, #c23a55 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(229, 103, 125, 0.4);
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
     }
   }
 }

@@ -6,9 +6,9 @@ import lombok.Data;
 
 @Data
 public class ChangePasswordRequest {
-    @NotBlank(message = "Máº­t kháº©u hiá»‡n táº¡i khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    @NotBlank(message = "Mật khẩu hiện tại không được để trống")
     private String currentPassword;
 
-    @NotBlank(message = "Máº­t kháº©u má»›i khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    @NotBlank(message = "Mật khẩu mới không được để trống")
     private String newPassword;
 }

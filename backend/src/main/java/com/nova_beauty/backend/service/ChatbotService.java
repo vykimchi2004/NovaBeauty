@@ -49,10 +49,14 @@ public class ChatbotService {
             + "\n\nTƯ VẤN SẢN PHẨM (CHỈ DÙNG THÔNG TIN TỪ CONTEXT): "
             + "A. Khi khách hỏi CHUNG (ví dụ: \"có son gì\", \"có kem gì\"): "
             + "   - Nếu context có \"=== DANH MỤC CON CỦA... ===\": "
-            + "     + PHẢI copy Y HỆT các dòng danh mục con từ context, giữ nguyên số thứ tự và tên "
-            + "     + KHÔNG được thay đổi, rút gọn, hoặc viết lại tên danh mục con "
-            + "     + KHÔNG được tự nghĩ ra danh mục con khác "
-            + "     + Format: \"Chào bạn! Nova Beauty có các loại [tên danh mục cha từ context] sau:\n\n[Copy Y HỆT các dòng từ context]\n\nBạn muốn xem chi tiết danh mục nào ạ?\" "
+            + "     + TUYỆT ĐỐI PHẢI copy Y HỆT từng ký tự, từng dòng danh mục con từ context "
+            + "     + PHẢI giữ nguyên số thứ tự, tên, và format (ví dụ: \"1. Son dưỡng môi\" phải giữ nguyên \"1. Son dưỡng môi\") "
+            + "     + CHỈ được liệt kê các dòng danh mục con, TUYỆT ĐỐI KHÔNG được thêm bất kỳ text, giải thích, hoặc câu nói nào khác "
+            + "     + TUYỆT ĐỐI KHÔNG được thay đổi, rút gọn, viết lại, hoặc tự nghĩ ra tên danh mục con "
+            + "     + TUYỆT ĐỐI KHÔNG được thay \"Son dưỡng môi\" thành \"Son dưỡng\" hoặc \"Son lì\" thành \"Son\" "
+            + "     + TUYỆT ĐỐI KHÔNG được tự nghĩ ra danh mục con khác không có trong context "
+            + "     + TUYỆT ĐỐI KHÔNG được thêm text như \"có thể hiện các danh mục cháu\", \"bạn có thể chọn\", hoặc bất kỳ giải thích nào "
+            + "     + Format: \"Chào bạn! Nova Beauty có các loại [tên danh mục cha từ context] sau:\n\n[Copy Y HỆT từng dòng từ context, giữ nguyên số thứ tự và tên]\n\nBạn muốn xem chi tiết danh mục nào ạ?\" "
             + "   - Nếu KHÔNG có context \"=== DANH MỤC CON CỦA... ===\": "
             + "     + Nói: \"Xin lỗi, tôi không có thông tin về danh mục con của [loại sản phẩm]. Bạn vui lòng liên hệ CSKH để được tư vấn thêm ạ.\" "
             + "B. Khi khách hỏi CỤ THỂ (ví dụ: \"son dior\", \"kem chống nắng la roche\"): "
@@ -65,7 +69,15 @@ public class ChatbotService {
             + "   - CHỈ đưa link [LINK:/product/{id}] với ID CÓ TRONG CONTEXT "
             + "   - KHÔNG được tự tạo ID hoặc link "
             + "   - Format: \"Bạn có thể xem chi tiết sản phẩm [tên từ context] tại: [LINK:/product/{id từ context}]\" "
-            + "D. Khi không có thông tin chi tiết trong context: "
+            + "D. Khi khách HỎI VỀ THƯƠNG HIỆU (ví dụ: \"có son dior\", \"son chanel\", \"thương hiệu dior\"): "
+            + "   - Nếu context có \"=== SẢN PHẨM THEO THƯƠNG HIỆU... ===\": "
+            + "     + Nếu có <10 sản phẩm: liệt kê tất cả TÊN sản phẩm từ context và đưa link từng sản phẩm "
+            + "     + Nếu có >=10 sản phẩm: đưa link đến trang thương hiệu [LINK:/products?brand={tên thương hiệu từ context}] "
+            + "     + Format (ít sản phẩm): \"Chào bạn! Nova Beauty có các sản phẩm [thương hiệu] sau:\n\n1. [Tên sản phẩm] - [LINK:/product/{id}]\n2. [Tên sản phẩm] - [LINK:/product/{id}]\n\nBạn có thể xem chi tiết từng sản phẩm hoặc xem tất cả tại: [LINK:/products?brand={thương hiệu}]\" "
+            + "     + Format (nhiều sản phẩm): \"Chào bạn! Nova Beauty có nhiều sản phẩm [thương hiệu]. Bạn có thể xem tất cả sản phẩm [thương hiệu] tại: [LINK:/products?brand={thương hiệu}]\" "
+            + "   - Nếu KHÔNG có context \"=== SẢN PHẨM THEO THƯƠNG HIỆU... ===\": "
+            + "     + Nói: \"Xin lỗi, tôi không có thông tin về sản phẩm [thương hiệu]. Bạn vui lòng liên hệ CSKH để được tư vấn thêm ạ.\" "
+            + "E. Khi không có thông tin chi tiết trong context: "
             + "   - Nói: \"Xin lỗi, tôi không có thông tin chi tiết về [thông tin thiếu]. Bạn vui lòng click vào link sản phẩm để xem chi tiết hoặc liên hệ CSKH để được tư vấn thêm ạ.\" "
             + "\n\nTHÔNG TIN KHUYẾN MÃI/VOUCHER: "
             + "- KHÔNG liệt kê danh sách khuyến mãi "
@@ -87,13 +99,15 @@ public class ChatbotService {
             + "2. Chỉ dùng text thuần túy "
             + "3. Liệt kê: dùng số thứ tự (1., 2., 3.) hoặc dấu gạch (-), mỗi mục xuống dòng riêng "
             + "4. Trích dẫn: dùng dấu ngoặc kép \"\" "
-            + "\n\nVÍ DỤ: "
+            + "\n\nVÍ DỤ FORMAT (CHỈ LÀ VÍ DỤ FORMAT, KHÔNG PHẢI DỮ LIỆU THỰC): "
             + "Câu hỏi: có son gì "
-            + "Trả lời (nếu có context danh mục con): \"Chào bạn! Nova Beauty có các loại Trang điểm môi sau:\n\n1. Son dưỡng môi\n2. Son lì\n3. Son bóng\n\nBạn muốn xem chi tiết danh mục nào ạ?\" "
-            + "Câu hỏi: son dior "
-            + "Trả lời (nếu có sản phẩm trong context): \"Chào bạn! Nova Beauty có các sản phẩm son sau:\n\n1. Son Dior\n2. Son dưỡng Dior\n\nBạn muốn xem chi tiết sản phẩm nào ạ?\" "
-            + "Câu hỏi: tôi chọn số 1 "
-            + "Trả lời (nếu có ID trong context): \"Bạn có thể xem chi tiết sản phẩm Son Dior tại: [LINK:/product/abc123]\"";
+            + "Trả lời (nếu có context danh mục con): \"Chào bạn! Nova Beauty có các loại [TÊN DANH MỤC CHA TỪ CONTEXT] sau:\n\n[COPY Y HỆT CÁC DÒNG DANH MỤC CON TỪ CONTEXT, GIỮ NGUYÊN SỐ THỨ TỰ VÀ TÊN]\n\nBạn muốn xem chi tiết danh mục nào ạ?\" "
+            + "LƯU Ý: Không được tự nghĩ ra tên danh mục con, PHẢI copy y hệt từ context "
+            + "Câu hỏi: [tên sản phẩm cụ thể] "
+            + "Trả lời (nếu có sản phẩm trong context): \"Chào bạn! Nova Beauty có các sản phẩm [loại] sau:\n\n[CHỈ LIỆT KÊ TÊN SẢN PHẨM CÓ TRONG CONTEXT]\n\nBạn muốn xem chi tiết sản phẩm nào ạ?\" "
+            + "Câu hỏi: tôi chọn số [số] "
+            + "Trả lời (nếu có ID trong context): \"Bạn có thể xem chi tiết sản phẩm [TÊN TỪ CONTEXT] tại: [LINK:/product/{ID TỪ CONTEXT}]\"";
+
 
     final WebClient webClient;
     final String apiKey;
@@ -335,7 +349,24 @@ public class ChatbotService {
      * Ưu tiên trả về danh mục con nếu câu hỏi chung, trả về sản phẩm nếu câu hỏi cụ thể
      */
     private String getProductsContextForMessage(String userMessage) {
-        // Extract keywords từ user message
+        // Kiểm tra xem user có đang chọn một category cụ thể từ danh sách trước đó không
+        // Nếu user nói tên category đầy đủ (như "trang điểm môi", "trang điểm mắt"), coi như đang chọn category cụ thể
+        boolean isSelectingCategory = isSelectingCategoryFromList(userMessage);
+        
+        // Nếu user đang chọn category cụ thể, dùng toàn bộ message làm keyword (để tìm đúng category)
+        // Ví dụ: "trang điểm môi" -> dùng "trang điểm môi" để tìm, không dùng extracted "trang điểm"
+        if (isSelectingCategory) {
+            String mainKeyword = userMessage.trim().toLowerCase();
+            log.debug("User selecting category, using full message as keyword: {}", mainKeyword);
+            // Lấy subcategories của chính category đó (useParentCategory = false)
+            String subCategoriesContext = getSubCategoriesContext(mainKeyword, false);
+            if (!subCategoriesContext.isEmpty()) {
+                log.debug("Returning subcategories for selected category: {}", mainKeyword);
+                return subCategoriesContext;
+            }
+        }
+        
+        // Extract keywords từ user message (nếu không phải chọn category cụ thể)
         String[] productKeywords = extractProductKeywords(userMessage);
         
         if (productKeywords.length == 0) {
@@ -349,10 +380,21 @@ public class ChatbotService {
             // Câu hỏi chung: ưu tiên trả về danh mục con
             // Lấy keyword đầu tiên để tìm danh mục con
             String mainKeyword = productKeywords[0];
-            String subCategoriesContext = getSubCategoriesContext(mainKeyword);
+            // Khi hỏi chung, có thể lấy subcategories của parent (useParentCategory = true)
+            String subCategoriesContext = getSubCategoriesContext(mainKeyword, true);
             if (!subCategoriesContext.isEmpty()) {
                 log.debug("Returning subcategories for keyword: {}", mainKeyword);
                 return subCategoriesContext;
+            }
+        }
+        
+        // Kiểm tra xem có phải là câu hỏi về thương hiệu không
+        String brandName = extractBrandFromMessage(userMessage);
+        if (brandName != null && !brandName.isEmpty()) {
+            String brandProductsContext = getBrandProductsContext(brandName);
+            if (!brandProductsContext.isEmpty()) {
+                log.debug("Returning brand products for brand: {}", brandName);
+                return brandProductsContext;
             }
         }
         
@@ -411,6 +453,56 @@ public class ChatbotService {
     }
 
     /**
+     * Kiểm tra xem user có đang chọn một category cụ thể từ danh sách trước đó không
+     * Ví dụ: "trang điểm môi", "trang điểm mắt", "tôi chọn số 4" = đang chọn category cụ thể
+     */
+    private boolean isSelectingCategoryFromList(String message) {
+        String lowerMessage = message.toLowerCase().trim();
+        
+        // Danh sách các tên category đầy đủ (cả parent và subcategory)
+        String[] categoryNames = {
+            "trang điểm môi", "trang điểm mắt", "trang điểm khuôn mặt",
+            "phụ kiện trang điểm", "chăm sóc da", "chăm sóc tóc", "nước hoa",
+            "trang điểm" // Cũng có thể là category cha
+        };
+        
+        // Kiểm tra xem message có phải là tên category đầy đủ không (exact match hoặc contains)
+        for (String catName : categoryNames) {
+            // Exact match: nếu message chính xác là tên category
+            if (lowerMessage.equals(catName)) {
+                return true;
+            }
+            // Nếu message ngắn (< 50 ký tự) và chứa tên category, coi như đang chọn category
+            // Tránh trường hợp "có trang điểm môi gì" -> không phải chọn category
+            if (message.length() < 50 && lowerMessage.contains(catName) && 
+                !lowerMessage.contains("có") && !lowerMessage.contains("gì") && 
+                !lowerMessage.contains("những")) {
+                return true;
+            }
+        }
+        
+        // Nếu có từ khóa chọn lựa: "tôi chọn", "chọn số X"
+        if (lowerMessage.contains("tôi chọn") || lowerMessage.contains("chọn số") || 
+            lowerMessage.matches(".*số\\s+\\d+.*")) {
+            return true;
+        }
+        
+        // Nếu message ngắn (< 30 ký tự) và không có từ hỏi, coi như đang chọn category
+        if (message.length() < 30 && 
+            !lowerMessage.contains("có gì") && !lowerMessage.contains("có những gì") &&
+            !lowerMessage.contains("có loại gì") && !lowerMessage.contains("có những loại")) {
+            // Kiểm tra xem có phải là tên category không
+            for (String catName : categoryNames) {
+                if (lowerMessage.equals(catName) || lowerMessage.contains(catName)) {
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+
+    /**
      * Mapping từ keyword phổ biến sang tên category
      */
     private String mapKeywordToCategoryName(String keyword) {
@@ -451,9 +543,12 @@ public class ChatbotService {
 
     /**
      * Lấy context về danh mục con để chatbot hỏi lại khách hàng
+     * @param keyword Từ khóa tìm category
+     * @param useParentCategory Nếu true, sẽ tìm parent category và lấy subcategories của parent. 
+     *                          Nếu false, sẽ lấy subcategories của chính category tìm được (dùng khi user chọn category cụ thể)
      */
     @Transactional(readOnly = true)
-    private String getSubCategoriesContext(String keyword) {
+    private String getSubCategoriesContext(String keyword, boolean useParentCategory) {
         try {
             // Tìm category chính theo keyword
             java.util.List<com.nova_beauty.backend.dto.response.CategoryResponse> categories = categoryService.getAllCategories();
@@ -510,8 +605,9 @@ public class ChatbotService {
                 return ""; // Không tìm thấy category, để chatbot tự xử lý
             }
             
-            // Nếu category tìm được có parent (là category con), tìm category cha
-            if (mainCategory.getParentId() != null && !mainCategory.getParentId().isEmpty()) {
+            // Chỉ tìm parent category nếu useParentCategory = true (khi user hỏi chung)
+            // Nếu useParentCategory = false (khi user chọn category cụ thể), lấy subcategories của chính category đó
+            if (useParentCategory && mainCategory.getParentId() != null && !mainCategory.getParentId().isEmpty()) {
                 // Tìm category cha
                 for (com.nova_beauty.backend.dto.response.CategoryResponse cat : categories) {
                     if (cat.getId() != null && cat.getId().equals(mainCategory.getParentId())) {
@@ -520,16 +616,22 @@ public class ChatbotService {
                         break;
                     }
                 }
+            } else if (!useParentCategory) {
+                log.debug("Using category directly: {} for keyword: {} (user selected specific category)", mainCategory.getName(), keyword);
             }
             
             log.debug("Found category: {} for keyword: {}", mainCategory.getName(), keyword);
             
-            // Lấy danh mục con (chỉ lấy danh mục active)
-            java.util.List<com.nova_beauty.backend.dto.response.CategoryResponse> subCategories = categoryService.getSubCategories(mainCategory.getId());
+            // Lưu mainCategory.getId() vào biến final để dùng trong lambda
+            final String mainCategoryId = mainCategory.getId();
             
-            // Filter chỉ lấy danh mục active
+            // Lấy danh mục con (chỉ lấy danh mục active)
+            java.util.List<com.nova_beauty.backend.dto.response.CategoryResponse> subCategories = categoryService.getSubCategories(mainCategoryId);
+            
+            // Filter chỉ lấy danh mục active và đảm bảo không lấy chính parent category
             subCategories = subCategories.stream()
                 .filter(cat -> cat.getStatus() != null && cat.getStatus())
+                .filter(cat -> !cat.getId().equals(mainCategoryId)) // Đảm bảo không lấy chính parent category
                 .collect(java.util.stream.Collectors.toList());
             
             if (subCategories == null || subCategories.isEmpty()) {
@@ -537,12 +639,15 @@ public class ChatbotService {
                 return ""; // Không có danh mục con, để chatbot tự xử lý
             }
             
+            log.info("Found {} subcategories for category {} (keyword: {}): {}", 
+                subCategories.size(), mainCategory.getName(), keyword,
+                subCategories.stream().map(cat -> cat.getName()).collect(java.util.stream.Collectors.joining(", ")));
             log.debug("Found {} subcategories for category: {}", subCategories.size(), mainCategory.getName());
             
             // Format context về danh mục con - format rõ ràng để chatbot dễ nhận biết
             StringBuilder context = new StringBuilder();
             context.append("=== DANH MỤC CON CỦA ").append(mainCategory.getName().toUpperCase()).append(" ===\n");
-            context.append("TUYỆT ĐỐI CHỈ LIỆT KÊ ĐÚNG Y HỆT CÁC DANH MỤC CON SAU, KHÔNG TỰ NGHĨ RA, KHÔNG THAY ĐỔI TÊN, KHÔNG RÚT GỌN:\n\n");
+            context.append("TUYỆT ĐỐI CHỈ LIỆT KÊ ĐÚNG Y HỆT CÁC DANH MỤC CON SAU, KHÔNG TỰ NGHĨ RA, KHÔNG THAY ĐỔI TÊN, KHÔNG RÚT GỌN, KHÔNG THÊM BẤT KỲ TEXT NÀO:\n\n");
             
             for (int i = 0; i < subCategories.size(); i++) {
                 com.nova_beauty.backend.dto.response.CategoryResponse subCat = subCategories.get(i);
@@ -554,12 +659,17 @@ public class ChatbotService {
             }
             
             context.append("\n");
-            context.append("QUY TẮC BẮT BUỘC KHI TRẢ LỜI:\n");
-            context.append("- PHẢI copy Y HỆT các dòng danh mục con trên (từ số thứ tự đến tên)\n");
-            context.append("- KHÔNG được thay đổi, rút gọn, hoặc viết lại tên danh mục con\n");
-            context.append("- KHÔNG được tự nghĩ ra danh mục con khác\n");
-            context.append("- Ví dụ: Nếu context có \"1. Son dưỡng môi\", PHẢI viết đúng \"1. Son dưỡng môi\", KHÔNG được viết \"1. Son dưỡng\" hoặc \"1. Son\"\n");
-            context.append("- Nếu không có context này, KHÔNG được tự nghĩ ra danh mục con\n");
+            context.append("QUY TẮC BẮT BUỘC KHI TRẢ LỜI (TUYỆT ĐỐI TUÂN THỦ):\n");
+            context.append("- TUYỆT ĐỐI PHẢI copy Y HỆT từng ký tự, từng dòng danh mục con trên (từ số thứ tự đến tên)\n");
+            context.append("- PHẢI giữ nguyên format: số thứ tự + dấu chấm + khoảng trắng + tên danh mục\n");
+            context.append("- CHỈ được liệt kê các dòng danh mục con, KHÔNG được thêm bất kỳ text, giải thích, hoặc câu nói nào khác\n");
+            context.append("- TUYỆT ĐỐI KHÔNG được thay đổi, rút gọn, viết lại, hoặc tự nghĩ ra tên danh mục con\n");
+            context.append("- TUYỆT ĐỐI KHÔNG được tự nghĩ ra danh mục con khác không có trong danh sách trên\n");
+            context.append("- TUYỆT ĐỐI KHÔNG được thêm text như \"có thể hiện các danh mục cháu\", \"bạn có thể chọn\", hoặc bất kỳ giải thích nào\n");
+            context.append("- Sau khi liệt kê hết các dòng danh mục con, CHỈ được viết: \"\\n\\nBạn muốn xem chi tiết danh mục nào ạ?\"\n");
+            context.append("- Ví dụ: Nếu context có \"1. Son dưỡng môi\", PHẢI viết đúng \"1. Son dưỡng môi\", TUYỆT ĐỐI KHÔNG được viết \"1. Son dưỡng\", \"1. Son\", hoặc bất kỳ biến thể nào khác\n");
+            context.append("- Ví dụ: Nếu context có \"2. Son lì\", PHẢI viết đúng \"2. Son lì\", KHÔNG được viết \"2. Son\" hoặc \"2. Lipstick\"\n");
+            context.append("- Nếu không có context này, TUYỆT ĐỐI KHÔNG được tự nghĩ ra danh mục con, phải nói không có thông tin\n");
             
             return context.toString();
         } catch (Exception e) {
@@ -609,6 +719,114 @@ public class ChatbotService {
         }
         
         return keywords.toArray(new String[0]);
+    }
+
+    /**
+     * Extract brand name từ user message
+     * Ví dụ: "có son dior" -> "Dior", "son chanel" -> "Chanel"
+     */
+    private String extractBrandFromMessage(String message) {
+        String lowerMessage = message.toLowerCase();
+        
+        // Danh sách các thương hiệu phổ biến (cần match case-insensitive)
+        java.util.Map<String, String> brandMappings = new java.util.HashMap<>();
+        brandMappings.put("dior", "Dior");
+        brandMappings.put("chanel", "Chanel");
+        brandMappings.put("gucci", "Gucci");
+        brandMappings.put("ysl", "YSL");
+        brandMappings.put("yves saint laurent", "YSL");
+        brandMappings.put("mac", "MAC");
+        brandMappings.put("maybelline", "Maybelline");
+        brandMappings.put("l'oreal", "L'Oreal");
+        brandMappings.put("loreal", "L'Oreal");
+        brandMappings.put("revlon", "Revlon");
+        brandMappings.put("clinique", "Clinique");
+        brandMappings.put("estee lauder", "Estee Lauder");
+        brandMappings.put("shiseido", "Shiseido");
+        brandMappings.put("laneige", "Laneige");
+        brandMappings.put("innisfree", "Innisfree");
+        brandMappings.put("the face shop", "The Face Shop");
+        brandMappings.put("skii", "SK-II");
+        brandMappings.put("sk-ii", "SK-II");
+        brandMappings.put("la mer", "La Mer");
+        brandMappings.put("kiehl", "Kiehl's");
+        brandMappings.put("origins", "Origins");
+        brandMappings.put("fresh", "Fresh");
+        
+        // Tìm brand trong message (ưu tiên exact match trước, sau đó contains)
+        for (java.util.Map.Entry<String, String> entry : brandMappings.entrySet()) {
+            String lowerBrandKey = entry.getKey().toLowerCase();
+            // Kiểm tra exact match trước (nếu message chỉ là brand name)
+            if (lowerMessage.trim().equals(lowerBrandKey)) {
+                return entry.getValue();
+            }
+            // Kiểm tra contains (nếu message có chứa brand name)
+            if (lowerMessage.contains(lowerBrandKey)) {
+                // Nếu có từ khóa về brand hoặc brand name đứng độc lập (word boundary)
+                if (lowerMessage.contains("thương hiệu") || lowerMessage.contains("brand") || 
+                    java.util.regex.Pattern.compile("\\b" + java.util.regex.Pattern.quote(lowerBrandKey) + "\\b", 
+                        java.util.regex.Pattern.CASE_INSENSITIVE).matcher(lowerMessage).find()) {
+                    return entry.getValue();
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Lấy context về sản phẩm theo thương hiệu
+     */
+    @Transactional(readOnly = true)
+    private String getBrandProductsContext(String brandName) {
+        try {
+            // Tìm tất cả sản phẩm có brand này (tìm trong tất cả sản phẩm)
+            java.util.List<com.nova_beauty.backend.dto.response.ProductResponse> allProducts = productService.searchProducts(brandName);
+            
+            // Filter chỉ lấy sản phẩm có brand chính xác (case-insensitive)
+            java.util.List<com.nova_beauty.backend.dto.response.ProductResponse> brandProducts = allProducts.stream()
+                .filter(p -> p.getBrand() != null && p.getBrand().equalsIgnoreCase(brandName))
+                .collect(java.util.stream.Collectors.toList());
+            
+            if (brandProducts.isEmpty()) {
+                log.debug("No products found for brand: {}", brandName);
+                return "";
+            }
+            
+            log.info("Found {} products for brand: {}", brandProducts.size(), brandName);
+            
+            // Format context về sản phẩm theo brand
+            StringBuilder context = new StringBuilder();
+            context.append("=== SẢN PHẨM THEO THƯƠNG HIỆU: ").append(brandName.toUpperCase()).append(" ===\n");
+            context.append("TÊN THƯƠNG HIỆU: ").append(brandName).append("\n");
+            context.append("SỐ LƯỢNG SẢN PHẨM: ").append(brandProducts.size()).append("\n\n");
+            
+            // Giới hạn 50 sản phẩm để tránh prompt quá dài
+            int maxProducts = Math.min(50, brandProducts.size());
+            for (int i = 0; i < maxProducts; i++) {
+                com.nova_beauty.backend.dto.response.ProductResponse product = brandProducts.get(i);
+                context.append(String.format("%d. ID: %s | Tên: %s", i + 1, product.getId(), product.getName()));
+                if (product.getPrice() != null) {
+                    context.append(String.format(" | Giá: %,.0f VNĐ", product.getPrice()));
+                }
+                context.append("\n");
+            }
+            
+            if (brandProducts.size() > maxProducts) {
+                context.append(String.format("... và còn %d sản phẩm khác.\n", brandProducts.size() - maxProducts));
+            }
+            
+            context.append("\n");
+            context.append("QUY TẮC KHI TRẢ LỜI:\n");
+            context.append("- Nếu có <10 sản phẩm: liệt kê tất cả TÊN sản phẩm và đưa link [LINK:/product/{id}] cho từng sản phẩm\n");
+            context.append("- Nếu có >=10 sản phẩm: đưa link đến trang thương hiệu [LINK:/products?brand=").append(brandName).append("]\n");
+            context.append("- LUÔN đưa link đến trang thương hiệu: [LINK:/products?brand=").append(brandName).append("]\n");
+            
+            return context.toString();
+        } catch (Exception e) {
+            log.error("Error getting brand products context for brand: {}", brandName, e);
+            return "";
+        }
     }
 
     /**

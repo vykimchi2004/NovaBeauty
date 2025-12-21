@@ -3,6 +3,11 @@ package com.nova_beauty.backend.exception;
 import java.util.Map;
 import java.util.Objects;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nova_beauty.backend.dto.response.CreateMomoResponse;
+
+import feign.FeignException;
+
 import jakarta.validation.ConstraintViolation;
 
 import org.springframework.http.HttpStatus;
@@ -22,6 +27,38 @@ import lombok.extern.slf4j.Slf4j;
 public class GlobalExceptionHandler {
 
     private static final String MIN_ATTRIBUTE = "min";
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @ExceptionHandler(value = FeignException.class)
+    ResponseEntity<ApiResponse<?>> handleFeignException(FeignException exception) {
+        log.error("FeignException occurred: status={}, message={}", exception.status(), exception.getMessage());
+        
+        String errorMessage = "Lỗi kết nối với dịch vụ thanh toán. Vui lòng thử lại sau.";
+        
+        // Cố gắng parse response body từ MoMo API để lấy message chi tiết
+        try {
+            String bodyString = exception.contentUTF8();
+            if (bodyString != null && !bodyString.isEmpty()) {
+                log.debug("MoMo API error response body: {}", bodyString);
+                
+                // Thử parse JSON response từ MoMo
+                CreateMomoResponse momoResponse = objectMapper.readValue(bodyString, CreateMomoResponse.class);
+                if (momoResponse != null && momoResponse.getMessage() != null && !momoResponse.getMessage().isEmpty()) {
+                    errorMessage = "Lỗi thanh toán MoMo: " + momoResponse.getMessage();
+                    log.info("Parsed MoMo error - resultCode: {}, message: {}", 
+                            momoResponse.getResultCode(), momoResponse.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not parse MoMo error response: {}", e.getMessage());
+        }
+        
+        ApiResponse<?> apiResponse = ApiResponse.builder()
+                .code(ErrorCode.EXTERNAL_SERVICE_ERROR.getCode())
+                .message(errorMessage)
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(apiResponse);
+    }
 
     @ExceptionHandler(value = Exception.class)
     ResponseEntity<ApiResponse<?>> handleException(Exception exception) {

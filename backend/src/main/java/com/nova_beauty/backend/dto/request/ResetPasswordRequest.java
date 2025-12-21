@@ -17,7 +17,7 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ResetPasswordRequest {
     @NotBlank(message = "Email không được để trống")
-    @Email(message = "Email sai Ä‘á»‹nh dáº¡ng")
+    @Email(message = "Email sai định dạng")
     String email;
 
     @NotBlank

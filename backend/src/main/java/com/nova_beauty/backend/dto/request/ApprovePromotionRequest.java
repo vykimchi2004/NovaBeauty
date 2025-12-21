@@ -13,12 +13,12 @@ import lombok.*;
 @AllArgsConstructor
 public class ApprovePromotionRequest {
 
-    @NotNull(message = "ID khuyáº¿n mÃ£i khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    @NotNull(message = "ID khuyến mãi không được để trống")
     private String promotionId;
 
-    @NotBlank(message = "HÃ nh Ä‘á»™ng khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
-    @Pattern(regexp = "^(APPROVE|REJECT)$", message = "HÃ nh Ä‘á»™ng pháº£i lÃ  APPROVE hoáº·c REJECT")
+    @NotBlank(message = "Hành động không được để trống")
+    @Pattern(regexp = "^(APPROVE|REJECT)$", message = "Hành động phải là APPROVE hoặc REJECT")
     private String action;
 
-    private String reason; // LÃ½ do tá»« chá»‘i (náº¿u action = REJECT)
+    private String reason; // Lý do từ chối (nếu action = REJECT)
 }

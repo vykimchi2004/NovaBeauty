@@ -13,11 +13,11 @@ import lombok.*;
 @AllArgsConstructor
 public class ApproveVoucherRequest {
 
-    @NotNull(message = "ID voucher khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
+    @NotNull(message = "ID voucher không được để trống")
     private String voucherId;
 
-    @NotBlank(message = "HÃ nh Ä‘á»™ng khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng")
-    @Pattern(regexp = "^(APPROVE|REJECT)$", message = "HÃ nh Ä‘á»™ng pháº£i lÃ  APPROVE hoáº·c REJECT")
+    @NotBlank(message = "Hành động không được để trống")
+    @Pattern(regexp = "^(APPROVE|REJECT)$", message = "Hành động phải là APPROVE hoặc REJECT")
     private String action;
 
     private String reason;

@@ -28,7 +28,7 @@ public class OtpController {
 
     @PostMapping("/send-otp")
     public ApiResponse<String> sendOtp(
-            @RequestParam @NotBlank(message = "Email khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng") @Email(message = "Email sai Ä‘á»‹nh dáº¡ng")
+            @RequestParam @NotBlank(message = "Email không được để trống") @Email(message = "Email sai định dạng")
                     String email,
             @RequestParam(required = false) String mode) {
         try {
@@ -47,7 +47,7 @@ public class OtpController {
                     && !userRepository.findByEmail(email).isPresent()) {
                 return ApiResponse.<String>builder()
                         .code(400)
-                        .message("Email khÃ´ng tá»“n táº¡i trong há»‡ thá»‘ng")
+                        .message("Email không tồn tại trong hệ thống")
                         .result(null)
                         .build();
             }
