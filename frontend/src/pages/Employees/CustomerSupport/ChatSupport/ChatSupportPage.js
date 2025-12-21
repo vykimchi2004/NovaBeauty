@@ -41,6 +41,7 @@ function ChatSupportPage() {
     const fetchConversations = async () => {
         try {
             const data = await chatService.getConversations();
+            console.log('[ChatSupportPage] Fetched conversations:', data);
             setConversations(data || []);
             
             // Kiểm tra tất cả conversations để tìm welcome messages chưa được phản hồi và ai đã tiếp nhận
@@ -54,27 +55,50 @@ function ChatSupportPage() {
                     try {
                         const messages = await chatService.getConversation(conv.partnerId);
                         if (messages && messages.length > 0) {
+                            // Kiểm tra tin nhắn cuối cùng - nếu là disconnect và không có welcome message mới sau đó, thì đã disconnect
+                            const lastMessage = messages[messages.length - 1];
+                            const isLastMessageDisconnect = lastMessage.message && 
+                                lastMessage.message.includes('[SYSTEM_DISCONNECT]') &&
+                                lastMessage.senderId === conv.partnerId;
+                            
+                            if (isLastMessageDisconnect) {
+                                // Tin nhắn cuối là disconnect, conversation đã bị ngắt kết nối
+                                disconnectedSet.add(conv.partnerId);
+                                acceptedMap.delete(conv.partnerId);
+                                // Không cần kiểm tra thêm, return để skip logic phía dưới
+                                return;
+                            }
+                            
                             // Tìm tất cả welcome messages (có thể có nhiều nếu khách hàng kết nối lại)
+                            // Welcome message được gửi từ customer (senderId = partnerId = customerId)
                             const allWelcomeMessages = messages.filter(msg => 
                                 msg.message && 
                                 msg.message.includes('Khách hàng yêu cầu chat trực tiếp với nhân viên hỗ trợ từ chatbot') &&
-                                msg.senderId !== currentUserId
+                                msg.senderId === conv.partnerId // Phải là từ customer
                             );
                             
+                            // Tìm tin nhắn "Tôi đã tiếp nhận" gần nhất (tìm từ cuối lên đầu)
+                            const allAcceptMessages = messages.filter(msg => 
+                                msg.message && 
+                                msg.message.includes('Tôi đã tiếp nhận yêu cầu hỗ trợ của bạn') &&
+                                msg.senderId !== conv.partnerId // Phải là từ CSKH
+                            );
+                            
+                            // Nếu có welcome message, kiểm tra logic dựa trên welcome message mới nhất
                             if (allWelcomeMessages.length > 0) {
                                 // Tìm welcome message mới nhất
                                 const latestWelcomeMessage = allWelcomeMessages[allWelcomeMessages.length - 1];
                                 const welcomeIndex = messages.findIndex(msg => msg.id === latestWelcomeMessage.id);
                                 
                                 // Tìm tin nhắn "Tôi đã tiếp nhận" sau welcome message mới nhất
-                                const acceptMessage = messages.slice(welcomeIndex + 1).find(msg => 
+                                const acceptMessageAfterWelcome = messages.slice(welcomeIndex + 1).find(msg => 
                                     msg.message && 
                                     msg.message.includes('Tôi đã tiếp nhận yêu cầu hỗ trợ của bạn') &&
                                     msg.senderId !== conv.partnerId // Phải là từ CSKH
                                 );
                                 
-                                if (acceptMessage) {
-                                    const acceptIndex = messages.findIndex(msg => msg.id === acceptMessage.id);
+                                if (acceptMessageAfterWelcome) {
+                                    const acceptIndex = messages.findIndex(msg => msg.id === acceptMessageAfterWelcome.id);
                                     
                                     // Kiểm tra xem có tin nhắn disconnect sau tin nhắn accept không
                                     const disconnectMessage = messages.slice(acceptIndex + 1).find(msg => 
@@ -83,13 +107,13 @@ function ChatSupportPage() {
                                         msg.senderId === conv.partnerId // Phải là từ khách hàng
                                     );
                                     
-                                    if (disconnectMessage) {
+                                        if (disconnectMessage) {
                                         // Kiểm tra xem có welcome message mới sau disconnect không (khách hàng kết nối lại)
                                         const disconnectIndex = messages.findIndex(msg => msg.id === disconnectMessage.id);
                                         const newWelcomeAfterDisconnect = messages.slice(disconnectIndex + 1).find(msg => 
                                             msg.message && 
                                             msg.message.includes('Khách hàng yêu cầu chat trực tiếp với nhân viên hỗ trợ từ chatbot') &&
-                                            msg.senderId !== currentUserId
+                                            msg.senderId === conv.partnerId // Phải là từ customer
                                         );
                                         
                                         if (newWelcomeAfterDisconnect) {
@@ -109,8 +133,8 @@ function ChatSupportPage() {
                                         disconnectedSet.delete(conv.partnerId);
                                         // Đã có người tiếp nhận và chưa bị ngắt kết nối
                                         acceptedMap.set(conv.partnerId, {
-                                            userId: acceptMessage.senderId,
-                                            userName: acceptMessage.senderName || 'CSKH'
+                                            userId: acceptMessageAfterWelcome.senderId,
+                                            userName: acceptMessageAfterWelcome.senderName || 'CSKH'
                                         });
                                     }
                                 } else {
@@ -128,7 +152,7 @@ function ChatSupportPage() {
                                         const newWelcomeAfterDisconnect = messages.slice(disconnectIndex + 1).find(msg => 
                                             msg.message && 
                                             msg.message.includes('Khách hàng yêu cầu chat trực tiếp với nhân viên hỗ trợ từ chatbot') &&
-                                            msg.senderId !== currentUserId
+                                            msg.senderId === conv.partnerId // Phải là từ customer
                                         );
                                         
                                         if (!newWelcomeAfterDisconnect) {
@@ -146,6 +170,31 @@ function ChatSupportPage() {
                                         disconnectedSet.delete(conv.partnerId);
                                     }
                                 }
+                            } else if (allAcceptMessages.length > 0) {
+                                // Không có welcome message mới, nhưng có accept message (đã được tiếp nhận trước đó)
+                                // Tìm accept message mới nhất
+                                const latestAcceptMessage = allAcceptMessages[allAcceptMessages.length - 1];
+                                const acceptIndex = messages.findIndex(msg => msg.id === latestAcceptMessage.id);
+                                
+                                // Kiểm tra xem có disconnect sau accept message không
+                                const disconnectAfterAccept = messages.slice(acceptIndex + 1).find(msg => 
+                                    msg.message && 
+                                    msg.message.includes('[SYSTEM_DISCONNECT]') &&
+                                    msg.senderId === conv.partnerId
+                                );
+                                
+                                if (!disconnectAfterAccept) {
+                                    // Đã được tiếp nhận và chưa disconnect
+                                    acceptedMap.set(conv.partnerId, {
+                                        userId: latestAcceptMessage.senderId,
+                                        userName: latestAcceptMessage.senderName || 'CSKH'
+                                    });
+                                    disconnectedSet.delete(conv.partnerId);
+                                } else {
+                                    // Đã disconnect
+                                    disconnectedSet.add(conv.partnerId);
+                                    acceptedMap.delete(conv.partnerId);
+                                }
                             }
                         }
                     } catch (err) {
@@ -162,8 +211,8 @@ function ChatSupportPage() {
             // Không tự động chọn conversation đầu tiên - để người dùng tự chọn
             setError(null);
         } catch (err) {
-            console.error('Error fetching conversations:', err);
-            setError('Không thể tải danh sách cuộc trò chuyện');
+            console.error('[ChatSupportPage] Error fetching conversations:', err);
+            setError('Không thể tải danh sách cuộc trò chuyện: ' + (err.message || 'Lỗi không xác định'));
         } finally {
             setLoading(false);
         }
@@ -186,10 +235,23 @@ function ChatSupportPage() {
         e?.stopPropagation();
         if (!partnerId || sending) return;
 
-        // Kiểm tra xem đã có người khác tiếp nhận chưa
+        // Kiểm tra xem conversation đã bị disconnect chưa
+        if (conversationsDisconnected.has(partnerId)) {
+            alert('Không thể tiếp nhận conversation đã bị ngắt kết nối');
+            return;
+        }
+
+        // Kiểm tra xem đã có người khác tiếp nhận chưa (tránh race condition)
         const acceptedInfo = conversationAcceptedBy.get(partnerId);
+        
+        // Chỉ cho phép tiếp nhận nếu chưa được tiếp nhận bởi ai cả
         if (acceptedInfo && acceptedInfo.userId !== currentUserId) {
             alert(`Yêu cầu này đã được tiếp nhận bởi ${acceptedInfo.userName}`);
+            return;
+        }
+        
+        if (acceptedInfo && acceptedInfo.userId === currentUserId) {
+            // Đã được chính mình tiếp nhận rồi, không cần làm gì
             return;
         }
 
@@ -350,18 +412,11 @@ function ChatSupportPage() {
                                                     {(() => {
                                                         const isDisconnected = conversationsDisconnected.has(conv.partnerId);
                                                         
+                                                        // Luôn kiểm tra disconnect trước tiên
                                                         if (isDisconnected) {
                                                             return (
                                                                 <span className={cx('status', 'status-escalated')}>
                                                                     Đã ngắt kết nối
-                                    </span>
-                                                            );
-                                                        }
-                                                        
-                                                        if (hasPendingRequest && !acceptedInfo) {
-                                                            return (
-                                                                <span className={cx('status', 'status-pending')}>
-                                                                    Chờ tiếp nhận
                                                                 </span>
                                                             );
                                                         }
@@ -375,17 +430,18 @@ function ChatSupportPage() {
                                                         }
                                                         
                                                         if (isAcceptedByOther) {
-                                        return (
+                                                            return (
                                                                 <span className={cx('status', 'status-resolved')}>
                                                                     Đã tiếp nhận
                                                                 </span>
                                                             );
                                                         }
                                                         
-                                                        if (!hasPendingRequest && !acceptedInfo) {
+                                                        // Nếu chưa được tiếp nhận (không có acceptedInfo) và chưa disconnect -> hiển thị "Chờ tiếp nhận"
+                                                        if (!acceptedInfo && !isDisconnected) {
                                                             return (
-                                                                <span className={cx('status', 'status-new')}>
-                                                                    Mới
+                                                                <span className={cx('status', 'status-pending')}>
+                                                                    Chờ tiếp nhận
                                                                 </span>
                                                             );
                                                         }
@@ -394,17 +450,18 @@ function ChatSupportPage() {
                                                     })()}
                                                 </td>
                                                 <td>
-                                                    {hasPendingRequest && !acceptedInfo && !conversationsDisconnected.has(conv.partnerId) && (
+                                                    {/* Hiển thị nút "Tiếp nhận" nếu chưa được tiếp nhận và chưa bị disconnect */}
+                                                    {!acceptedInfo && !conversationsDisconnected.has(conv.partnerId) && (
                                                         <button
                                                             className={cx('view-btn')}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleAcceptRequest(conv.partnerId, e);
-                                    }}
-                                    disabled={sending}
+                                                            }}
+                                                            disabled={sending}
                                                         >
                                                             {sending ? 'Đang gửi...' : 'Tiếp nhận'}
-                                </button>
+                                                        </button>
                                                     )}
                                                 </td>
                                             </tr>

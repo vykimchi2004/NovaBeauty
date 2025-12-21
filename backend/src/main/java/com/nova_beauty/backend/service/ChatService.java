@@ -149,9 +149,29 @@ public class ChatService {
                         .findById(partnerId)
                         .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        List<ChatMessage> messages =
-                chatMessageRepository.findConversationBetweenUsers(
-                        currentUser.getId(), partner.getId());
+        List<ChatMessage> messages;
+        
+        // Nếu là CSKH và partner là CUSTOMER, lấy TẤT CẢ messages của customer với bất kỳ CSKH nào
+        // Để tất cả CSKH đều thấy cùng trạng thái
+        if (currentUser.getRole() != null 
+                && "CUSTOMER_SUPPORT".equals(currentUser.getRole().getName())
+                && partner.getRole() != null
+                && "CUSTOMER".equals(partner.getRole().getName())) {
+            messages = chatMessageRepository.findCustomerConversationWithAnySupport(partner.getId());
+        } 
+        // Nếu là CUSTOMER và partner là CSKH, lấy TẤT CẢ messages của customer với bất kỳ CSKH nào
+        // Để customer thấy tất cả tin nhắn từ mọi CSKH
+        else if (currentUser.getRole() != null 
+                && "CUSTOMER".equals(currentUser.getRole().getName())
+                && partner.getRole() != null
+                && "CUSTOMER_SUPPORT".equals(partner.getRole().getName())) {
+            messages = chatMessageRepository.findCustomerConversationWithAnySupport(currentUser.getId());
+        } 
+        else {
+            // Trường hợp khác, lấy messages giữa currentUser và partner
+            messages = chatMessageRepository.findConversationBetweenUsers(
+                    currentUser.getId(), partner.getId());
+        }
 
         return messages.stream().map(this::toResponse).collect(Collectors.toList());
     }
@@ -164,42 +184,74 @@ public class ChatService {
                         .findByEmail(currentUserEmail)
                         .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        // Lấy danh sách user đã chat (kết hợp cả sender và receiver)
-        List<User> partnersAsSender =
-                chatMessageRepository.findChatPartnersAsSender(currentUser.getId());
-        List<User> partnersAsReceiver =
-                chatMessageRepository.findChatPartnersAsReceiver(currentUser.getId());
-
-        // Kết hợp và loại bỏ duplicate
-        java.util.Set<String> partnerIds = new java.util.HashSet<>();
-        List<User> partners = new java.util.ArrayList<>();
-
-        for (User partner : partnersAsSender) {
-            if (!partnerIds.contains(partner.getId())) {
-                partnerIds.add(partner.getId());
-                partners.add(partner);
+        List<User> partners;
+        
+        // Nếu là CSKH, lấy TẤT CẢ customers có conversation với bất kỳ CSKH nào
+        if (currentUser.getRole() != null && "CUSTOMER_SUPPORT".equals(currentUser.getRole().getName())) {
+            List<User> customersAsSender = chatMessageRepository.findCustomersAsSender();
+            List<User> customersAsReceiver = chatMessageRepository.findCustomersAsReceiver();
+            
+            // Kết hợp và loại bỏ duplicate
+            java.util.Set<String> partnerIds = new java.util.HashSet<>();
+            partners = new java.util.ArrayList<>();
+            
+            for (User customer : customersAsSender) {
+                if (!partnerIds.contains(customer.getId())) {
+                    partnerIds.add(customer.getId());
+                    partners.add(customer);
+                }
             }
-        }
-        for (User partner : partnersAsReceiver) {
-            if (!partnerIds.contains(partner.getId())) {
-                partnerIds.add(partner.getId());
-                partners.add(partner);
+            for (User customer : customersAsReceiver) {
+                if (!partnerIds.contains(customer.getId())) {
+                    partnerIds.add(customer.getId());
+                    partners.add(customer);
+                }
+            }
+        } else {
+            // Nếu là CUSTOMER, giữ nguyên logic cũ
+            List<User> partnersAsSender =
+                    chatMessageRepository.findChatPartnersAsSender(currentUser.getId());
+            List<User> partnersAsReceiver =
+                    chatMessageRepository.findChatPartnersAsReceiver(currentUser.getId());
+
+            // Kết hợp và loại bỏ duplicate
+            java.util.Set<String> partnerIds = new java.util.HashSet<>();
+            partners = new java.util.ArrayList<>();
+
+            for (User partner : partnersAsSender) {
+                if (!partnerIds.contains(partner.getId())) {
+                    partnerIds.add(partner.getId());
+                    partners.add(partner);
+                }
+            }
+            for (User partner : partnersAsReceiver) {
+                if (!partnerIds.contains(partner.getId())) {
+                    partnerIds.add(partner.getId());
+                    partners.add(partner);
+                }
             }
         }
 
         return partners.stream()
                 .map(
                         partner -> {
-                            List<ChatMessage> messages =
-                                    chatMessageRepository.findConversationBetweenUsers(
-                                            currentUser.getId(), partner.getId());
+                            List<ChatMessage> messages;
+                            
+                            // Nếu là CSKH, lấy TẤT CẢ messages của customer với bất kỳ CSKH nào
+                            if (currentUser.getRole() != null && "CUSTOMER_SUPPORT".equals(currentUser.getRole().getName())) {
+                                messages = chatMessageRepository.findCustomerConversationWithAnySupport(partner.getId());
+                            } else {
+                                // Nếu là CUSTOMER, lấy messages giữa currentUser và partner
+                                messages = chatMessageRepository.findConversationBetweenUsers(
+                                        currentUser.getId(), partner.getId());
+                            }
 
                             ChatMessage lastMessage =
                                     messages.isEmpty()
                                             ? null
                                             : messages.get(messages.size() - 1);
 
-                            // Đếm unread từ partner này
+                            // Đếm unread từ partner này (chỉ đếm messages mà currentUser là receiver)
                             Long unreadFromPartner =
                                     messages.stream()
                                             .filter(

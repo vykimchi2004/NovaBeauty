@@ -47,6 +47,22 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, String
             nativeQuery = true)
     ChatMessage findLastMessageBetweenUsers(
             @Param("userId1") String userId1, @Param("userId2") String userId2);
+
+    // Lấy tất cả customers có conversation với bất kỳ CSKH nào (customer là sender)
+    @Query("SELECT DISTINCT m.sender FROM ChatMessage m WHERE m.sender.role.name = 'CUSTOMER' AND m.receiver.role.name = 'CUSTOMER_SUPPORT'")
+    List<User> findCustomersAsSender();
+
+    // Lấy tất cả customers có conversation với bất kỳ CSKH nào (customer là receiver)
+    @Query("SELECT DISTINCT m.receiver FROM ChatMessage m WHERE m.receiver.role.name = 'CUSTOMER' AND m.sender.role.name = 'CUSTOMER_SUPPORT'")
+    List<User> findCustomersAsReceiver();
+
+    // Lấy tất cả messages của một customer với bất kỳ CSKH nào
+    @Query(
+            "SELECT m FROM ChatMessage m WHERE "
+                    + "((m.sender.id = :customerId AND m.receiver.role.name = 'CUSTOMER_SUPPORT') OR "
+                    + " (m.receiver.id = :customerId AND m.sender.role.name = 'CUSTOMER_SUPPORT')) "
+                    + "ORDER BY m.createdAt ASC")
+    List<ChatMessage> findCustomerConversationWithAnySupport(@Param("customerId") String customerId);
 }
 
 

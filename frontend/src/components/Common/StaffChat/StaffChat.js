@@ -3,7 +3,7 @@ import classNames from 'classnames/bind';
 import styles from './StaffChat.module.scss';
 import chatService from '~/services/chat';
 import { storage } from '~/services/utils';
-import { STORAGE_KEYS } from '~/services/config';
+import { STORAGE_KEYS, API_BASE_URL } from '~/services/config';
 import { notify } from '~/utils/notification';
 
 const cx = classNames.bind(styles);
@@ -19,6 +19,10 @@ function StaffChat({ onBack, onClose }) {
     const [isAccepted, setIsAccepted] = useState(false);
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
+    const csSupportIdRef = useRef(null);
+    const chatStartTimeRef = useRef(null);
+    const disconnectMessageSentRef = useRef(false);
+    const isDisconnectingRef = useRef(false); // Flag để tránh hiển thị dialog nhiều lần
 
     const currentUser = storage.get(STORAGE_KEYS.USER);
 
@@ -34,6 +38,43 @@ function StaffChat({ onBack, onClose }) {
         }
     }, []);
 
+    // Helper function để gửi disconnect message (dùng khi beforeunload hoặc unmount)
+    const sendDisconnectMessage = () => {
+        // Tránh gửi nhiều lần
+        if (!csSupportIdRef.current || disconnectMessageSentRef.current) return;
+        
+        disconnectMessageSentRef.current = true;
+        
+        try {
+            const user = storage.get(STORAGE_KEYS.USER);
+            if (!user || !user.email) return;
+            
+            const senderName = user.name || user.fullName || 'Khách hàng';
+            const payload = {
+                message: '[SYSTEM_DISCONNECT] Khách hàng đã ngắt kết nối',
+                senderEmail: user.email,
+                senderName: senderName
+            };
+            
+            // Sử dụng fetch với keepalive: true để đảm bảo request được gửi ngay cả khi trang reload
+            const token = storage.get(STORAGE_KEYS.TOKEN);
+            
+            fetch(`${API_BASE_URL}/chat/chatbot/send`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token && { 'Authorization': `Bearer ${token}` })
+                },
+                body: JSON.stringify(payload),
+                keepalive: true // Quan trọng: đảm bảo request được gửi ngay cả khi trang reload
+            }).catch(error => {
+                console.warn('Failed to send disconnect message:', error);
+            });
+        } catch (error) {
+            console.warn('Failed to send disconnect message:', error);
+        }
+    };
+
     // Initialize connection when component mounts
     useEffect(() => {
         // Reset state NGAY LẬP TỨC khi mount (không giữ tin nhắn cũ)
@@ -45,15 +86,36 @@ function StaffChat({ onBack, onClose }) {
         setLastMessageId(null);
         setChatStartTime(null);
         setIsAccepted(false);
+        csSupportIdRef.current = null;
+        chatStartTimeRef.current = null;
+        disconnectMessageSentRef.current = false;
         
         // Connect lại sau khi reset
         const timer = setTimeout(() => {
             handleConnect();
         }, 100);
         
-        // Cleanup: Clear messages khi unmount và clear timer
+        // Thêm beforeunload và pagehide event listener để gửi disconnect message khi reload trang
+        const handleBeforeUnload = () => {
+            sendDisconnectMessage();
+        };
+        
+        const handlePageHide = () => {
+            sendDisconnectMessage();
+        };
+        
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        window.addEventListener('pagehide', handlePageHide);
+        
+        // Cleanup: Gửi disconnect message nếu đang kết nối, sau đó clear state
         return () => {
             clearTimeout(timer);
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            window.removeEventListener('pagehide', handlePageHide);
+            
+            // Gửi disconnect message nếu đang kết nối với CSKH (chỉ cần có csSupportId là đã bắt đầu kết nối)
+            sendDisconnectMessage();
+            
             setMessages([]);
             setInputValue('');
             setIsConnecting(false);
@@ -72,14 +134,16 @@ function StaffChat({ onBack, onClose }) {
         const fetchNewMessages = async () => {
             try {
                 const conversationMessages = await chatService.getConversation(csSupportId);
+                console.log('[StaffChat] Fetched messages:', conversationMessages);
+                console.log('[StaffChat] chatStartTime:', chatStartTime);
                 
                 if (conversationMessages && conversationMessages.length > 0) {
-                    // Kiểm tra xem có tin nhắn "Tôi đã tiếp nhận" không
+                    // Kiểm tra xem có tin nhắn "Tôi đã tiếp nhận" từ BẤT KỲ CSKH nào không
                     const acceptMessage = conversationMessages.find(msg => 
                         msg.message && 
                         msg.message.includes('Tôi đã tiếp nhận yêu cầu hỗ trợ của bạn') &&
-                        msg.senderId === csSupportId &&
-                        msg.receiverId === currentUser.id
+                        msg.senderId !== currentUser.id && // Sender phải là CSKH (không phải customer)
+                        msg.receiverId === currentUser.id // Receiver phải là customer
                     );
                     
                     if (acceptMessage) {
@@ -90,20 +154,31 @@ function StaffChat({ onBack, onClose }) {
                     setMessages(prev => {
                         const existingIds = new Set(prev.map(m => m.id));
                         
-                        // Lọc tin nhắn mới từ CSKH (chỉ lấy tin nhắn từ CSKH gửi cho khách hàng)
-                        // VÀ chỉ lấy tin nhắn được tạo SAU khi bắt đầu chat
-                        // VÀ loại bỏ tin nhắn hệ thống (SYSTEM_DISCONNECT)
+                        // Lọc tin nhắn mới từ CSKH (lấy tin nhắn từ BẤT KỲ CSKH nào gửi cho khách hàng)
+                        // CHỈ lấy tin nhắn được tạo SAU khi bắt đầu chat (chatStartTime)
+                        // VÀ loại bỏ tin nhắn hệ thống (SYSTEM_DISCONNECT) và welcome message
                         const newMessagesFromCS = conversationMessages
                             .filter(msg => {
                                 const messageTime = new Date(msg.createdAt);
-                                // Chỉ lấy tin nhắn từ CSKH (sender là CSKH, receiver là khách hàng)
-                                // VÀ tin nhắn được tạo sau khi bắt đầu chat
-                                // VÀ không phải tin nhắn hệ thống
-                                return msg.senderId === csSupportId && 
-                                       msg.receiverId === currentUser.id &&
-                                       messageTime >= chatStartTime &&
-                                       !existingIds.has(msg.id) &&
-                                       !(msg.message && msg.message.includes('[SYSTEM_DISCONNECT]'));
+                                const isAfterStartTime = messageTime >= chatStartTime;
+                                const isFromCSKH = msg.receiverId === currentUser.id && msg.senderId !== currentUser.id;
+                                const isNotSystemMessage = !(msg.message && (msg.message.includes('[SYSTEM_DISCONNECT]') || msg.message.includes('Khách hàng yêu cầu chat trực tiếp với nhân viên hỗ trợ từ chatbot')));
+                                const isNew = !existingIds.has(msg.id);
+                                
+                                const shouldInclude = isFromCSKH && isAfterStartTime && isNew && isNotSystemMessage;
+                                
+                                if (isFromCSKH && !shouldInclude) {
+                                    console.log('[StaffChat] Message filtered out:', {
+                                        message: msg.message?.substring(0, 50),
+                                        isAfterStartTime,
+                                        isNotSystemMessage,
+                                        isNew,
+                                        messageTime: messageTime.toISOString(),
+                                        chatStartTime: chatStartTime.toISOString()
+                                    });
+                                }
+                                
+                                return shouldInclude;
                             })
                             .map(msg => ({
                                 id: msg.id,
@@ -113,6 +188,7 @@ function StaffChat({ onBack, onClose }) {
                             }));
 
                         if (newMessagesFromCS.length > 0) {
+                            console.log('[StaffChat] Adding new messages from CSKH:', newMessagesFromCS.length);
                             // Cập nhật lastMessageId với tin nhắn mới nhất từ CSKH
                             const latestCSMessage = newMessagesFromCS[newMessagesFromCS.length - 1];
                             if (latestCSMessage) {
@@ -122,6 +198,8 @@ function StaffChat({ onBack, onClose }) {
                             // Thêm tin nhắn mới vào state
                             return [...prev, ...newMessagesFromCS];
                         }
+                        
+                        return prev;
                         
                         return prev;
                     });
@@ -173,6 +251,7 @@ function StaffChat({ onBack, onClose }) {
                 const csSupport = await chatService.getFirstCustomerSupport();
                 if (csSupport && csSupport.id) {
                     setCsSupportId(csSupport.id);
+                    csSupportIdRef.current = csSupport.id;
                 }
             } catch (csError) {
                 console.warn('Failed to get customer support:', csError);
@@ -196,8 +275,10 @@ function StaffChat({ onBack, onClose }) {
             setTimeout(() => {
                 setIsConnecting(false);
 
-                // Đặt thời gian bắt đầu chat (để chỉ lấy tin nhắn mới sau thời điểm này)
-                setChatStartTime(new Date());
+                // Đặt thời gian bắt đầu chat (mỗi lần kết nối lại là conversation mới, bắt đầu từ đầu)
+                const startTime = new Date();
+                setChatStartTime(startTime);
+                chatStartTimeRef.current = startTime;
 
                 // Thêm thông báo chào từ nhân viên
                 const staffMessage = {
@@ -297,40 +378,57 @@ function StaffChat({ onBack, onClose }) {
     };
 
     const handleDisconnect = async () => {
-        // Hiển thị dialog xác nhận
-        const confirmed = await notify.confirm(
-            'Bạn muốn ngắt kết nối?',
-            'Ngắt kết nối',
-            'Ngắt kết nối',
-            'Hủy'
-        );
-
-        if (confirmed) {
-            // Gửi tin nhắn thông báo cho CSKH rằng khách hàng đã ngắt kết nối
-            if (currentUser && csSupportId) {
-                try {
-                    const senderName = currentUser.name || currentUser.fullName || 'Khách hàng';
-                    await chatService.sendMessageFromChatbot(
-                        '[SYSTEM_DISCONNECT] Khách hàng đã ngắt kết nối',
-                        currentUser.email,
-                        senderName
-                    );
-                } catch (error) {
-                    console.warn('Failed to send disconnect message:', error);
-                }
-            }
-
-            // Reset tin nhắn (xóa tất cả tin nhắn cũ - chỉ lưu tạm ở client)
-            setMessages([]);
-            setInputValue('');
-            setIsSending(false);
-            setIsConnecting(false);
-            setChatStartTime(null);
-
-            return true; // Đã xác nhận ngắt kết nối
+        // Tránh hiển thị dialog nhiều lần nếu đang trong quá trình disconnect
+        if (isDisconnectingRef.current) {
+            return false;
         }
         
-        return false; // Không xác nhận
+        isDisconnectingRef.current = true;
+        
+        try {
+            // Hiển thị dialog xác nhận
+            const confirmed = await notify.confirm(
+                'Bạn muốn ngắt kết nối?',
+                'Ngắt kết nối',
+                'Ngắt kết nối',
+                'Hủy'
+            );
+
+            if (confirmed) {
+                // Gửi tin nhắn thông báo cho CSKH rằng khách hàng đã ngắt kết nối
+                if (currentUser && csSupportId) {
+                    try {
+                        const senderName = currentUser.name || currentUser.fullName || 'Khách hàng';
+                        await chatService.sendMessageFromChatbot(
+                            '[SYSTEM_DISCONNECT] Khách hàng đã ngắt kết nối',
+                            currentUser.email,
+                            senderName
+                        );
+                    } catch (error) {
+                        console.warn('Failed to send disconnect message:', error);
+                    }
+                }
+
+                // Reset tin nhắn (xóa tất cả tin nhắn cũ - chỉ lưu tạm ở client)
+                setMessages([]);
+                setInputValue('');
+                setIsSending(false);
+                setIsConnecting(false);
+                setChatStartTime(null);
+                csSupportIdRef.current = null;
+                chatStartTimeRef.current = null;
+                disconnectMessageSentRef.current = true; // Đánh dấu đã gửi disconnect message
+
+                return true; // Đã xác nhận ngắt kết nối
+            }
+            
+            return false; // Không xác nhận
+        } finally {
+            // Reset flag sau khi hoàn thành (có thể sau một khoảng thời gian ngắn để tránh race condition)
+            setTimeout(() => {
+                isDisconnectingRef.current = false;
+            }, 500);
+        }
     };
 
     const handleClose = async () => {
