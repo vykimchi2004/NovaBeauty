@@ -137,7 +137,7 @@ function Navbar({ open = false, setOpen = () => { }, onLoginClick = () => { } })
           >
             <div className={cx('category-btn')}>
               <FontAwesomeIcon icon={faBars} className={cx('cat-icon')} />
-              <span>Danh Mục Sản Phẩm</span>
+              <span>Danh mục sản phẩm</span>
             </div>
 
             <div className={cx('dropdown-container')}>

@@ -250,26 +250,12 @@ function RegisterModal({ isOpen, onClose, onOpenLogin, onOpenForgot }) {
         // Backend KHÔNG tạo user mới, chỉ UPDATE user hiện có
         await setPasswordForGoogleUser(email, verifiedOtp, password);
         
-        // 2) Đăng nhập bằng email/password mới
-        await login(email, password);
+        // 2) Phát sự kiện để UI cập nhật
+        window.dispatchEvent(new CustomEvent('userRegistered', { detail: { email } }));
         
-        // 3) Lấy thông tin user từ database (user đã tồn tại)
-        let userInfo = null;
-        try {
-          userInfo = await getMyInfo();
-          if (userInfo) {
-            storage.set(STORAGE_KEYS.USER, userInfo);
-          }
-        } catch (err) {
-          // fallback
-          userInfo = { email, fullName: email.split('@')[0] };
-          storage.set(STORAGE_KEYS.USER, userInfo);
-        }
-
-        // 4) Phát sự kiện và đóng modal
-        window.dispatchEvent(new CustomEvent('userRegistered', { detail: userInfo }));
+        // 3) Đóng modal đăng ký và mở modal đăng nhập
         onClose();
-        window.location.reload();
+        onOpenLogin?.();
       } else {
         // ===== USER MỚI: TẠO TÀI KHOẢN MỚI =====
         console.log('[RegisterModal] USER MỚI - Tạo tài khoản mới');
@@ -277,27 +263,12 @@ function RegisterModal({ isOpen, onClose, onOpenLogin, onOpenForgot }) {
         // 1) Tạo tài khoản mới trong database
         await register({ email, password, fullName: username });
 
-        // 2) Đăng nhập ngay sau khi đăng ký
-        await login(email, password);
-
-        // 3) Lấy thông tin user
-        let userInfo = null;
-        try {
-          userInfo = await getMyInfo();
-          if (userInfo) {
-            storage.set(STORAGE_KEYS.USER, userInfo);
-          }
-        } catch (err) {
-          // fallback nếu backend chưa có my-info
-          userInfo = { email, fullName: username, username };
-          storage.set(STORAGE_KEYS.USER, userInfo);
-        }
-
-        // 4) Phát sự kiện để UI cập nhật và đóng modal
-        window.dispatchEvent(new CustomEvent('userRegistered', { detail: userInfo }));
+        // 2) Phát sự kiện để UI cập nhật
+        window.dispatchEvent(new CustomEvent('userRegistered', { detail: { email, fullName: username } }));
+        
+        // 3) Đóng modal đăng ký và mở modal đăng nhập
         onClose();
-        // 5) Reload để đồng bộ toàn bộ UI
-        window.location.reload();
+        onOpenLogin?.();
       }
     } catch (err) {
       // Dịch lỗi và hiển thị ở đúng field
