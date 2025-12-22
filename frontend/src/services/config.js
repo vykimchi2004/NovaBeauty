@@ -8,10 +8,13 @@ export const API_ENDPOINTS = {
         SEND_OTP: '/auth/send-otp',
         VERIFY_OTP: '/auth/verify-otp',
         TOKEN: '/auth/token',
+        GOOGLE: '/auth/google',
         REFRESH_TOKEN: '/auth/refresh',
         LOGOUT: '/auth/logout',
         RESET_PASSWORD: '/auth/reset-password',
         CHANGE_PASSWORD: '/auth/change-password',
+        CHECK_GOOGLE_USER: '/auth/check-google-user',
+        SET_PASSWORD_GOOGLE: '/auth/set-password-google',
     },
     // Users
     USERS: {

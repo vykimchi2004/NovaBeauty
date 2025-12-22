@@ -4,10 +4,11 @@ import styles from './AuthLayout.module.scss';
 import classNames from 'classnames/bind';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
-import { sendVerificationCode, verifyCode, register, login } from '~/services/auth';
+import { sendVerificationCode, verifyCode, register, login, checkGoogleUser, setPasswordForGoogleUser } from '~/services/auth';
 import { getMyInfo } from '~/services/user';
 import { STORAGE_KEYS } from '~/services/config';
 import { storage, validatePassword } from '~/services/utils';
+import NotificationModal from '~/components/Common/NotificationModal/NotificationModal';
 
 const cx = classNames.bind(styles);
 
@@ -47,7 +48,7 @@ const translateError = (errorMessage) => {
   return { message: errorMessage, field: 'username' };
 };
 
-function RegisterModal({ isOpen, onClose, onOpenLogin }) {
+function RegisterModal({ isOpen, onClose, onOpenLogin, onOpenForgot }) {
   const [step, setStep] = useState(1); // 1: nhập email, 2: xác nhận mã, 3: tạo tài khoản
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -70,6 +71,9 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [agreeError, setAgreeError] = useState('');
+  const [isGoogleUser, setIsGoogleUser] = useState(false);
+  const [showGoogleUserPopup, setShowGoogleUserPopup] = useState(false);
+  const [verifiedOtp, setVerifiedOtp] = useState('');
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? 'hidden' : 'unset';
@@ -96,6 +100,9 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
       setPasswordError('');
       setConfirmPasswordError('');
       setAgreeError('');
+      setIsGoogleUser(false);
+      setShowGoogleUserPopup(false);
+      setVerifiedOtp('');
     }
   }, [isOpen]);
 
@@ -112,12 +119,27 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
   const handleSendEmail = async (e) => {
     e.preventDefault();
     setEmailError('');
+    setIsGoogleUser(false);
     if (!email) {
       setEmailError('Vui lòng nhập email hợp lệ');
       return;
     }
     setLoading(true);
     try {
+      // Kiểm tra xem email có phải Google user không
+      const isGoogle = await checkGoogleUser(email);
+      setIsGoogleUser(isGoogle);
+      console.log('[RegisterModal] handleSendEmail - isGoogleUser:', isGoogle);
+      
+      // Nếu là Google user, hiển thị popup thông báo
+      if (isGoogle) {
+        setLoading(false);
+        setShowGoogleUserPopup(true);
+        console.log('[RegisterModal] handleSendEmail - Google user detected, showing popup');
+        return; // Dừng lại, không gửi OTP cho đăng ký
+      }
+      
+      // Nếu không phải Google user, tiếp tục flow đăng ký bình thường
       await sendVerificationCode(email, 'register');
       setLoading(false);
       setStep(2);
@@ -141,6 +163,10 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
     setLoading(true);
     try {
       await verifyCode(email, code);
+      // Lưu OTP đã verify để dùng cho setPasswordForGoogleUser
+      setVerifiedOtp(code);
+      console.log('[RegisterModal] handleVerifyCode - OTP verified, isGoogleUser:', isGoogleUser);
+      console.log('[RegisterModal] handleVerifyCode - verifiedOtp saved:', code);
       setStep(3);
     } catch (err) {
       const { message } = translateError(err.message);
@@ -167,7 +193,8 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
 
     let hasError = false;
 
-    if (!username.trim()) {
+    // Nếu không phải Google user, yêu cầu username
+    if (!isGoogleUser && !username.trim()) {
       setUsernameError('Vui lòng nhập tên hiển thị');
       hasError = true;
     }
@@ -201,30 +228,77 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
 
     setLoading(true);
     try {
-      // 1) Tạo tài khoản
-      await register({ email, password, fullName: username });
-
-      // 2) Đăng nhập ngay sau khi đăng ký
-      await login(email, password);
-
-      // 3) Lấy thông tin user
-      let userInfo = null;
-      try {
-        userInfo = await getMyInfo();
-        if (userInfo) {
+      // QUAN TRỌNG: Kiểm tra lại isGoogleUser để đảm bảo không bị reset
+      console.log('[RegisterModal] handleRegister - isGoogleUser:', isGoogleUser);
+      console.log('[RegisterModal] handleRegister - email:', email);
+      console.log('[RegisterModal] handleRegister - verifiedOtp:', verifiedOtp ? 'Có' : 'Không');
+      
+      if (isGoogleUser) {
+        // ===== GOOGLE USER: CHỈ CẬP NHẬT MẬT KHẨU, KHÔNG TẠO TÀI KHOẢN MỚI =====
+        // QUAN TRỌNG: User đã tồn tại trong database (đã đăng nhập bằng Google trước đó)
+        // CHỈ CẬP NHẬT password cho user hiện có, KHÔNG TẠO TÀI KHOẢN MỚI
+        // KHÔNG GỌI register() - chỉ gọi setPasswordForGoogleUser()
+        
+        if (!verifiedOtp) {
+          throw new Error('OTP chưa được xác thực. Vui lòng quay lại bước xác thực OTP.');
+        }
+        
+        console.log('[RegisterModal] GOOGLE USER - Chỉ cập nhật mật khẩu, KHÔNG tạo tài khoản mới');
+        
+        // 1) CẬP NHẬT password cho user hiện có (KHÔNG TẠO MỚI)
+        // Backend sẽ tìm user theo email và UPDATE password
+        // Backend KHÔNG tạo user mới, chỉ UPDATE user hiện có
+        await setPasswordForGoogleUser(email, verifiedOtp, password);
+        
+        // 2) Đăng nhập bằng email/password mới
+        await login(email, password);
+        
+        // 3) Lấy thông tin user từ database (user đã tồn tại)
+        let userInfo = null;
+        try {
+          userInfo = await getMyInfo();
+          if (userInfo) {
+            storage.set(STORAGE_KEYS.USER, userInfo);
+          }
+        } catch (err) {
+          // fallback
+          userInfo = { email, fullName: email.split('@')[0] };
           storage.set(STORAGE_KEYS.USER, userInfo);
         }
-      } catch (err) {
-        // fallback nếu backend chưa có my-info
-        userInfo = { email, fullName: username, username };
-        storage.set(STORAGE_KEYS.USER, userInfo);
-      }
 
-      // 4) Phát sự kiện để UI cập nhật và đóng modal
-      window.dispatchEvent(new CustomEvent('userRegistered', { detail: userInfo }));
-      onClose();
-      // 5) Reload để đồng bộ toàn bộ UI
-      window.location.reload();
+        // 4) Phát sự kiện và đóng modal
+        window.dispatchEvent(new CustomEvent('userRegistered', { detail: userInfo }));
+        onClose();
+        window.location.reload();
+      } else {
+        // ===== USER MỚI: TẠO TÀI KHOẢN MỚI =====
+        console.log('[RegisterModal] USER MỚI - Tạo tài khoản mới');
+        
+        // 1) Tạo tài khoản mới trong database
+        await register({ email, password, fullName: username });
+
+        // 2) Đăng nhập ngay sau khi đăng ký
+        await login(email, password);
+
+        // 3) Lấy thông tin user
+        let userInfo = null;
+        try {
+          userInfo = await getMyInfo();
+          if (userInfo) {
+            storage.set(STORAGE_KEYS.USER, userInfo);
+          }
+        } catch (err) {
+          // fallback nếu backend chưa có my-info
+          userInfo = { email, fullName: username, username };
+          storage.set(STORAGE_KEYS.USER, userInfo);
+        }
+
+        // 4) Phát sự kiện để UI cập nhật và đóng modal
+        window.dispatchEvent(new CustomEvent('userRegistered', { detail: userInfo }));
+        onClose();
+        // 5) Reload để đồng bộ toàn bộ UI
+        window.location.reload();
+      }
     } catch (err) {
       // Dịch lỗi và hiển thị ở đúng field
       const { message, field } = translateError(err.message);
@@ -235,6 +309,9 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
         setEmailError(message);
       } else if (field === 'password') {
         setPasswordError(message);
+      } else if (field === 'otp') {
+        setStep(2);
+        setOtpError(message);
       } else {
         // Lỗi khác (username, uncategorized, etc.) hiển thị ở username field
         setUsernameError(message);
@@ -310,15 +387,20 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setEmailError('');
+                    setIsGoogleUser(false);
+                  }}
                   placeholder="Nhập email của bạn"
                 />
                 {emailError && <div className={cx('error')}>{emailError}</div>}
               </div>
               <button type="submit" className={cx('loginBtn')} disabled={loading}>
-                {loading ? 'Đang gửi...' : 'Gửi mã xác nhận'}
+                {loading ? 'Đang kiểm tra...' : 'Gửi mã xác nhận'}
               </button>
             </form>
+            
             <p className={cx('subtitle')}>
               Đã có tài khoản?{' '}
               <span className={cx('register')} onClick={onOpenLogin}>
@@ -376,17 +458,34 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
 
         {step === 3 && (
           <>
-            <form onSubmit={handleRegister} className={cx('form')} noValidate>
-              <div className={cx('formGroup')}>
-                <label>Tên hiển thị</label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Tên hiển thị"
-                />
-                {usernameError && <div className={cx('error')}>{usernameError}</div>}
+            {isGoogleUser && (
+              <div style={{
+                padding: '12px 16px',
+                backgroundColor: '#fff3cd',
+                border: '1px solid #ffc107',
+                borderRadius: '8px',
+                marginBottom: '16px',
+                color: '#856404',
+                fontSize: '14px',
+                lineHeight: '1.5'
+              }}>
+                <strong>Email này đã được đăng nhập bằng Google.</strong><br />
+                Bạn có muốn thiết lập mật khẩu để đăng nhập bằng email không?
               </div>
+            )}
+            <form onSubmit={handleRegister} className={cx('form')} noValidate>
+              {!isGoogleUser && (
+                <div className={cx('formGroup')}>
+                  <label>Tên hiển thị</label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Tên hiển thị"
+                  />
+                  {usernameError && <div className={cx('error')}>{usernameError}</div>}
+                </div>
+              )}
 
               <div className={cx('formGroup')}>
                 <label>Mật khẩu</label>
@@ -429,7 +528,7 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
               </div>
 
               <button type="submit" className={cx('loginBtn')} disabled={loading}>
-                {loading ? 'Đang đăng ký...' : 'Đăng ký'}
+                {loading ? (isGoogleUser ? 'Đang thiết lập...' : 'Đang đăng ký...') : (isGoogleUser ? 'Thiết lập mật khẩu' : 'Đăng ký')}
               </button>
             </form>
           </>
@@ -438,7 +537,50 @@ function RegisterModal({ isOpen, onClose, onOpenLogin }) {
     </div>
   );
 
-  return ReactDOM.createPortal(modal, document.getElementById('modal-root'));
+  return (
+    <>
+      {ReactDOM.createPortal(modal, document.getElementById('modal-root'))}
+      
+      {/* Popup thông báo cho Google user */}
+      <NotificationModal
+        isOpen={showGoogleUserPopup}
+        type="confirm"
+        title="Thêm mật khẩu"
+        message={`Email "${email}" đã được đăng nhập bằng Google.\n\nBạn có muốn thêm mật khẩu để đăng nhập bằng email không?`}
+        confirmText="Thiết lập mật khẩu"
+        cancelText="Hủy"
+        showCancel={true}
+        onConfirm={async () => {
+          setShowGoogleUserPopup(false);
+          setLoading(true);
+          try {
+            // QUAN TRỌNG: Đảm bảo isGoogleUser vẫn là true khi chuyển sang step 2
+            console.log('[RegisterModal] Popup confirmed - isGoogleUser:', isGoogleUser);
+            console.log('[RegisterModal] Popup confirmed - email:', email);
+            
+            // Gửi OTP với mode 'forgot' để có thể set password
+            await sendVerificationCode(email, 'forgot');
+            setLoading(false);
+            // Đảm bảo isGoogleUser vẫn là true
+            setIsGoogleUser(true);
+            setStep(2); // Chuyển sang bước nhập OTP
+            setOtp(['', '', '', '', '', '']);
+            setSeconds(60);
+            setTimeout(() => inputsRef.current[0]?.focus(), 100);
+          } catch (err) {
+            setLoading(false);
+            const { message } = translateError(err.message);
+            setEmailError(message || 'Gửi mã xác nhận thất bại');
+            setShowGoogleUserPopup(false);
+          }
+        }}
+        onClose={() => {
+          setShowGoogleUserPopup(false);
+          setIsGoogleUser(false);
+        }}
+      />
+    </>
+  );
 }
 
 export default RegisterModal;

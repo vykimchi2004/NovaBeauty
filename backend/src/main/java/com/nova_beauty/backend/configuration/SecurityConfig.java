@@ -24,12 +24,14 @@ public class SecurityConfig {
     private static final String[] PUBLIC_POST_ENDPOINTS = {
         "/users",
         "/auth/token",
+        "/auth/google",  // Google OAuth login endpoint
         "/auth/introspect",
         "/auth/logout",
         "/auth/refresh",
         "/auth/send-otp",
         "/auth/verify-otp",
         "/auth/reset-password",
+        "/auth/set-password-google",  // Set password for Google user
         "/shipments/ghn/fees",
         "/shipments/ghn/leadtime",
         "/api/momo/ipn-handler",
@@ -39,6 +41,7 @@ public class SecurityConfig {
     };
 
     private static final String[] PUBLIC_GET_ENDPOINTS = {
+        "/auth/check-google-user",  // Check if email is Google user
         "/product_media/**",
         "/voucher_media/**",
         "/promotion_media/**",

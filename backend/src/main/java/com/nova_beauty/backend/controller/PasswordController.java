@@ -67,4 +67,44 @@ public class PasswordController {
                 .result("OK")
                 .build();
     }
+
+    // Check if email is Google login user
+    @GetMapping("/check-google-user")
+    public ApiResponse<Boolean> checkGoogleUser(@RequestParam String email) {
+        try {
+            boolean isGoogleUser = passwordService.isGoogleUser(email);
+            return ApiResponse.<Boolean>builder()
+                    .code(200)
+                    .message("Success")
+                    .result(isGoogleUser)
+                    .build();
+        } catch (Exception e) {
+            log.error("Error checking Google user for email: {}", email, e);
+            return ApiResponse.<Boolean>builder()
+                    .code(400)
+                    .message(e.getMessage())
+                    .result(false)
+                    .build();
+        }
+    }
+
+    // Set password for Google user (public endpoint, requires OTP)
+    @PostMapping("/set-password-google")
+    public ApiResponse<String> setPasswordForGoogleUser(@RequestBody @Valid ResetPasswordRequest request) {
+        try {
+            passwordService.setPasswordForGoogleUser(request.getEmail(), request.getOtp(), request.getNewPassword());
+            return ApiResponse.<String>builder()
+                    .code(200)
+                    .message("Password set successfully")
+                    .result("OK")
+                    .build();
+        } catch (Exception e) {
+            log.error("Error setting password for Google user: {}", request.getEmail(), e);
+            return ApiResponse.<String>builder()
+                    .code(400)
+                    .message(e.getMessage())
+                    .result(null)
+                    .build();
+        }
+    }
 }

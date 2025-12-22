@@ -12,7 +12,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import styles from './Profile.module.scss';
 import { getMyInfo, updateUser } from '~/services/user';
-import { logout, changePassword } from '~/services/auth';
+import { logout, changePassword, checkGoogleUser } from '~/services/auth';
 import { storage, validatePassword } from '~/services/utils';
 import { STORAGE_KEYS } from '~/services/config';
 import notifier from '~/utils/notification';
@@ -106,6 +106,7 @@ function ProfilePage() {
   const [addressRefreshKey, setAddressRefreshKey] = useState(0);
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [showAddressList, setShowAddressList] = useState(false);
+  const [isGoogleUserWithoutPassword, setIsGoogleUserWithoutPassword] = useState(false);
 
   const getStatusClass = (status) => {
     // Nếu status là Vietnamese text, map trực tiếp
@@ -256,6 +257,17 @@ function ProfilePage() {
 
   const handlePasswordSubmit = async (event) => {
     event.preventDefault();
+
+    // QUAN TRỌNG: Kiểm tra nếu là Google user chưa có mật khẩu thì không cho phép đổi mật khẩu
+    console.log('[Profile] handlePasswordSubmit - isGoogleUserWithoutPassword:', isGoogleUserWithoutPassword);
+    if (isGoogleUserWithoutPassword) {
+      console.log('[Profile] Blocking password change - Google user without password');
+      setPasswordMessage({
+        type: 'error',
+        text: 'Bạn chưa có mật khẩu. Vui lòng đăng ký và thiết lập mật khẩu trước khi có thể đổi mật khẩu.'
+      });
+      return;
+    }
 
     // Reset tất cả lỗi
     setOldPasswordError('');
@@ -480,6 +492,17 @@ function ProfilePage() {
 
         setUserId(userInfo.id);
         
+        // Kiểm tra xem user có phải Google user chưa có mật khẩu không
+        try {
+          console.log('[Profile] Checking Google user for email:', userInfo.email);
+          const isGoogle = await checkGoogleUser(userInfo.email);
+          console.log('[Profile] Google user check result:', isGoogle);
+          setIsGoogleUserWithoutPassword(isGoogle);
+        } catch (err) {
+          console.error('[Profile] Error checking Google user:', err);
+          setIsGoogleUserWithoutPassword(false);
+        }
+        
         // Fetch addresses to find default address
         try {
           const addresses = await getMyAddresses();
@@ -533,6 +556,26 @@ function ProfilePage() {
   }, [navigate]);
 
   // Auto-update default address when address list changes
+  // Kiểm tra lại Google user khi chuyển sang section password
+  useEffect(() => {
+    if (activeSection === 'password' && !isProfileLoading) {
+      const checkGoogleUserStatus = async () => {
+        try {
+          const cachedUser = storage.get(STORAGE_KEYS.USER, null);
+          if (cachedUser && cachedUser.email) {
+            console.log('[Profile] Re-checking Google user when entering password section:', cachedUser.email);
+            const isGoogle = await checkGoogleUser(cachedUser.email);
+            console.log('[Profile] Re-check result:', isGoogle);
+            setIsGoogleUserWithoutPassword(isGoogle);
+          }
+        } catch (err) {
+          console.error('[Profile] Error re-checking Google user:', err);
+        }
+      };
+      checkGoogleUserStatus();
+    }
+  }, [activeSection, isProfileLoading]);
+
   useEffect(() => {
     const updateDefaultAddress = async () => {
       if (addressRefreshKey === 0) return;
@@ -594,6 +637,7 @@ function ProfilePage() {
           newPasswordError={newPasswordError}
           confirmPasswordError={confirmPasswordError}
           onPasswordFieldChange={handlePasswordFieldChange}
+          isDisabled={isGoogleUserWithoutPassword}
         />
       );
     }

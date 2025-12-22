@@ -14,22 +14,55 @@ function PasswordSection({
   oldPasswordError,
   newPasswordError,
   confirmPasswordError,
-  onPasswordFieldChange
+  onPasswordFieldChange,
+  isDisabled = false
 }) {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  console.log('[PasswordSection] isDisabled:', isDisabled);
+
   return (
     <div className={cx('card')}>
       <div className={cx('cardHeader')}>
         <h2>Đổi mật khẩu</h2>
-        <button type="submit" form="password-form" className={cx('btn', 'btnPrimary')}>
+        <button 
+          type="submit" 
+          form="password-form" 
+          className={cx('btn', 'btnPrimary')}
+          disabled={isDisabled}
+        >
           Đổi mật khẩu
         </button>
       </div>
 
-      <form id="password-form" onSubmit={onSubmit}>
+      {isDisabled && (
+        <div style={{
+          padding: '12px 16px',
+          backgroundColor: '#fff3cd',
+          border: '1px solid #ffc107',
+          borderRadius: '8px',
+          marginBottom: '16px',
+          color: '#856404',
+          fontSize: '14px',
+          lineHeight: '1.5'
+        }}>
+          <strong>Bạn chưa có mật khẩu.</strong><br />
+          Vui lòng đăng ký và thiết lập mật khẩu trước khi có thể đổi mật khẩu.
+        </div>
+      )}
+
+      <form 
+        id="password-form" 
+        onSubmit={(e) => {
+          if (isDisabled) {
+            e.preventDefault();
+            return false;
+          }
+          return onSubmit(e);
+        }}
+      >
         <div className={cx('grid')}>
           <label>
             Mật khẩu hiện tại
@@ -44,12 +77,14 @@ function PasswordSection({
                     onPasswordFieldChange('current');
                   }
                 }}
+                disabled={isDisabled}
               />
               <button
                 type="button"
                 className={cx('eyeBtn')}
                 onClick={() => setShowCurrentPassword((prev) => !prev)}
                 aria-label={showCurrentPassword ? 'Ẩn mật khẩu hiện tại' : 'Hiện mật khẩu hiện tại'}
+                disabled={isDisabled}
               >
                 <FontAwesomeIcon icon={showCurrentPassword ? faEyeSlash : faEye} />
               </button>
@@ -79,14 +114,20 @@ function PasswordSection({
                     onPasswordFieldChange('next');
                   }
                 }}
+                disabled={isDisabled}
               />
               <button
                 type="button"
                 className={cx('eyeBtn')}
                 onClick={() => setShowNewPassword((prev) => !prev)}
                 aria-label={showNewPassword ? 'Ẩn mật khẩu mới' : 'Hiện mật khẩu mới'}
+                disabled={isDisabled}
               >
-                <FontAwesomeIcon icon={showNewPassword ? faEyeSlash : faEye} />
+                {showNewPassword ? (
+                  <FontAwesomeIcon icon={faEyeSlash} />
+                ) : (
+                  <FontAwesomeIcon icon={faEye} />
+                )}
               </button>
             </div>
             {newPasswordError && (
@@ -114,12 +155,14 @@ function PasswordSection({
                     onPasswordFieldChange('confirm');
                   }
                 }}
+                disabled={isDisabled}
               />
               <button
                 type="button"
                 className={cx('eyeBtn')}
                 onClick={() => setShowConfirmPassword((prev) => !prev)}
                 aria-label={showConfirmPassword ? 'Ẩn xác nhận mật khẩu' : 'Hiện xác nhận mật khẩu'}
+                disabled={isDisabled}
               >
                 <FontAwesomeIcon icon={showConfirmPassword ? faEyeSlash : faEye} />
               </button>

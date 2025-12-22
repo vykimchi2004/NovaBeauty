@@ -9,7 +9,7 @@ import { sendVerificationCode } from '~/services/auth';
 
 const cx = classNames.bind(styles);
 
-function ForgotPasswordModal({ isOpen, onClose, onBackToLogin, onCodeSent }) {
+function ForgotPasswordModal({ isOpen, onClose, onBackToLogin, onCodeSent, initialEmail = '' }) {
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [renderKey, setRenderKey] = useState(0);
@@ -26,10 +26,46 @@ function ForgotPasswordModal({ isOpen, onClose, onBackToLogin, onCodeSent }) {
       setLoading(false);
       setRenderKey((k) => k + 1);
       setTimeout(() => {
-        if (emailRef.current) emailRef.current.value = '';
+        if (emailRef.current) {
+          emailRef.current.value = initialEmail || '';
+          // Nếu có initialEmail, tự động submit
+          if (initialEmail) {
+            handleSubmitAuto(initialEmail);
+          }
+        }
       }, 0);
     }
-  }, [isOpen]);
+  }, [isOpen, initialEmail]);
+  
+  const handleSubmitAuto = async (email) => {
+    setEmailError('');
+    
+    if (!email) {
+      return;
+    }
+
+    // Kiểm tra nếu là admin email thì không cho phép quên mật khẩu
+    const normalizedEmail = email.toLowerCase();
+    if (normalizedEmail === 'admin@novabeauty.com' || normalizedEmail === 'admin@novabeuty.com') {
+      setEmailError('Bạn không có quyền này');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Gọi API gửi OTP với mode='forgot'
+      await sendVerificationCode(email, 'forgot');
+      
+      // Chuyển sang modal verify code (không đóng modal này, để parent xử lý)
+      if (onCodeSent) {
+        onCodeSent(email);
+      }
+    } catch (err) {
+      setEmailError(err.message || 'Không thể gửi mã xác nhận. Vui lòng thử lại.');
+      setLoading(false);
+    }
+  };
 
   const handleClose = () => {
     setEmailError('');

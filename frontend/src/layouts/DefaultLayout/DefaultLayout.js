@@ -54,12 +54,14 @@ function DefaultLayout({ children }) {
   // State cho forgot password flow
   const [forgotEmail, setForgotEmail] = useState('');
   const [verifiedOtp, setVerifiedOtp] = useState('');
+  const [isGoogleUserForgot, setIsGoogleUserForgot] = useState(false);
 
   // Đóng tất cả modal
   const closeModal = () => {
     setActiveModal(null);
     setForgotEmail('');
     setVerifiedOtp('');
+    setIsGoogleUserForgot(false);
   };
 
   // Xử lý đăng nhập thành công
@@ -70,9 +72,33 @@ function DefaultLayout({ children }) {
   };
 
   // Xử lý khi OTP được gửi (forgot password)
-  const handleForgotCodeSent = (email) => {
+  const handleForgotCodeSent = async (email) => {
     setForgotEmail(email);
+    // Kiểm tra xem có phải Google user không
+    const { checkGoogleUser } = await import('~/services/auth');
+    const isGoogle = await checkGoogleUser(email);
+    setIsGoogleUserForgot(isGoogle);
     setActiveModal('verify-code'); // Đóng forgot modal và mở verify modal
+  };
+
+  // Xử lý khi mở forgot password từ register modal (Google user)
+  const handleOpenForgotFromRegister = async (email) => {
+    setForgotEmail(email);
+    // Kiểm tra xem có phải Google user không
+    const { checkGoogleUser } = await import('~/services/auth');
+    const isGoogle = await checkGoogleUser(email);
+    setIsGoogleUserForgot(isGoogle);
+    setActiveModal('forgot');
+    // Tự động gửi OTP
+    setTimeout(async () => {
+      try {
+        const { sendVerificationCode } = await import('~/services/auth');
+        await sendVerificationCode(email, 'forgot');
+        setActiveModal('verify-code');
+      } catch (err) {
+        console.error('Error sending OTP:', err);
+      }
+    }, 100);
   };
 
   // Xử lý verify OTP cho forgot password
@@ -90,8 +116,14 @@ function DefaultLayout({ children }) {
   // Xử lý reset password
   const handleResetPassword = async (newPassword) => {
     try {
-      // Sử dụng OTP đã verify ở bước trước
-      await resetPassword(forgotEmail, verifiedOtp, newPassword);
+      // Nếu là Google user, dùng setPasswordForGoogleUser
+      if (isGoogleUserForgot) {
+        const { setPasswordForGoogleUser } = await import('~/services/auth');
+        await setPasswordForGoogleUser(forgotEmail, verifiedOtp, newPassword);
+      } else {
+        // Sử dụng OTP đã verify ở bước trước
+        await resetPassword(forgotEmail, verifiedOtp, newPassword);
+      }
       // ResetPasswordModal sẽ hiển thị thông báo thành công
     } catch (err) {
       throw new Error(err.message || 'Đặt lại mật khẩu thất bại');
@@ -288,6 +320,7 @@ function DefaultLayout({ children }) {
         isOpen={activeModal === 'register'}
         onClose={closeModal}
         onOpenLogin={() => setActiveModal('login')}
+        onOpenForgot={handleOpenForgotFromRegister}
       />
 
       {/* Forgot Password Modal */}
@@ -296,6 +329,7 @@ function DefaultLayout({ children }) {
         onClose={closeModal}
         onCodeSent={handleForgotCodeSent}
         onBackToLogin={() => setActiveModal('login')}
+        initialEmail={forgotEmail}
       />
 
       {/* Verify Code Modal (for forgot password) */}

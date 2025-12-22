@@ -19,11 +19,14 @@ import lombok.experimental.FieldDefaults;
 @Table(name = "users")
 public class User {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID) // Táº¡o chuá»—i ID ngáº«u nhiÃªn
+    @GeneratedValue(strategy = GenerationType.UUID) 
     String id;
 
     String password;
+    
+    @Column(name = "full_name", columnDefinition = "VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     String fullName;
+    
     String email;
     String phoneNumber;
     String address;

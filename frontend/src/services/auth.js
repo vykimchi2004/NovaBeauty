@@ -87,6 +87,40 @@ export async function login(email, password) {
   }
 }
 
+// Google OAuth login
+export async function loginWithGoogle(googleData) {
+  try {
+    const url = apiClient.buildURL(API_ENDPOINTS.AUTH.GOOGLE);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: JSON.stringify({
+        idToken: googleData.credential || googleData.idToken,
+        email: googleData.email,
+        fullName: googleData.name || googleData.fullName,
+        picture: googleData.picture,
+      }),
+    });
+
+    const data = await apiClient.handleResponse(response);
+
+    // Lưu access token và refresh token vào storage
+    if (data && data.token) {
+      storage.set(STORAGE_KEYS.TOKEN, data.token);
+    }
+    if (data && data.refreshToken) {
+      storage.set(STORAGE_KEYS.REFRESH_TOKEN, data.refreshToken);
+    }
+
+    return data;
+  } catch (error) {
+    console.error('[Auth Service] loginWithGoogle error:', error);
+    throw error;
+  }
+}
+
 // Register (create user)
 export async function register(userData) {
   try {
@@ -157,6 +191,47 @@ export async function changePassword(currentPassword, newPassword) {
     return response;
   } catch (error) {
     console.error('[Auth Service] changePassword error:', error);
+    throw error;
+  }
+}
+
+// Check if email is Google user
+export async function checkGoogleUser(email) {
+  try {
+    const url = apiClient.buildURL(`${API_ENDPOINTS.AUTH.CHECK_GOOGLE_USER}?email=${encodeURIComponent(email)}`);
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    const data = await apiClient.handleResponse(response);
+    // apiClient.handleResponse trả về data.result nếu có format {code, message, result}
+    // Nếu không có result, trả về data
+    const result = data?.result !== undefined ? data.result : data;
+    const isGoogle = result === true || result === 'true' || result === 1;
+    console.log('[Auth Service] checkGoogleUser - email:', email, 'isGoogle:', isGoogle, 'raw data:', data);
+    return isGoogle;
+  } catch (error) {
+    console.error('[Auth Service] checkGoogleUser error:', error);
+    return false;
+  }
+}
+
+// Set password for Google user (requires OTP)
+export async function setPasswordForGoogleUser(email, otp, newPassword) {
+  try {
+    const url = apiClient.buildURL(API_ENDPOINTS.AUTH.SET_PASSWORD_GOOGLE);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, otp, newPassword }),
+    });
+    return await apiClient.handleResponse(response);
+  } catch (error) {
+    console.error('[Auth Service] setPasswordForGoogleUser error:', error);
     throw error;
   }
 }

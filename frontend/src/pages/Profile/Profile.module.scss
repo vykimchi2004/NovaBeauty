@@ -214,6 +214,18 @@
     width: 32px;
     height: 32px;
 
+    // Đảm bảo chỉ có 1 icon được hiển thị
+    svg {
+      display: block;
+      width: 16px;
+      height: 16px;
+    }
+
+    // Ẩn tất cả icon con nếu có nhiều hơn 1
+    svg:not(:first-child) {
+      display: none;
+    }
+
     &:hover {
       color: #e5677d;
     }

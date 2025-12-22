@@ -50,4 +50,10 @@ public class AuthenticationController {
         authenticationService.logout(request);
         return ApiResponse.<Void>builder().build();
     }
+
+    @PostMapping("/google")
+    ApiResponse<AuthenticationResponse> authenticateWithGoogle(@RequestBody GoogleLoginRequest request) {
+        var result = authenticationService.authenticateWithGoogle(request);
+        return ApiResponse.<AuthenticationResponse>builder().result(result).build();
+    }
 }
