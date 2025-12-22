@@ -103,6 +103,15 @@ function Navbar({ open = false, setOpen = () => { }, onLoginClick = () => { } })
     setGrandChildrenMap({});
   };
 
+  // Tự động chọn danh mục đầu tiên khi dropdown được mở
+  const handleDropdownEnter = () => {
+    if (isMobile) return;
+    // Nếu chưa có category nào được chọn và có ít nhất 1 category
+    if (!activeCategoryId && categories.length > 0) {
+      handleMouseEnterCategory(categories[0].id, 'vertical');
+    }
+  };
+
   return (
     <nav className={cx('navbar')} onMouseLeave={handleMouseLeaveNavbar}>
       <div className={cx('overlay', { active: open })} onClick={() => setOpen(false)} />
@@ -122,7 +131,10 @@ function Navbar({ open = false, setOpen = () => { }, onLoginClick = () => { } })
         )}
         {/* Product Categories Dropdown (Desktop) */}
         {!isMobile && (
-          <li className={cx('category-dropdown-wrapper')}>
+          <li 
+            className={cx('category-dropdown-wrapper')}
+            onMouseEnter={handleDropdownEnter}
+          >
             <div className={cx('category-btn')}>
               <FontAwesomeIcon icon={faBars} className={cx('cat-icon')} />
               <span>Danh Mục Sản Phẩm</span>
