@@ -10,6 +10,30 @@
   }
 }
 
+@keyframes megaContentFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes dropdownEntrance {
+  from {
+    opacity: 0;
+    transform: translateY(15px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .navbar {
   background: linear-gradient(115deg, #e5677d 0%, #d85a6f 100%);
   position: relative;
@@ -400,8 +424,8 @@
     visibility: hidden;
     pointer-events: none;
     /* Smooth transform & opacity */
-    transform: translateY(12px);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(15px) scale(0.98);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     z-index: 200;
     border: 1px solid #eee;
     width: max-content;
@@ -409,14 +433,14 @@
     max-width: 1200px;
 
     /* Origin at top for natural reveal */
-    transform-origin: top center;
+    transform-origin: top left;
   }
 
   .category-dropdown-wrapper:hover .dropdown-container {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 
   /* Left Vertical Menu */
@@ -475,6 +499,7 @@
     flex-wrap: wrap;
     gap: 30px;
     align-content: flex-start;
+    animation: megaContentFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
   /* Reuse or adapt mega styles */

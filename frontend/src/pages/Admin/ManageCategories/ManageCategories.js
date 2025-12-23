@@ -11,7 +11,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames/bind';
 import styles from './ManageCategories.module.scss';
-import { getCategories, deleteCategory, createCategory, updateCategory, getRootCategories } from '~/services/category';
+import { getCategories, deleteCategory, createCategory, updateCategory } from '~/services/category';
 import notify from '~/utils/notification';
 
 const cx = classNames.bind(styles);
@@ -34,10 +34,14 @@ function ManageCategories() {
   const [hoverParentId, setHoverParentId] = useState('');
   const [formErrors, setFormErrors] = useState({});
 
+  // Lưu parentId ban đầu của category khi edit (để khóa rule)
+  const [originalParentId, setOriginalParentId] = useState('');
+
   useEffect(() => {
     fetchCategories();
   }, []);
 
+  // Luôn sync filteredCategories theo categories + searchTerm
   useEffect(() => {
     filterCategories();
   }, [searchTerm, categories]);
@@ -47,7 +51,6 @@ function ManageCategories() {
       setLoading(true);
       const data = await getCategories();
       setCategories(data || []);
-      setFilteredCategories(data || []);
     } catch (err) {
       console.error('Error fetching categories:', err);
       notify.error('Không thể tải danh sách danh mục. Vui lòng thử lại.');
@@ -89,6 +92,10 @@ function ManageCategories() {
     return filteredCategories.filter(cat => !cat.parentId);
   };
 
+  // ====== HELPERS: root/child ======
+  const isRootCategory = (cat) => !cat?.parentId && !cat?.parentCategory?.id;
+  const isChildCategory = (cat) => !!(cat?.parentId || cat?.parentCategory?.id);
+
   // Lấy tất cả id con của một danh mục (để tránh chọn chính nó hoặc con của nó làm cha)
   const getDescendantIds = (parentId) => {
     const children = categories.filter(cat => cat.parentId === parentId);
@@ -104,10 +111,10 @@ function ManageCategories() {
     if (!categoryId) return 0;
     const category = categories.find(c => c.id === categoryId);
     if (!category || !category.parentId) return 0;
-    
-    let level = 1; // Bắt đầu từ level 1 vì có parentId
+
+    let level = 1;
     let currentId = category.parentId;
-    
+
     while (currentId) {
       const parent = categories.find(c => c.id === currentId);
       if (!parent || !parent.parentId) break;
@@ -115,125 +122,125 @@ function ManageCategories() {
       if (level >= 3) break; // Tối đa 3 cấp (0, 1, 2)
       currentId = parent.parentId;
     }
-    
+
     return level;
   };
 
-  // Tạo danh sách option danh mục có thụt đầu dòng để chọn cha (cho phép chọn cả danh mục con)
-  const buildCategoryOptions = () => {
-    const excludeIds = editingCategory ? [editingCategory.id, ...getDescendantIds(editingCategory.id)] : [];
-
-    const traverse = (parentId = '', depth = 0) => {
-      return categories
-        .filter(cat => (cat.parentId || '') === (parentId || ''))
-        .map(cat => {
-          const option = {
-            id: cat.id,
-            name: `${'-- '.repeat(depth)}${cat.name}`,
-          };
-          return [option, ...traverse(cat.id, depth + 1)];
-        })
-        .flat();
-    };
-
-    return traverse().filter(opt => !excludeIds.includes(opt.id));
-  };
-
-  const excludeIdsForSelection = editingCategory ? [editingCategory.id, ...getDescendantIds(editingCategory.id)] : [];
-  
-  // Chỉ hiển thị danh mục gốc (level 0) trong danh sách chính
-  // Danh mục con (level 1) chỉ hiển thị trong menu con bên phải khi hover
-  const rootOptions = categories
-    .filter(cat => {
-      // Chỉ hiển thị danh mục gốc (không có parentId)
-      return !cat.parentId && !excludeIdsForSelection.includes(cat.id);
-    })
-    .sort((a, b) => {
-      // Sắp xếp theo tên
-      return (a.name || '').localeCompare(b.name || '');
-    });
-  
-  const childOptions = (hoverParentId
-    ? categories.filter(c => {
-        const level = getCategoryLevel(c.id);
-        return c.parentId === hoverParentId && !excludeIdsForSelection.includes(c.id);
-      })
-    : []);
   // Lấy đường dẫn đầy đủ của danh mục (cha > con)
   const getCategoryPath = (categoryId) => {
     if (!categoryId) return '';
     const category = categories.find(c => c.id === categoryId);
     if (!category) return '';
-    
+
     const path = [category.name];
     let currentParentId = category.parentId;
-    
+
     while (currentParentId) {
       const parent = categories.find(c => c.id === currentParentId);
       if (!parent) break;
       path.unshift(parent.name);
       currentParentId = parent.parentId;
     }
-    
+
     return path.join(' > ');
   };
+
+  // ====== OPTIONS FOR DROPDOWN ======
+  const excludeIdsForSelection = editingCategory
+    ? [editingCategory.id, ...getDescendantIds(editingCategory.id)]
+    : [];
+
+  // Chỉ hiển thị danh mục gốc ở cột trái
+  const rootOptions = categories
+    .filter(cat => !cat.parentId && !excludeIdsForSelection.includes(cat.id))
+    .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
   const selectedParentLabel = (() => {
     if (!formData.parentId) return 'Không có (Danh mục gốc)';
     const found = categories.find(c => c.id === formData.parentId);
     if (!found) return 'Danh mục không tồn tại';
-    
+
     const level = getCategoryLevel(formData.parentId);
-    // Nếu là danh mục con (level 1), hiển thị đường dẫn đầy đủ (cha > con)
-    if (level === 1) {
-      return getCategoryPath(formData.parentId);
-    }
-    // Nếu là danh mục gốc (level 0), chỉ hiển thị tên
+    if (level === 1) return getCategoryPath(formData.parentId);
     return found.name;
   })();
 
+  // ====== RULE: chỉ cho "danh mục con -> danh mục cha", không cho "danh mục cha -> danh mục con" ======
   const handleSelectParent = (id) => {
+    // RULES khi đang sửa
+    if (editingCategory) {
+      const editingIsRoot = isRootCategory(editingCategory);
+      const editingIsChild = isChildCategory(editingCategory);
+
+      // 1) Không cho danh mục cha (root) thành danh mục con
+      if (editingIsRoot && id) {
+        notify.warning('Danh mục cha không thể chuyển thành danh mục con.');
+        return;
+      }
+
+      // 2) Danh mục con: CHỈ cho phép chọn root (''), hoặc giữ nguyên parent cũ
+      if (editingIsChild) {
+        const allow = (id === '') || (id === originalParentId);
+        if (!allow) {
+          notify.warning('Chỉ cho phép chuyển danh mục con lên thành danh mục cha (Danh mục gốc).');
+          return;
+        }
+      }
+    }
+
+    // (Giữ rule 3 cấp của bạn)
     if (id) {
       const selectedCategory = categories.find(c => c.id === id);
       if (selectedCategory) {
         const level = getCategoryLevel(id);
-        // Không cho phép chọn level 2 (cháu) làm cha vì sẽ tạo ra level 3
         if (level >= 2) {
           notify.warning('Không thể chọn danh mục này làm cha. Chỉ cho phép tối đa 3 cấp (cha - con - cháu).');
           return;
         }
       }
     }
-    // Cập nhật state và đóng dropdown
+
     setFormData(prev => ({ ...prev, parentId: id || '' }));
     setParentDropdownOpen(false);
-    setHoverParentId(''); // Reset hover state
+    setHoverParentId('');
   };
 
   const handleAdd = () => {
     setEditingCategory(null);
+    setOriginalParentId('');
+    setParentDropdownOpen(false);
+    setHoverParentId('');
+    setFormErrors({});
     setFormData({
       name: '',
       description: '',
       status: true,
       parentId: ''
     });
-    setFormErrors({});
     setShowModal(true);
   };
 
   const handleEdit = (category) => {
     setEditingCategory(category);
+
+    const parent = category.parentId || category.parentCategory?.id || '';
+    setOriginalParentId(parent);
+
+    setParentDropdownOpen(false);
+    setHoverParentId('');
+    setFormErrors({});
+
     setFormData({
       name: category.name || '',
       description: category.description || '',
       status: category.status !== false,
-      parentId: category.parentId || category.parentCategory?.id || ''
+      parentId: parent
     });
-    setFormErrors({});
+
     setShowModal(true);
   };
 
+  // ✅ FIX: xóa xong phải refetch để tránh UI cũ (cascading/expanded)
   const handleDelete = async (categoryId) => {
     const confirmed = await notify.confirm(
       'Bạn có chắc chắn muốn xóa danh mục này? Tất cả danh mục con cũng sẽ bị xóa.',
@@ -241,13 +248,17 @@ function ManageCategories() {
       'Xóa',
       'Hủy'
     );
-    
+
     if (!confirmed) return;
 
     try {
       await deleteCategory(categoryId);
-      setCategories(categories.filter(c => c.id !== categoryId));
       notify.success('Xóa danh mục thành công!');
+
+      setExpandedCategories(new Set());
+      await fetchCategories();
+
+      window.dispatchEvent(new CustomEvent('categoriesUpdated'));
     } catch (err) {
       console.error('Error deleting category:', err);
       notify.error('Không thể xóa danh mục. Vui lòng thử lại.');
@@ -256,17 +267,36 @@ function ManageCategories() {
 
   const validateForm = () => {
     const errors = {};
+
     if (!formData.name?.trim()) {
       errors.name = 'Tên danh mục không được để trống';
     }
 
-    // Kiểm tra nếu chọn cha, đảm bảo không vượt quá 3 cấp (cha - con - cháu)
+    // RULES khi sửa
+    if (editingCategory) {
+      const editingIsRoot = isRootCategory(editingCategory);
+      const editingIsChild = isChildCategory(editingCategory);
+
+      // Không cho cha -> con
+      if (editingIsRoot && formData.parentId) {
+        errors.parentId = 'Danh mục cha không thể chuyển thành danh mục con.';
+      }
+
+      // Con: chỉ cho root hoặc giữ nguyên
+      if (editingIsChild) {
+        const allow = (formData.parentId === '') || (formData.parentId === originalParentId);
+        if (!allow) {
+          errors.parentId = 'Chỉ cho phép chuyển danh mục con lên thành danh mục cha (Danh mục gốc).';
+        }
+      }
+    }
+
+    // Kiểm tra giới hạn 3 cấp (nếu có parentId)
     if (formData.parentId) {
       const parentLevel = getCategoryLevel(formData.parentId);
       if (parentLevel >= 2) {
         errors.parentId = 'Không thể chọn danh mục này làm cha. Chỉ cho phép tối đa 3 cấp (cha - con - cháu).';
       } else {
-        // Danh mục mới sẽ ở level = parentLevel + 1
         const newLevel = parentLevel + 1;
         if (newLevel >= 3) {
           errors.parentId = 'Danh mục mới sẽ vượt quá giới hạn 3 cấp. Vui lòng chọn danh mục cha khác.';
@@ -281,15 +311,14 @@ function ManageCategories() {
   // Helper function to generate ID from name
   const generateCategoryId = (name) => {
     if (!name) return '';
-    // Convert Vietnamese to ASCII, remove special chars, uppercase, replace spaces with underscores
     return name
       .replace(/đ/g, 'd')
       .replace(/Đ/g, 'D')
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
-      .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9\s]/g, '')
       .trim()
-      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .replace(/\s+/g, '_')
       .toUpperCase();
   };
 
@@ -298,45 +327,40 @@ function ManageCategories() {
     if (!validateForm()) return;
 
     try {
-      // Chuẩn bị dữ liệu gửi lên - chỉ gửi các field có giá trị
       const trimmedName = formData.name.trim();
-      const submitData = {
-        name: trimmedName
-      };
-      
-      // Luôn generate ID từ tên (cho cả tạo mới và sửa)
+      const submitData = { name: trimmedName };
+
+      // Luôn generate ID từ tên (theo code bạn)
       const newId = generateCategoryId(trimmedName);
-      if (!newId) {
-        // Nếu id rỗng sau khi generate, thử dùng UUID hoặc timestamp
-        submitData.id = 'CAT_' + Date.now();
-      } else {
-        submitData.id = newId;
-      }
-      
-      // Chỉ thêm description nếu có giá trị
+      submitData.id = newId ? newId : 'CAT_' + Date.now();
+
       if (formData.description && formData.description.trim().length > 0) {
         submitData.description = formData.description.trim();
       }
-      
-      // Luôn gửi status (mặc định là true)
-      submitData.status = formData.status !== undefined && formData.status !== null ? formData.status : true;
-      
-      // Chỉ thêm parentId nếu có giá trị
-      if (formData.parentId && formData.parentId.trim().length > 0) {
-        submitData.parentId = formData.parentId.trim();
+
+      submitData.status =
+        formData.status !== undefined && formData.status !== null ? formData.status : true;
+
+      // ✅ QUAN TRỌNG: UPDATE phải gửi parentId rõ ràng để xóa parentId cũ (đưa lên root)
+      if (editingCategory) {
+        submitData.parentId =
+          formData.parentId && formData.parentId.trim().length > 0 ? formData.parentId.trim() : null;
+      } else {
+        // Create: chỉ gửi parentId khi có chọn cha
+        if (formData.parentId && formData.parentId.trim().length > 0) {
+          submitData.parentId = formData.parentId.trim();
+        }
       }
-      
+
       console.log('[ManageCategories] Submitting data:', submitData);
 
       if (editingCategory) {
         const oldId = editingCategory.id;
-        const newId = submitData.id;
-        const idChanged = oldId !== newId;
-        
+        const idChanged = oldId !== submitData.id;
+
         await updateCategory(oldId, submitData);
         notify.success('Cập nhật danh mục thành công!');
-        
-        // Nếu ID đã thay đổi, đợi một chút để backend xử lý xong
+
         if (idChanged) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
@@ -346,10 +370,13 @@ function ManageCategories() {
       }
 
       setShowModal(false);
-      // Reload danh sách để hiển thị ID mới
+
+      // ✅ Refresh chắc chắn + reset UI state
+      setExpandedCategories(new Set());
+      setParentDropdownOpen(false);
+      setHoverParentId('');
       await fetchCategories();
-      
-      // Dispatch event to notify other components
+
       window.dispatchEvent(new CustomEvent('categoriesUpdated'));
     } catch (err) {
       console.error('Error saving category:', err);
@@ -359,18 +386,21 @@ function ManageCategories() {
         status: err.status,
         response: err.response
       });
-      
-      // Xử lý các lỗi cụ thể
+
       let errorMessage = 'Không thể lưu danh mục. Vui lòng thử lại.';
-      
+
       if (err.message) {
         const errMsg = err.message.toLowerCase();
-        if (errMsg.includes('tên danh mục đã tồn tại') || errMsg.includes('name already exists') || errMsg.includes('dữ liệu đầu vào không hợp lệ')) {
+        if (
+          errMsg.includes('tên danh mục đã tồn tại') ||
+          errMsg.includes('name already exists') ||
+          errMsg.includes('dữ liệu đầu vào không hợp lệ')
+        ) {
           errorMessage = 'Tên danh mục đã tồn tại. Vui lòng chọn tên khác.';
-          setFormErrors({ ...formErrors, name: 'Tên danh mục đã tồn tại' });
+          setFormErrors(prev => ({ ...prev, name: 'Tên danh mục đã tồn tại' }));
         } else if (errMsg.includes('danh mục không tồn tại') || errMsg.includes('category_not_existed')) {
           errorMessage = 'Danh mục cha không tồn tại. Vui lòng chọn danh mục cha khác.';
-          setFormErrors({ ...formErrors, parentId: 'Danh mục cha không tồn tại' });
+          setFormErrors(prev => ({ ...prev, parentId: 'Danh mục cha không tồn tại' }));
         } else if (errMsg.includes('dữ liệu đầu vào không hợp lệ') || errMsg.includes('invalid_input')) {
           errorMessage = 'Dữ liệu nhập vào không hợp lệ. Vui lòng kiểm tra lại các trường bắt buộc.';
         } else if (errMsg.includes('forbidden') || errMsg.includes('403')) {
@@ -381,7 +411,7 @@ function ManageCategories() {
           errorMessage = err.message || errorMessage;
         }
       }
-      
+
       notify.error(errorMessage);
     }
   };
@@ -389,6 +419,10 @@ function ManageCategories() {
   const renderCategoryRow = (category, level = 0) => {
     const hasChildren = getSubCategories(category.id).length > 0;
     const isExpanded = expandedCategories.has(category.id);
+
+    const parentNameComputed = category.parentId
+      ? categories.find(c => c.id === category.parentId)?.name || '-'
+      : 'Danh mục gốc';
 
     return (
       <React.Fragment key={category.id}>
@@ -416,7 +450,8 @@ function ManageCategories() {
               {category.status ? 'Hoạt động' : 'Tắt'}
             </span>
           </td>
-          <td>{category.parentName || 'Danh mục gốc'}</td>
+          {/* ✅ Render theo parentId (không phụ thuộc parentName từ BE) */}
+          <td>{parentNameComputed}</td>
           <td>
             <div className={cx('actions')}>
               <button
@@ -438,7 +473,10 @@ function ManageCategories() {
             </div>
           </td>
         </tr>
-        {hasChildren && isExpanded && getSubCategories(category.id).map(subCat => renderCategoryRow(subCat, level + 1))}
+
+        {hasChildren &&
+          isExpanded &&
+          getSubCategories(category.id).map(subCat => renderCategoryRow(subCat, level + 1))}
       </React.Fragment>
     );
   };
@@ -450,6 +488,9 @@ function ManageCategories() {
       </div>
     );
   }
+
+  const editingIsRoot = editingCategory ? isRootCategory(editingCategory) : false;
+  const editingIsChild = editingCategory ? isChildCategory(editingCategory) : false;
 
   return (
     <div className={cx('wrapper')}>
@@ -537,95 +578,122 @@ function ManageCategories() {
               <div className={cx('formRow')}>
                 <div className={cx('formGroup', { error: formErrors.parentId })}>
                   <label>Danh mục cha</label>
-                <div className={cx('parentDropdown')}>
-                  <button
-                    type="button"
-                    className={cx('parentDropdownToggle')}
-                    onClick={() => setParentDropdownOpen((prev) => !prev)}
-                  >
-                    <span>{selectedParentLabel}</span>
-                    <FontAwesomeIcon icon={faChevronDown} />
-                  </button>
-                  {parentDropdownOpen && (
-                    <div
-                      className={cx('parentDropdownMenu')}
-                      onMouseLeave={(e) => {
-                        // Chỉ reset nếu không di chuyển vào childDropdown
-                        const relatedTarget = e.relatedTarget;
-                        if (!relatedTarget || typeof relatedTarget.closest !== 'function') {
-                          setHoverParentId('');
+
+                  <div className={cx('parentDropdown')}>
+                    <button
+                      type="button"
+                      className={cx('parentDropdownToggle')}
+                      disabled={editingCategory && editingIsRoot} // root không được thành con
+                      onClick={() => {
+                        if (editingCategory && editingIsRoot) {
+                          notify.warning('Danh mục cha không thể chuyển thành danh mục con.');
                           return;
                         }
-                        if (!relatedTarget.closest('.childDropdown') && !relatedTarget.closest('.parentOption')) {
-                          setHoverParentId('');
-                        }
+                        setParentDropdownOpen(prev => !prev);
                       }}
                     >
-                      <div className={cx('parentColumn')}>
-                        <div
-                          className={cx('parentOption', !formData.parentId && 'active')}
-                          onMouseEnter={() => setHoverParentId('')}
-                          onClick={() => handleSelectParent('')}
-                        >
-                          Không có (Danh mục gốc)
-                        </div>
-                        {rootOptions.length === 0 && (
-                          <div className={cx('emptyOption')}>Chưa có danh mục</div>
-                        )}
-                        {rootOptions.map(cat => {
-                          const hasChildren = categories.some(c => c.parentId === cat.id);
-                          const isHovered = hoverParentId === cat.id;
-                          const level = getCategoryLevel(cat.id);
-                          const childOpts = isHovered && hasChildren 
-                            ? categories.filter(c => c.parentId === cat.id && !excludeIdsForSelection.includes(c.id))
-                            : [];
-                          return (
+                      <span>{selectedParentLabel}</span>
+                      <FontAwesomeIcon icon={faChevronDown} />
+                    </button>
+
+                    {parentDropdownOpen && (
+                      <div
+                        className={cx('parentDropdownMenu')}
+                        onMouseLeave={(e) => {
+                          const relatedTarget = e.relatedTarget;
+                          if (!relatedTarget || typeof relatedTarget.closest !== 'function') {
+                            setHoverParentId('');
+                            return;
+                          }
+                          if (!relatedTarget.closest('.childDropdown') && !relatedTarget.closest('.parentOption')) {
+                            setHoverParentId('');
+                          }
+                        }}
+                      >
+                        <div className={cx('parentColumn')}>
+                          {/* Nếu đang edit và là CHILD -> chỉ hiển thị đúng 1 lựa chọn: đưa lên ROOT */}
+                          {editingCategory && editingIsChild ? (
                             <div
-                              key={cat.id}
-                              className={cx(
-                                'parentOption',
-                                formData.parentId === cat.id && 'active',
-                                hasChildren && 'hasChildren',
-                                level === 1 && 'isChild'
-                              )}
-                              onMouseEnter={() => setHoverParentId(cat.id)}
-                              onClick={() => handleSelectParent(cat.id)}
+                              className={cx('parentOption', !formData.parentId && 'active')}
+                              onClick={() => handleSelectParent('')}
                             >
-                              <span>{level === 1 ? '└ ' : ''}{cat.name}</span>
-                              {hasChildren && (
-                                <FontAwesomeIcon icon={faChevronRight} className={cx('arrowRight')} />
-                              )}
-                              {isHovered && hasChildren && childOpts.length > 0 && (
-                                <div 
-                                  className={cx('childDropdown')}
-                                  onMouseEnter={() => setHoverParentId(cat.id)}
-                                  onMouseLeave={() => setHoverParentId('')}
-                                >
-                                  {childOpts.map(childCat => (
-                                    <div
-                                      key={childCat.id}
-                                      className={cx(
-                                        'childOption',
-                                        formData.parentId === childCat.id && 'active'
-                                      )}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleSelectParent(childCat.id);
-                                      }}
-                                    >
-                                      {childCat.name}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
+                              Không có (Danh mục gốc)
                             </div>
-                          );
-                        })}
+                          ) : (
+                            <>
+                              <div
+                                className={cx('parentOption', !formData.parentId && 'active')}
+                                onMouseEnter={() => setHoverParentId('')}
+                                onClick={() => handleSelectParent('')}
+                              >
+                                Không có (Danh mục gốc)
+                              </div>
+
+                              {rootOptions.length === 0 && (
+                                <div className={cx('emptyOption')}>Chưa có danh mục</div>
+                              )}
+
+                              {rootOptions.map(cat => {
+                                const hasChildren = categories.some(c => c.parentId === cat.id);
+                                const isHovered = hoverParentId === cat.id;
+
+                                const childOpts =
+                                  isHovered && hasChildren
+                                    ? categories.filter(
+                                        c => c.parentId === cat.id && !excludeIdsForSelection.includes(c.id)
+                                      )
+                                    : [];
+
+                                return (
+                                  <div
+                                    key={cat.id}
+                                    className={cx(
+                                      'parentOption',
+                                      formData.parentId === cat.id && 'active',
+                                      hasChildren && 'hasChildren'
+                                    )}
+                                    onMouseEnter={() => setHoverParentId(cat.id)}
+                                    onClick={() => handleSelectParent(cat.id)}
+                                  >
+                                    <span>{cat.name}</span>
+                                    {hasChildren && (
+                                      <FontAwesomeIcon icon={faChevronRight} className={cx('arrowRight')} />
+                                    )}
+
+                                    {isHovered && hasChildren && childOpts.length > 0 && (
+                                      <div
+                                        className={cx('childDropdown')}
+                                        onMouseEnter={() => setHoverParentId(cat.id)}
+                                        onMouseLeave={() => setHoverParentId('')}
+                                      >
+                                        {childOpts.map(childCat => (
+                                          <div
+                                            key={childCat.id}
+                                            className={cx(
+                                              'childOption',
+                                              formData.parentId === childCat.id && 'active'
+                                            )}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleSelectParent(childCat.id);
+                                            }}
+                                          >
+                                            {childCat.name}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-                {formErrors.parentId && <span className={cx('errorText')}>{formErrors.parentId}</span>}
+                    )}
+                  </div>
+
+                  {formErrors.parentId && <span className={cx('errorText')}>{formErrors.parentId}</span>}
                 </div>
 
                 <div className={cx('formGroup')}>

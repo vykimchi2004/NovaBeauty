@@ -4,6 +4,7 @@ import classNames from 'classnames/bind';
 import styles from './ChatButton.module.scss';
 import chatbotService from '~/services/chatbot';
 import chatService from '~/services/chat';
+import { getActiveProducts } from '~/services/product';
 import { storage } from '~/services/utils';
 import { STORAGE_KEYS } from '~/services/config';
 import { notify } from '~/utils/notification';
@@ -29,17 +30,58 @@ function ChatButton() {
     const [sessionId, setSessionId] = useState(null);
     const [useAI, setUseAI] = useState(true); // Toggle giữa AI và staff chat
     const [staffChatKey, setStaffChatKey] = useState(0); // Key để force re-mount StaffChat
+    const [allProducts, setAllProducts] = useState([]);
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
 
     const currentUser = storage.get(STORAGE_KEYS.USER);
 
     /**
-     * Parse message content để render links
-     * Format: [LINK:/promo] sẽ được convert thành clickable link
+     * Parse message content để render links và product cards
      */
-    const renderMessageContent = (content) => {
-        if (!content) return null;
+    const renderMessageContent = (message) => {
+        const { content, products } = message;
+        if (!content && !products) return null;
+
+        let messageText = content;
+
+        // Render product grid if available
+        const renderProductGrid = (productList) => {
+            if (!productList || productList.length === 0) return null;
+            return (
+                <div className={cx('productGrid')}>
+                    {productList.map(product => (
+                        <div key={product.id} className={cx('productCard')}>
+                            <img
+                                src={product.defaultMediaUrl || product.imageUrl}
+                                alt={product.name}
+                                className={cx('productImg')}
+                            />
+                            <div className={cx('productInfo')}>
+                                <h5>{product.name}</h5>
+                                <div className={cx('productPrice')}>
+                                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price)}
+                                </div>
+                                <p className={cx('productDesc')}>
+                                    {product.reviewHighlights || product.uses || product.description || 'Sản phẩm chính hãng từ Nova Beauty'}
+                                </p>
+                            </div>
+                            <button
+                                className={cx('viewBtn')}
+                                onClick={() => {
+                                    navigate(`/product/${product.id}`);
+                                    setIsOpen(false);
+                                }}
+                            >
+                                Xem chi tiết
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
+        if (!messageText) return renderProductGrid(products);
 
         // Pattern để tìm [LINK:/path]
         const linkPattern = /\[LINK:([^\]]+)\]/g;
@@ -47,16 +89,14 @@ function ChatButton() {
         let lastIndex = 0;
         let match;
 
-        while ((match = linkPattern.exec(content)) !== null) {
-            // Thêm text trước link
+        while ((match = linkPattern.exec(messageText)) !== null) {
             if (match.index > lastIndex) {
                 parts.push({
                     type: 'text',
-                    content: content.substring(lastIndex, match.index)
+                    content: messageText.substring(lastIndex, match.index)
                 });
             }
 
-            // Thêm link
             const path = match[1];
             let linkText = 'Xem tại đây';
             if (path === '/promo') {
@@ -76,44 +116,44 @@ function ChatButton() {
             lastIndex = match.index + match[0].length;
         }
 
-        // Thêm phần text còn lại
-        if (lastIndex < content.length) {
+        if (lastIndex < messageText.length) {
             parts.push({
                 type: 'text',
-                content: content.substring(lastIndex)
+                content: messageText.substring(lastIndex)
             });
         }
 
-        // Nếu không có link, trả về text thuần
-        if (parts.length === 0 || (parts.length === 1 && parts[0].type === 'text')) {
-            return <p>{content}</p>;
-        }
-
-        // Render với links
         return (
-            <p>
-                {parts.map((part, index) => {
-                    if (part.type === 'link') {
-                        return (
-                            <React.Fragment key={index}>
-                                {' '}
-                                <a
-                                    href={part.path}
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        navigate(part.path);
-                                        setIsOpen(false); // Đóng chat khi click link
-                                    }}
-                                    className={cx('chatLink')}
-                                >
-                                    {part.text}
-                                </a>
-                            </React.Fragment>
-                        );
-                    }
-                    return <React.Fragment key={index}>{part.content}</React.Fragment>;
-                })}
-            </p>
+            <>
+                {parts.length > 0 ? (
+                    <p>
+                        {parts.map((part, index) => {
+                            if (part.type === 'link') {
+                                return (
+                                    <React.Fragment key={index}>
+                                        {' '}
+                                        <a
+                                            href={part.path}
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                navigate(part.path);
+                                                setIsOpen(false);
+                                            }}
+                                            className={cx('chatLink')}
+                                        >
+                                            {part.text}
+                                        </a>
+                                    </React.Fragment>
+                                );
+                            }
+                            return <React.Fragment key={index}>{part.content}</React.Fragment>;
+                        })}
+                    </p>
+                ) : (
+                    <p>{messageText}</p>
+                )}
+                {renderProductGrid(products)}
+            </>
         );
     };
 
@@ -129,11 +169,24 @@ function ChatButton() {
         if (isOpen && inputRef.current) {
             inputRef.current.focus();
         }
-    }, [isOpen]);
+
+        // Load products for local consultation
+        if (isOpen && allProducts.length === 0) {
+            const loadProducts = async () => {
+                try {
+                    const data = await getActiveProducts();
+                    setAllProducts(Array.isArray(data) ? data : []);
+                } catch (err) {
+                    console.error('Failed to load products for chatbot:', err);
+                }
+            };
+            loadProducts();
+        }
+    }, [isOpen, allProducts.length]);
 
     const toggleChat = async () => {
         const wasOpen = isOpen;
-        
+
         // Nếu đang đóng chat và đang ở chế độ staff chat, hiển thị popup xác nhận
         if (wasOpen && !useAI) {
             const confirmed = await notify.confirm(
@@ -142,11 +195,11 @@ function ChatButton() {
                 'Ngắt kết nối',
                 'Hủy'
             );
-            
+
             if (!confirmed) {
                 return; // Không đóng nếu hủy
             }
-            
+
             // Gửi thông báo ngắt kết nối cho CSKH
             const currentUser = storage.get(STORAGE_KEYS.USER);
             if (currentUser) {
@@ -162,7 +215,7 @@ function ChatButton() {
                 }
             }
         }
-        
+
         // Nếu đang đóng chat, reset về trạng thái ban đầu NGAY LẬP TỨC
         if (wasOpen) {
             // Reset ngay lập tức trước khi đóng
@@ -180,9 +233,9 @@ function ChatButton() {
             setUseAI(true); // Reset về AI chat
             setStaffChatKey(prev => prev + 1); // Force re-mount StaffChat (unmount component cũ)
         }
-        
+
         setIsOpen(!isOpen);
-        
+
         // Nếu mở lại và đang ở chế độ staff chat, force re-mount
         if (!wasOpen && !useAI) {
             setStaffChatKey(prev => prev + 1);
@@ -229,12 +282,13 @@ function ChatButton() {
         });
     };
 
-    const addBotMessage = (content, delay = 1000) => {
+    const addBotMessage = (content, products = [], delay = 1000) => {
         setTimeout(() => {
             setMessages(prev => [...prev, {
                 id: Date.now(),
                 type: 'bot',
                 content,
+                products,
                 time: new Date()
             }]);
         }, delay);
@@ -308,8 +362,38 @@ function ChatButton() {
                     setSessionId(response.sessionId);
                 }
 
+                // Check for consultation triggers
+                const lowerMsg = messageContent.toLowerCase();
+                const isConsultation = lowerMsg.includes('tư vấn') ||
+                    lowerMsg.includes('gợi ý') ||
+                    lowerMsg.includes('sản phẩm nào') ||
+                    lowerMsg.includes('tìm giúp') ||
+                    lowerMsg.includes('xem sản phẩm') ||
+                    lowerMsg.includes('muốn xem') ||
+                    lowerMsg.includes('tìm sản phẩm');
+
+                let suggestedProducts = [];
+                if (isConsultation && allProducts.length > 0) {
+                    // Simple keyword matching with randomization for variety
+                    const keywords = messageContent.split(' ').filter(k => k.length >= 2);
+                    const matches = allProducts.filter(p => {
+                        const searchStr = `${p.name} ${p.reviewHighlights || ''} ${p.description || ''} ${p.uses || ''}`.toLowerCase();
+                        return keywords.some(k => searchStr.includes(k.toLowerCase()));
+                    });
+
+                    // Shuffle and pick at most 3
+                    suggestedProducts = matches
+                        .sort(() => 0.5 - Math.random())
+                        .slice(0, 3);
+                }
+
                 // Add bot response từ AI
-                addBotMessage(response.reply);
+                let finalReply = response.reply;
+                if (suggestedProducts.length > 0) {
+                    finalReply = 'Tôi có một vài sản phẩm gợi ý theo ý bạn, bạn có thể tham khảo qua nhé:';
+                }
+
+                addBotMessage(finalReply, suggestedProducts);
             }
         } catch (error) {
             console.error('Error sending message:', error);
@@ -394,69 +478,69 @@ function ChatButton() {
                                     </button>
                                 </div>
 
-                        {messages.map((message) => (
-                            <div
-                                key={message.id}
-                                className={cx('messageWrapper', message.type)}
-                            >
-                                {message.type === 'bot' && (
-                                    <div className={cx('botAvatar')}>
-                                        <svg viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
-                                        </svg>
+                                {messages.map((message) => (
+                                    <div
+                                        key={message.id}
+                                        className={cx('messageWrapper', message.type)}
+                                    >
+                                        {message.type === 'bot' && (
+                                            <div className={cx('botAvatar')}>
+                                                <svg viewBox="0 0 24 24" fill="currentColor">
+                                                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+                                                </svg>
+                                            </div>
+                                        )}
+                                        <div className={cx('messageContent', message.type)}>
+                                            {message.content === 'action_buttons' ? (
+                                                <div className={cx('actionButtons')}>
+                                                    <button onClick={triggerLogin} className={cx('actionBtn', 'primary')}>
+                                                        Đăng nhập
+                                                    </button>
+                                                    <a href="/support" className={cx('actionBtn', 'secondary')}>
+                                                        Trang hỗ trợ
+                                                    </a>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    {renderMessageContent(message)}
+                                                    <span className={cx('messageTime')}>{formatTime(message.time)}</span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {/* Quick Replies */}
+                                {showQuickReplies && (
+                                    <div className={cx('quickReplies')}>
+                                        {quickReplies.map((reply) => (
+                                            <button
+                                                key={reply.id}
+                                                className={cx('quickReplyBtn')}
+                                                onClick={() => handleQuickReply(reply)}
+                                            >
+                                                <span>{reply.icon}</span>
+                                                {reply.text}
+                                            </button>
+                                        ))}
                                     </div>
                                 )}
-                                <div className={cx('messageContent', message.type)}>
-                                    {message.content === 'action_buttons' ? (
-                                        <div className={cx('actionButtons')}>
-                                            <button onClick={triggerLogin} className={cx('actionBtn', 'primary')}>
-                                                Đăng nhập
-                                            </button>
-                                            <a href="/support" className={cx('actionBtn', 'secondary')}>
-                                                Trang hỗ trợ
-                                            </a>
+
+                                {/* Typing indicator */}
+                                {isSending && (
+                                    <div className={cx('messageWrapper', 'bot')}>
+                                        <div className={cx('botAvatar')}>
+                                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+                                            </svg>
                                         </div>
-                                    ) : (
-                                        <>
-                                            {renderMessageContent(message.content)}
-                                            <span className={cx('messageTime')}>{formatTime(message.time)}</span>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-
-                        {/* Quick Replies */}
-                        {showQuickReplies && (
-                            <div className={cx('quickReplies')}>
-                                {quickReplies.map((reply) => (
-                                    <button
-                                        key={reply.id}
-                                        className={cx('quickReplyBtn')}
-                                        onClick={() => handleQuickReply(reply)}
-                                    >
-                                        <span>{reply.icon}</span>
-                                        {reply.text}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Typing indicator */}
-                        {isSending && (
-                            <div className={cx('messageWrapper', 'bot')}>
-                                <div className={cx('botAvatar')}>
-                                    <svg viewBox="0 0 24 24" fill="currentColor">
-                                        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
-                                    </svg>
-                                </div>
-                                <div className={cx('typingIndicator')}>
-                                    <span></span>
-                                    <span></span>
-                                    <span></span>
-                                </div>
-                            </div>
-                        )}
+                                        <div className={cx('typingIndicator')}>
+                                            <span></span>
+                                            <span></span>
+                                            <span></span>
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div ref={messagesEndRef} />
                             </div>
@@ -490,7 +574,7 @@ function ChatButton() {
                         </>
                     ) : (
                         isOpen && (
-                            <StaffChat 
+                            <StaffChat
                                 key={staffChatKey}
                                 onBack={handleBackToAI}
                                 onClose={toggleChat}

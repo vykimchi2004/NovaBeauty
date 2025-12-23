@@ -132,21 +132,21 @@ public class CategoryService {
             newCategory.setStatus(request.getStatus() != null ? request.getStatus() : category.getStatus());
             newCategory.setCreatedAt(category.getCreatedAt());
             newCategory.setUpdatedAt(LocalDateTime.now());
-            
-            // Update parent category if provided
-            if (request.getParentId() != null) {
-                if (request.getParentId().isEmpty()) {
-                    newCategory.setParentCategory(null);
-                } else {
-                    Category parentCategory = categoryRepository
-                            .findById(request.getParentId())
-                            .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
-                    newCategory.setParentCategory(parentCategory);
-                }
+
+            String pid = request.getParentId();
+
+// ✅ null hoặc "" => bỏ cha (danh mục gốc)
+            if (pid == null || pid.isBlank()) {
+                newCategory.setParentCategory(null);
             } else {
-                newCategory.setParentCategory(category.getParentCategory());
+                Category parentCategory = categoryRepository
+                        .findById(pid)
+                        .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
+                newCategory.setParentCategory(parentCategory);
             }
-            
+
+
+
             // Save new category first
             Category savedCategory = categoryRepository.save(newCategory);
             
@@ -160,17 +160,18 @@ public class CategoryService {
             categoryMapper.updateCategory(category, request);
             category.setUpdatedAt(LocalDateTime.now());
 
-            // Update parent category if provided
-            if (request.getParentId() != null) {
-                if (request.getParentId().isEmpty()) {
-                    category.setParentCategory(null);
-                } else {
-                    Category parentCategory = categoryRepository
-                            .findById(request.getParentId())
-                            .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
-                    category.setParentCategory(parentCategory);
-                }
+            String pid = request.getParentId();
+
+// ✅ null hoặc "" => bỏ cha (danh mục gốc)
+            if (pid == null || pid.isBlank()) {
+                category.setParentCategory(null);
+            } else {
+                Category parentCategory = categoryRepository
+                        .findById(pid)
+                        .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
+                category.setParentCategory(parentCategory);
             }
+
 
             Category savedCategory = categoryRepository.save(category);
             log.info("Category updated: {}", categoryId);

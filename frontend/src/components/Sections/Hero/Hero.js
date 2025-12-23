@@ -25,9 +25,9 @@ const Hero = () => {
           getActiveProducts(),
         ]);
         if (mounted) {
-          // Filter only approved banners (status = true, pendingReview = false)
+          // Filter only active banners with an image
           const approvedBanners = (bannerRes || []).filter(
-            (banner) => banner.status === true && banner.pendingReview === false && banner.imageUrl
+            (banner) => banner.status === true && !!banner.imageUrl
           );
           // Sort by orderIndex
           approvedBanners.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
@@ -70,10 +70,10 @@ const Hero = () => {
       banners.length > 0
         ? banners
         : [
-            { imageUrl: banner1, id: 'default-1', linkUrl: null },
-            { imageUrl: banner2, id: 'default-2', linkUrl: null },
-            { imageUrl: banner3, id: 'default-3', linkUrl: null },
-          ],
+          { imageUrl: banner1, id: 'default-1', linkUrl: null },
+          { imageUrl: banner2, id: 'default-2', linkUrl: null },
+          { imageUrl: banner3, id: 'default-3', linkUrl: null },
+        ],
     [banners],
   );
 

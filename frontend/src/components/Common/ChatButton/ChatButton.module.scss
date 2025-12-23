@@ -645,6 +645,95 @@
         }
     }
 
+    // Product Recommendations
+    .productGrid {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 10px;
+        width: 100%;
+    }
+
+    .productCard {
+        background: #fff;
+        border: 1px solid #eee;
+        border-radius: 12px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+        &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border-color: #fce7eb;
+        }
+
+        .productImg {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            background: #fdfdfd;
+        }
+
+        .productInfo {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+
+            h5 {
+                margin: 0;
+                font-size: 13px;
+                font-weight: 600;
+                color: #2c2c2c;
+                line-height: 1.4;
+                display: -webkit-box;
+                line-clamp: 2;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+
+            .productPrice {
+                font-size: 12px;
+                font-weight: 700;
+                color: #e5677d;
+            }
+
+            .productDesc {
+                font-size: 11px;
+                color: #6b7280;
+                line-height: 1.4;
+                display: -webkit-box;
+                line-clamp: 2;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+        }
+
+        .viewBtn {
+            margin: 0 10px 10px;
+            padding: 6px;
+            background: #fff;
+            border: 1px solid #e5677d;
+            border-radius: 6px;
+            color: #e5677d;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+
+            &:hover {
+                background: #e5677d;
+                color: #fff;
+            }
+        }
+    }
+
     .messageTime {
         display: block;
         font-size: 10px;
