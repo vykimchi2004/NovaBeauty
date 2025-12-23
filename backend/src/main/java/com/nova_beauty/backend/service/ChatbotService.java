@@ -1200,5 +1200,17 @@ public class ChatbotService {
         @JsonProperty("content")
         GeminiContent content;
     }
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public class ChatProductSuggestion {
+        private String id;
+        private String name;
+        private String imageUrl;
+        private String shortBenefit; // công dụng ngắn
+        private String uses;          // công dụng
+    }
+
+
 }
 
