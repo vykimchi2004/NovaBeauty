@@ -463,7 +463,7 @@ function ChatButton() {
                                             </svg>
                                         </div>
                                         <div className={cx('supportText')}>
-                                            <h5>Cần hỗ trợ từ con người?</h5>
+                                            <h5>Cần hỗ trợ từ nhân viên?</h5>
                                             <p>Nhân viên tư vấn sẵn sàng giải đáp thắc mắc chuyên sâu của bạn.</p>
                                         </div>
                                     </div>

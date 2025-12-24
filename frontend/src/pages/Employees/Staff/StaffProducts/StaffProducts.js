@@ -9,7 +9,7 @@ import UpdateProductPage from './components/UpdateProduct/UpdateProductPage';
 import ProductDetailPage from './components/ProductDetail/ProductDetailPage';
 import UpdateInventoryModal from './components/UpdateInventory/UpdateInventoryModal';
 import { getMyProducts, createProduct, updateProduct, deleteProduct } from '~/services/product';
-import { uploadProductMedia } from '~/services/media';
+import { uploadToCloudinary } from '~/services/cloudinaryService';
 import notify from '~/utils/notification';
 import { STAFF_PRODUCT_ERRORS, STAFF_PRODUCT_MESSAGES } from './messages';
 import { storage } from '~/services/utils';
@@ -864,17 +864,26 @@ function StaffProducts() {
     const totalFiles = pending.length;
     const uploadedUrls = [];
 
-    // Upload files one by one to track progress
+    // Upload files one by one to track progress using direct Cloudinary upload
     for (let i = 0; i < pending.length; i++) {
       const file = pending[i].file;
-      const progressPercent = Math.round(((i + 1) / totalFiles) * 100);
-      
-      setUploadProgress(progressPercent);
       
       try {
-        const urls = await uploadProductMedia([file]);
-        if (urls && urls.length > 0) {
-          uploadedUrls.push(urls[0]);
+        // Upload directly to Cloudinary with progress tracking
+        const url = await uploadToCloudinary(
+          file,
+          'product_media',
+          (percent) => {
+            // Calculate overall progress across all files
+            const overallProgress = Math.round(
+              ((i / totalFiles) * 100) + ((percent / totalFiles))
+            );
+            setUploadProgress(overallProgress);
+          }
+        );
+        
+        if (url) {
+          uploadedUrls.push(url);
         } else {
           throw new Error(`Failed to upload file: ${file.name}`);
         }
@@ -909,8 +918,26 @@ function StaffProducts() {
 
     if (!pending.length) return variants;
 
-    const files = pending.map(({ variant }) => variant.imageFile);
-    const uploadedUrls = await uploadProductMedia(files);
+    // Upload variant images directly to Cloudinary
+    const uploadedUrls = [];
+    for (let i = 0; i < pending.length; i++) {
+      const { variant } = pending[i];
+      try {
+        const url = await uploadToCloudinary(
+          variant.imageFile,
+          'product_media',
+          (percent) => {
+            // Optional: track variant upload progress
+            console.log(`Uploading variant ${i + 1}/${pending.length}: ${percent}%`);
+          }
+        );
+        uploadedUrls.push(url);
+      } catch (error) {
+        console.error(`[uploadVariantImages] Error uploading variant ${i}:`, error);
+        throw error;
+      }
+    }
+
     if (!uploadedUrls || uploadedUrls.length !== pending.length) {
       throw new Error(STAFF_PRODUCT_MESSAGES.mediaUploadError);
     }

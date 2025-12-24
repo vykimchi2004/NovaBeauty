@@ -106,6 +106,7 @@ export const API_ENDPOINTS = {
         UPLOAD_VOUCHER: '/media/upload-voucher',
         UPLOAD_PROMOTION: '/media/upload-promotion',
         UPLOAD_BANNER: '/media/upload-banner',
+        CLOUDINARY_SIGNATURE: '/media/cloudinary-signature',
     },
     // Cart
     CART: {

@@ -1,6 +1,7 @@
 package com.nova_beauty.backend.controller;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.http.MediaType;
@@ -8,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.nova_beauty.backend.dto.request.ApiResponse;
+import com.nova_beauty.backend.service.CloudinarySignatureService;
 import com.nova_beauty.backend.service.FileStorageService;
 
 import lombok.AccessLevel;
@@ -21,6 +23,7 @@ import lombok.experimental.FieldDefaults;
 public class MediaController {
 
     FileStorageService fileStorageService;
+    CloudinarySignatureService cloudinarySignatureService;
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<List<String>> uploadProfileMedia(@RequestPart("files") List<MultipartFile> files) {
@@ -62,6 +65,10 @@ public class MediaController {
         return ApiResponse.<List<String>>builder().result(urls).build();
     }
 
+    @PostMapping("/cloudinary-signature")
+    public ApiResponse<Map<String, Object>> getCloudinarySignature(@RequestParam String folder) {
+        Map<String, Object> signature = cloudinarySignatureService.generateUploadSignature(folder);
+        return ApiResponse.<Map<String, Object>>builder().result(signature).build();
+    }
+
 }
-
-
