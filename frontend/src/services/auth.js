@@ -100,7 +100,6 @@ export async function loginWithGoogle(googleData) {
         idToken: googleData.credential || googleData.idToken,
         email: googleData.email,
         fullName: googleData.name || googleData.fullName,
-        picture: googleData.picture,
       }),
     });
 
@@ -174,7 +173,7 @@ export async function changePassword(currentPassword, newPassword) {
       currentPassword,
       newPassword,
     });
-    
+
     // Backend có thể trả về HTTP 200 nhưng ApiResponse có code 400
     // Cần kiểm tra response để đảm bảo không phải lỗi
     // Nếu response là object và có code, kiểm tra code
@@ -187,7 +186,7 @@ export async function changePassword(currentPassword, newPassword) {
       }
       return response.result || response;
     }
-    
+
     return response;
   } catch (error) {
     console.error('[Auth Service] changePassword error:', error);
@@ -241,7 +240,7 @@ export async function refreshToken(refreshTokenValue) {
   try {
     // Nếu không truyền refreshTokenValue, lấy từ storage
     const tokenToUse = refreshTokenValue || storage.get(STORAGE_KEYS.REFRESH_TOKEN);
-    
+
     if (!tokenToUse) {
       throw new Error('No refresh token available');
     }

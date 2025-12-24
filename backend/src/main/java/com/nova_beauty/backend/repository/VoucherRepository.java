@@ -29,11 +29,11 @@ public interface VoucherRepository extends JpaRepository<Voucher, String> {
 
     long countByImageUrl(String imageUrl);
 
-    // TÃ¬m cÃ¡c voucher Ä‘Ã£ háº¿t háº¡n nhÆ°ng chÆ°a Ä‘Æ°á»£c chuyá»ƒn vÃ o báº£ng háº¿t háº¡n
+    // Tìm các voucher đã hết hạn nhưng chưa được chuyển vào bảng hết hạn
     @Query("SELECT v FROM Voucher v WHERE v.expiryDate < :today AND v.status != :expiredStatus")
     List<Voucher> findExpiredVouchers(@Param("today") LocalDate today, @Param("expiredStatus") VoucherStatus expiredStatus);
 
-    // TÃ¬m cÃ¡c voucher cÃ³ product nÃ y trong productApply
+    // Tìm các voucher có product này trong productApply
     @Query("SELECT v FROM Voucher v JOIN v.productApply pr WHERE pr.id = :productId")
     List<Voucher> findByProductId(@Param("productId") String productId);
 }

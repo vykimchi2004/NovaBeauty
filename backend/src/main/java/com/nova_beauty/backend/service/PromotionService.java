@@ -67,7 +67,7 @@ public class PromotionService {
 
         // Set workflow fields
         promotion.setUsageCount(0);
-        promotion.setIsActive(false); // ChÆ°a active cho Ä‘áº¿n khi Ä‘Æ°á»£c approve
+        promotion.setIsActive(false); // Chưa active cho đến khi được approve
         promotion.setStatus(PromotionStatus.PENDING_APPROVAL);
         promotion.setSubmittedBy(staff);
         promotion.setSubmittedAt(LocalDateTime.now());
@@ -100,14 +100,14 @@ public class PromotionService {
             promotion.setApprovedBy(admin);
             promotion.setApprovedAt(LocalDateTime.now());
             
-            // Chá»‰ activate vÃ  apply ngay náº¿u startDate Ä‘Ã£ Ä‘áº¿n, náº¿u chÆ°a thÃ¬ Ä‘á»ƒ scheduled task tá»± Ä‘á»™ng activate
+            // Chỉ activate và apply ngay nếu startDate đã đến, nếu chưa thì để scheduled task tự động activate
             LocalDate today = LocalDate.now();
             if (promotion.getStartDate() != null && !promotion.getStartDate().isAfter(today)) {
-                // StartDate Ä‘Ã£ Ä‘áº¿n hoáº·c hÃ´m nay - activate vÃ  apply ngay
+                // StartDate đã đến hoặc hôm nay - activate và apply ngay
                 promotion.setIsActive(true);
                 applyPromotionToTargets(promotion);
             } else {
-                // StartDate chÆ°a Ä‘áº¿n - set isActive = false, scheduled task sáº½ tá»± Ä‘á»™ng activate khi Ä‘áº¿n startDate
+                // StartDate chưa đến - set isActive = false, scheduled task sẽ tự động activate khi đến startDate
                 promotion.setIsActive(false);
             }
             // log.info("Promotion approved: {} by admin: {}", promotion.getId(), admin.getId());
@@ -153,7 +153,7 @@ public class PromotionService {
         return pendingPromotions.stream().map(promotionMapper::toResponse).collect(Collectors.toList());
     }
 
-    // Cho phÃ©p cáº£ admin vÃ  staff xem promotions theo status
+    // Cho phép cả admin và staff xem promotions theo status
     public List<PromotionResponse> getPromotionsByStatus(PromotionStatus status) {
         List<Promotion> promotions = promotionRepository.findByStatus(status);
 
@@ -208,10 +208,10 @@ public class PromotionService {
             promotion.setApplyScope(scope);
         }
 
-        // Náº¿u staff cáº­p nháº­t promotion bá»‹ tá»« chá»‘i, tá»± Ä‘á»™ng chuyá»ƒn vá» chá» duyá»‡t
+        // Nếu staff cập nhật promotion bị từ chối, tự động chuyển về chờ duyệt
         if (!isAdmin && promotion.getStatus() == PromotionStatus.REJECTED) {
             promotion.setStatus(PromotionStatus.PENDING_APPROVAL);
-            promotion.setRejectionReason(null); // XÃ³a lÃ½ do tá»« chá»‘i khi gá»­i láº¡i
+            promotion.setRejectionReason(null); // Xóa lý do từ chối khi gửi lại
         }
 
         Promotion savedPromotion = promotionRepository.save(promotion);
@@ -242,16 +242,16 @@ public class PromotionService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        // KhÃ´i phá»¥c giÃ¡ cÃ¡c sáº£n pháº©m Ä‘ang Ã¡p dá»¥ng promotion nÃ y (náº¿u cÃ³)
+        // Khôi phục giá các sản phẩm đang áp dụng promotion này (nếu có)
         clearPromotionPricing(promotion);
 
-        // 1. XÃ³a product khá»i promotion.productApply (báº£ng promotion_products)
-        // Láº¥y táº¥t cáº£ products trong productApply Ä‘á»ƒ xÃ³a quan há»‡
+        // 1. Xóa product khỏi promotion.productApply (bảng promotion_products)
+        // Lấy tất cả products trong productApply để xóa quan hệ
         Set<Product> productsInPromotion = new HashSet<>(promotion.getProductApply());
         promotion.getProductApply().clear();
         promotionRepository.save(promotion);
 
-        // 2. Set product.promotion = null cho cÃ¡c products cÃ³ promotion nÃ y trá»±c tiáº¿p
+        // 2. Set product.promotion = null cho các products có promotion này trực tiếp
         List<Product> productsWithDirectPromotion = productRepository.findByPromotionId(promotionId);
         for (Product product : productsWithDirectPromotion) {
             if (product.getPromotion() != null && product.getPromotion().getId().equals(promotionId)) {
@@ -260,10 +260,10 @@ public class PromotionService {
             }
         }
 
-        // 3. XÃ³a file media váº­t lÃ½ trong thÆ° má»¥c promotions (náº¿u cÃ³)
+        // 3. Xóa file media vật lý trong thư mục promotions (nếu có)
         deleteMediaFileIfExists(promotion);
 
-        // 4. XÃ³a promotion
+        // 4. Xóa promotion
         promotionRepository.delete(promotion);
         // log.info("Promotion deleted: {} by user: {}", promotionId, currentUserId);
     }
@@ -334,7 +334,7 @@ public class PromotionService {
     }
 
     public void applyPromotionToTargets(Promotion promotion) {
-        // Chá»‰ Ã¡p dá»¥ng promotion Ä‘Ã£ Ä‘Æ°á»£c duyá»‡t (APPROVED)
+        // Chỉ áp dụng promotion đã được duyệt (APPROVED)
         if (promotion.getStatus() != PromotionStatus.APPROVED) {
             log.warn("Cannot apply promotion {} because it is not approved. Status: {}", 
                     promotion.getId(), promotion.getStatus());
@@ -393,14 +393,14 @@ public class PromotionService {
                     && !promotion.getId().equals(product.getPromotion().getId())) {
                 Promotion existingPromo = product.getPromotion();
                 
-                // Kiá»ƒm tra xem promotion hiá»‡n táº¡i cÃ²n active khÃ´ng
+                // Kiểm tra xem promotion hiện tại còn active không
                 boolean isExistingActive = existingPromo.getStatus() == PromotionStatus.APPROVED
                         && (existingPromo.getIsActive())
                         && (existingPromo.getExpiryDate() == null || !existingPromo.getExpiryDate().isBefore(today))
                         && (existingPromo.getStartDate() == null || !existingPromo.getStartDate().isAfter(today));
                 
                 if (isExistingActive) {
-                    // Kiá»ƒm tra date range overlap
+                    // Kiểm tra date range overlap
                     boolean hasDateOverlap = hasDateRangeOverlap(
                             promotion.getStartDate(), promotion.getExpiryDate(),
                             existingPromo.getStartDate(), existingPromo.getExpiryDate());
@@ -412,10 +412,10 @@ public class PromotionService {
                 }
             }
             
-            // Kiá»ƒm tra cÃ¡c promotion khÃ¡c cÃ³ thá»ƒ Ã¡p dá»¥ng cho sáº£n pháº©m nÃ y (theo product hoáº·c category)
+            // Kiểm tra các promotion khác có thể áp dụng cho sản phẩm này (theo product hoặc category)
             List<Promotion> otherActivePromotions = new ArrayList<>();
             
-            // TÃ¬m theo product
+            // Tìm theo product
             if (product.getId() != null) {
                 otherActivePromotions.addAll(
                         promotionRepository.findActiveByProductId(product.getId(), today).stream()
@@ -423,7 +423,7 @@ public class PromotionService {
                                 .toList());
             }
             
-            // TÃ¬m theo category
+            // Tìm theo category
             if (product.getCategory() != null && product.getCategory().getId() != null) {
                 otherActivePromotions.addAll(
                         promotionRepository.findActiveByCategoryId(product.getCategory().getId(), today).stream()
@@ -431,7 +431,7 @@ public class PromotionService {
                                 .toList());
             }
             
-            // Kiá»ƒm tra date range overlap vá»›i cÃ¡c promotion khÃ¡c
+            // Kiểm tra date range overlap với các promotion khác
             for (Promotion otherPromo : otherActivePromotions) {
                 boolean hasDateOverlap = hasDateRangeOverlap(
                         promotion.getStartDate(), promotion.getExpiryDate(),
@@ -447,15 +447,15 @@ public class PromotionService {
         if (!conflicted.isEmpty()) {
             log.warn("Cannot apply promotion {} due to date range conflicts on products {}", promotion.getId(), conflicted);
             String errorMessage = String.format(
-                    "KhÃ´ng thá»ƒ Ã¡p dá»¥ng khuyáº¿n mÃ£i. CÃ¡c sáº£n pháº©m sau Ä‘Ã£ cÃ³ khuyáº¿n mÃ£i Ä‘ang hoáº¡t Ä‘á»™ng trong khoáº£ng thá»i gian trÃ¹ng láº·p: %s. " +
-                    "Vui lÃ²ng chá»n: 'Thay Ä‘á»•i chÆ°Æ¡ng trÃ¬nh khuyáº¿n mÃ£i sang chÆ°Æ¡ng trÃ¬nh má»›i' hoáº·c 'Giá»¯ nguyÃªn, khÃ´ng Ã¡p promotion má»›i cho sáº£n pháº©m nÃ y'",
+                    "Không thể áp dụng khuyến mãi. Các sản phẩm sau đã có khuyến mãi đang hoạt động trong khoảng thời gian trùng lặp: %s. " +
+                    "Vui lòng chọn: 'Thay đổi chương trình khuyến mãi sang chương trình mới' hoặc 'Giữ nguyên, không áp promotion mới cho sản phẩm này'",
                     String.join(", ", conflictedNames));
             throw new AppException(ErrorCode.PROMOTION_PRODUCT_CONFLICT, errorMessage);
         }
     }
     
     /**
-     * Kiá»ƒm tra xem hai khoáº£ng thá»i gian cÃ³ trÃ¹ng láº·p khÃ´ng
+     * Kiểm tra xem hai khoảng thời gian có trùng lặp không
      * @param start1 Ngày bắt đầu của promotion 1
      * @param end1 Ngày kết thúc của promotion 1
      * @param start2 Ngày bắt đầu của promotion 2
@@ -464,10 +464,10 @@ public class PromotionService {
      */
     private boolean hasDateRangeOverlap(LocalDate start1, LocalDate end1, LocalDate start2, LocalDate end2) {
         if (start1 == null || end1 == null || start2 == null || end2 == null) {
-            return false; // Náº¿u thiáº¿u thÃ´ng tin, khÃ´ng thá»ƒ xÃ¡c Ä‘á»‹nh overlap
+            return false; // Nếu thiếu thông tin, không thể xác định overlap
         }
         
-        // Hai khoáº£ng thá»i gian overlap náº¿u:
+        // Hai khoảng thời gian overlap nếu:
         // start1 <= end2 && start2 <= end1
         return !start1.isAfter(end2) && !start2.isAfter(end1);
     }
@@ -477,14 +477,14 @@ public class PromotionService {
 
         for (Product product : products) {
             double unitPrice = product.getUnitPrice() != null ? product.getUnitPrice() : 0.0;
-            double tax = product.getTax() != null ? product.getTax() : 0.0; // tax lÃ  pháº§n trÄƒm (0.1 = 10%)
+            double tax = product.getTax() != null ? product.getTax() : 0.0; // tax là phần trăm (0.1 = 10%)
             
-            // TÃ­nh giá có tax trước
+            // Tính giá có tax trước
             double priceWithTax = unitPrice * (1 + tax);
-            // TÃ­nh discountValue tá»« promotion (từ giá đã có tax để đảm bảo phần trăm hiển thị chính xác)
+            // Tính discountValue từ promotion (từ giá đã có tax để đảm bảo phần trăm hiển thị chính xác)
             double discountAmount = calculateDiscountAmount(promotion, priceWithTax);
             
-            // TÃ­nh price = unitPrice * (1 + tax) - discountValue
+            // Tính price = unitPrice * (1 + tax) - discountValue
             double finalPrice = Math.max(0, priceWithTax - discountAmount);
 
             product.setDiscountValue(discountAmount);
@@ -523,13 +523,13 @@ public class PromotionService {
         
         for (Product product : products) {
             double unitPrice = product.getUnitPrice() != null ? product.getUnitPrice() : 0.0;
-            double tax = product.getTax() != null ? product.getTax() : 0.0; // tax lÃ  pháº§n trÄƒm (0.1 = 10%)
+            double tax = product.getTax() != null ? product.getTax() : 0.0; // tax là phần trăm (0.1 = 10%)
             
-            // Kiá»ƒm tra xem cÃ³ promotion káº¿ tiáº¿p nÃ o cÃ²n hiá»‡u lá»±c khÃ´ng
+            // Kiểm tra xem có promotion kế tiếp nào còn hiệu lực không
             Promotion nextPromotion = findNextActivePromotionForProduct(product, today);
             
             if (nextPromotion != null) {
-                // Ãp dá»¥ng promotion káº¿ tiáº¿p
+                // Áp dụng promotion kế tiếp
                 double priceWithTax = unitPrice * (1 + tax);
                 // Calculate discount from price with tax to ensure accurate percentage display
                 double discountAmount = calculateDiscountAmount(nextPromotion, priceWithTax);
@@ -539,8 +539,8 @@ public class PromotionService {
                 product.setPrice(finalPrice);
                 product.setPromotion(nextPromotion);
             } else {
-                // KhÃ´ng cÃ³ promotion káº¿ tiáº¿p, khÃ´i phá»¥c vá» giÃ¡ gá»‘c
-                // price = unitPrice + tax * unitPrice (khÃ´ng cÃ³ discount)
+                // Không có promotion kế tiếp, khôi phục về giá gốc
+                // price = unitPrice + tax * unitPrice (không có discount)
                 product.setDiscountValue(0.0);
                 product.setPrice(unitPrice + (tax * unitPrice));
                 product.setPromotion(null);
@@ -550,31 +550,31 @@ public class PromotionService {
     }
     
     /**
-     * TÃ¬m promotion káº¿ tiáº¿p cÃ²n hiá»‡u lá»±c cho sáº£n pháº©m
-     * (promotion cÃ³ date range overlap hoáº·c tiáº¿p ná»‘i vá»›i promotion hiá»‡n táº¡i)
+     * Tìm promotion kế tiếp còn hiệu lực cho sản phẩm
+     * (promotion có date range overlap hoặc tiếp nối với promotion hiện tại)
      */
     private Promotion findNextActivePromotionForProduct(Product product, LocalDate today) {
-        // TÃ¬m cÃ¡c promotion active cho sáº£n pháº©m nÃ y (theo product hoáº·c category)
+        // Tìm các promotion active cho sản phẩm này (theo product hoặc category)
         List<Promotion> activePromotions = new ArrayList<>();
         
-        // TÃ¬m theo product
+        // Tìm theo product
         if (product.getId() != null) {
             activePromotions.addAll(promotionRepository.findActiveByProductId(product.getId(), today));
         }
         
-        // TÃ¬m theo category
+        // Tìm theo category
         if (product.getCategory() != null && product.getCategory().getId() != null) {
             activePromotions.addAll(promotionRepository.findActiveByCategoryId(product.getCategory().getId(), today));
         }
         
-        // Loáº¡i bá» trÃ¹ng láº·p vÃ  sáº¯p xáº¿p theo startDate
+        // Loại bỏ trùng lặp và sắp xếp theo startDate
         return activePromotions.stream()
-                .distinct() // Loáº¡i bá» trÃ¹ng láº·p
+                .distinct() // Loại bỏ trùng lặp
                 .filter(p -> p.getStatus() == PromotionStatus.APPROVED 
                         && (p.getIsActive())
                         && (p.getExpiryDate() == null || !p.getExpiryDate().isBefore(today))
                         && (p.getStartDate() == null || !p.getStartDate().isAfter(today)))
-                .min(Comparator.comparing(Promotion::getStartDate)) // Sáº¯p xáº¿p theo startDate
+                .min(Comparator.comparing(Promotion::getStartDate)) // Sắp xếp theo startDate
                 .orElse(null);
     }
 

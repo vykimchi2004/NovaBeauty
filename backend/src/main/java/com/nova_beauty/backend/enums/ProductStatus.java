@@ -4,10 +4,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum ProductStatus {
-    PENDING("Chá» duyá»‡t"),
-    APPROVED("ÄÃ£ duyá»‡t"),
-    REJECTED("Tá»« chá»‘i"),
-    DISABLED("VÃ´ hiá»‡u hÃ³a");
+    PENDING("Chờ duyệt"),
+    APPROVED("Đã duyệt"),
+    REJECTED("Từ chối"),
+    DISABLED("Vô hiệu hóa");
 
     private final String displayName;
 
@@ -25,13 +25,13 @@ public enum ProductStatus {
         if (value == null) {
             return null;
         }
-        // TÃ¬m theo displayName (tiáº¿ng Viá»‡t)
+        // Tìm theo displayName (tiếng Việt)
         for (ProductStatus status : ProductStatus.values()) {
             if (status.displayName.equals(value)) {
                 return status;
             }
         }
-        // Fallback: tÃ¬m theo enum name (tiáº¿ng Anh) Ä‘á»ƒ tÆ°Æ¡ng thÃ­ch ngÆ°á»£c
+        // Fallback: tìm theo enum name (tiếng Anh) để tương thích ngược
         try {
             return ProductStatus.valueOf(value.toUpperCase());
         } catch (IllegalArgumentException e) {
