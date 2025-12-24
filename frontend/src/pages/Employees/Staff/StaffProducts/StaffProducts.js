@@ -137,6 +137,7 @@ function StaffProducts() {
   const [formData, setFormData] = useState(() => getInitialFormData());
   const [formErrors, setFormErrors] = useState({});
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0); // Track upload progress percentage
   const [mediaFiles, setMediaFiles] = useState([]);
   const fileInputRef = useRef(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -367,6 +368,7 @@ function StaffProducts() {
       fileInputRef.current.value = '';
     }
     setUploadingMedia(false);
+    setUploadProgress(0);
   };
 
   const handleAdd = () => {
@@ -859,9 +861,30 @@ function StaffProducts() {
     const pending = mediaFiles.filter((item) => item.file && !item.uploadedUrl);
     if (!pending.length) return mediaFiles;
 
-    const filesToUpload = pending.map((item) => item.file);
-    const uploadedUrls = await uploadProductMedia(filesToUpload);
-    if (!uploadedUrls || uploadedUrls.length !== pending.length) {
+    const totalFiles = pending.length;
+    const uploadedUrls = [];
+
+    // Upload files one by one to track progress
+    for (let i = 0; i < pending.length; i++) {
+      const file = pending[i].file;
+      const progressPercent = Math.round(((i + 1) / totalFiles) * 100);
+      
+      setUploadProgress(progressPercent);
+      
+      try {
+        const urls = await uploadProductMedia([file]);
+        if (urls && urls.length > 0) {
+          uploadedUrls.push(urls[0]);
+        } else {
+          throw new Error(`Failed to upload file: ${file.name}`);
+        }
+      } catch (error) {
+        console.error('[uploadPendingMedia] Error uploading file:', error);
+        throw error;
+      }
+    }
+
+    if (uploadedUrls.length !== pending.length) {
       throw new Error(STAFF_PRODUCT_MESSAGES.mediaUploadError);
     }
 
@@ -915,6 +938,7 @@ function StaffProducts() {
     if (!validateForm()) return;
 
     setUploadingMedia(true);
+    setUploadProgress(0); // Reset progress before starting
     try {
       const finalMediaList = await uploadPendingMedia();
       const imageUrls = finalMediaList
@@ -1445,6 +1469,27 @@ function StaffProducts() {
         onClose={handleCloseStockUpdateModal}
         onSuccess={handleStockUpdateSuccess}
       />
+
+      {/* Upload Progress Popup */}
+      {uploadingMedia && (
+        <div className={cx('uploadProgressOverlay')}>
+          <div className={cx('uploadProgressModal')}>
+            <div className={cx('uploadProgressContent')}>
+              <h3 className={cx('uploadProgressTitle')}>Đang tải ảnh lên...</h3>
+              <div className={cx('uploadProgressBarContainer')}>
+                <div 
+                  className={cx('uploadProgressBar')} 
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </div>
+              <div className={cx('uploadProgressText')}>
+                <span className={cx('uploadProgressPercentStart')}>0%</span>
+                <span className={cx('uploadProgressPercentCurrent')}>{uploadProgress}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
