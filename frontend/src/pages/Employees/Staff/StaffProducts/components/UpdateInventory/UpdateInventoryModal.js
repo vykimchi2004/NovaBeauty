@@ -45,10 +45,12 @@ function UpdateInventoryModal({ open, product, onClose, onSuccess }) {
   const handleSubmit = async () => {
     if (!product) return;
 
-    // Check if at least one variant has a value to add
-    const hasAnyUpdate = Object.values(variantStockUpdates).some((v) => v && parseInt(v, 10) > 0);
+    const MIN_STOCK = 50; // Tồn kho tối thiểu
+
+    // Check if at least one variant has a value
+    const hasAnyUpdate = Object.values(variantStockUpdates).some((v) => v && v !== '' && parseInt(v, 10) !== 0);
     if (!hasAnyUpdate) {
-      notify.warning('Vui lòng nhập số lượng cần thêm cho ít nhất một mã màu');
+      notify.warning('Vui lòng nhập số lượng cần thêm hoặc bớt cho ít nhất một mã màu');
       return;
     }
 
@@ -60,15 +62,28 @@ function UpdateInventoryModal({ open, product, onClose, onSuccess }) {
         const variants = normalizeVariantRecords(product.manufacturingLocation);
         if (variants.length > 0) {
           const updatedVariants = variants.map((v, idx) => {
-            const addQty = variantStockUpdates[idx] ? parseInt(variantStockUpdates[idx], 10) : 0;
-            if (Number.isNaN(addQty) || addQty < 0) {
+            const changeQty = variantStockUpdates[idx] ? parseInt(variantStockUpdates[idx], 10) : 0;
+            
+            // Skip if NaN or 0
+            if (Number.isNaN(changeQty) || changeQty === 0) {
               return v;
             }
+
+            const currentStock = v.stockQuantity || 0;
+            const newStock = currentStock + changeQty;
+
+            // Kiểm tra giảm xuống dưới 50
+            if (newStock < MIN_STOCK) {
+              const variantName = v.name || v.code || 'Mã màu';
+              throw new Error(`Không thể giảm tồn kho của ${variantName} xuống dưới ${MIN_STOCK} sản phẩm (hiện tại: ${currentStock}, thay đổi: ${changeQty})`);
+            }
+
             return {
               ...v,
-              stockQuantity: (v.stockQuantity || 0) + addQty,
+              stockQuantity: newStock,
             };
           });
+          
           const updatedManufacturingLocation = serializeVariantPayload(updatedVariants, 'Mã màu');
           const updatePayload = {
             ...product,
@@ -79,16 +94,24 @@ function UpdateInventoryModal({ open, product, onClose, onSuccess }) {
         }
       } else {
         // Sản phẩm không có mã màu, cập nhật trực tiếp
-        const addQty = variantStockUpdates[0] ? parseInt(variantStockUpdates[0], 10) : 0;
-        if (!Number.isNaN(addQty) && addQty > 0) {
+        const changeQty = variantStockUpdates[0] ? parseInt(variantStockUpdates[0], 10) : 0;
+        if (!Number.isNaN(changeQty) && changeQty !== 0) {
           const currentStock = product.stockQuantity || 0;
-          const newStock = currentStock + addQty;
+          const newStock = currentStock + changeQty;
+          
+          // Kiểm tra giảm xuống dưới 50
+          if (newStock < MIN_STOCK) {
+            throw new Error(`Không thể giảm tồn kho xuống dưới ${MIN_STOCK} sản phẩm (hiện tại: ${currentStock}, thay đổi: ${changeQty})`);
+          }
+
           const updatePayload = {
             ...product,
             stockQuantity: newStock,
           };
           await updateProduct(product.id, updatePayload);
-          notify.success(`Cập nhật tồn kho thành công (+${addQty} sản phẩm)`);
+          
+          const changeText = changeQty > 0 ? `+${changeQty}` : `${changeQty}`;
+          notify.success(`Cập nhật tồn kho thành công (${changeText} sản phẩm)`);
         }
       }
 
@@ -182,10 +205,9 @@ function UpdateInventoryModal({ open, product, onClose, onSuccess }) {
                         </div>
                         <input
                           type="number"
-                          min="0"
                           value={variantStockUpdates[idx] || ''}
                           onChange={(e) => setVariantStockUpdates({ ...variantStockUpdates, [idx]: e.target.value })}
-                          placeholder="Nhập số lượng cần thêm"
+                          placeholder="Nhập số lượng (+ thêm, - bớt)"
                           className={cx('input')}
                           disabled={loading}
                         />
@@ -203,15 +225,14 @@ function UpdateInventoryModal({ open, product, onClose, onSuccess }) {
           ) : (
             <div className={cx('formGroup')}>
               <label htmlFor="stockAddValue" className={cx('label')}>
-                Số lượng cần thêm vào <span className={cx('required')}>*</span>
+                Số lượng thay đổi <span className={cx('required')}>*</span>
               </label>
               <input
                 id="stockAddValue"
                 type="number"
-                min="1"
                 value={variantStockUpdates[0] || ''}
                 onChange={(e) => setVariantStockUpdates({ 0: e.target.value })}
-                placeholder="Nhập số lượng (chỉ cộng thêm)"
+                placeholder="Nhập số lượng (+ thêm, - bớt)"
                 className={cx('input')}
                 disabled={loading}
               />

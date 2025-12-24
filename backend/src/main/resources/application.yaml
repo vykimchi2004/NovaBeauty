@@ -77,7 +77,7 @@ cloudinary:
 
 gemini:
   apiKey: ${GEMINI_API_KEY}
-  model: gemini-2.5-flash.  # Model mới nhất, tối ưu cho chatbot
+  model: gemini-2.5-flash  # Model mới nhất, tối ưu cho chatbot
 
 
 # Layer1 - Controller: Quan ly cac mapping, endpoint
