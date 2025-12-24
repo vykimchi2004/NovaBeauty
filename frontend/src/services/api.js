@@ -89,8 +89,8 @@ class ApiClient {
     // Lấy refresh token từ storage
     getRefreshToken() {
         try {
-            return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN) || 
-                   sessionStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+            return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN) ||
+                sessionStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
         } catch (error) {
             return null;
         }
@@ -128,14 +128,14 @@ class ApiClient {
                 const data = await response.json();
                 const newAccessToken = data?.result?.token || data?.token;
                 const newRefreshToken = data?.result?.refreshToken || data?.refreshToken;
-                
+
                 if (newAccessToken) {
                     this.setToken(newAccessToken);
                 }
                 if (newRefreshToken) {
                     this.setRefreshToken(newRefreshToken);
                 }
-                
+
                 if (newAccessToken) {
                     console.log('[API] Token refreshed successfully');
                     return true;
@@ -165,7 +165,7 @@ class ApiClient {
         if (!response.ok) {
             // Backend trả về ApiResponse format: {code, message, result}
             let message = data?.message || data || `HTTP error! status: ${response.status}`;
-            
+
             // Xử lý trường hợp message là object hoặc array
             if (typeof message === 'object') {
                 if (Array.isArray(message)) {
@@ -176,7 +176,7 @@ class ApiClient {
                     message = JSON.stringify(message);
                 }
             }
-            
+
             // Log chi tiết cho 401/403 để debug (nhưng không log cho /cart endpoint vì đây là bình thường khi chưa đăng nhập)
             if ((response.status === 401 || response.status === 403) && !response.url.includes('/cart')) {
                 console.error('[API] Auth error:', {
@@ -187,7 +187,7 @@ class ApiClient {
                     url: response.url
                 });
             }
-            
+
             // Dịch các message tiếng Anh phổ biến sang tiếng Việt
             const messageTranslations = {
                 'You do not have permission': 'Bạn không có quyền thực hiện thao tác này.',
@@ -195,7 +195,7 @@ class ApiClient {
                 'Forbidden': 'Bạn không có quyền thực hiện thao tác này.',
                 'Unauthorized': 'Phiên đăng nhập đã hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.',
             };
-            
+
             // Kiểm tra và dịch message nếu cần
             for (const [en, vi] of Object.entries(messageTranslations)) {
                 if (message && message.includes(en)) {
@@ -203,7 +203,7 @@ class ApiClient {
                     break;
                 }
             }
-            
+
             // Thay thế "Uncategorized error" hoặc message rỗng bằng message rõ ràng hơn
             if (
                 !message ||
@@ -231,7 +231,7 @@ class ApiClient {
                         message = `Lỗi ${response.status}: ${response.statusText || 'Đã xảy ra lỗi'}`;
                 }
             }
-            
+
             const error = new Error(message);
             error.code = data?.code || response.status;
             error.status = response.status;

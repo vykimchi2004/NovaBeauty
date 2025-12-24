@@ -14,7 +14,7 @@ import com.nova_beauty.backend.enums.ProductStatus;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, String> {
 
-    // TÃ¬m products theo category
+    // Tìm products theo category
     List<Product> findByCategoryId(String categoryId);
 
     List<Product> findByStatus(ProductStatus status);
@@ -34,70 +34,74 @@ public interface ProductRepository extends JpaRepository<Product, String> {
     @Query("SELECT p FROM Product p LEFT JOIN FETCH p.category WHERE p.category.id = :categoryId")
     List<Product> findByCategoryIdWithCategory(@Param("categoryId") String categoryId);
 
-    // TÃ¬m products theo name (case insensitive)
+    // Tìm products theo name (case insensitive)
     List<Product> findByNameContainingIgnoreCase(String name);
 
-    // TÃ¬m products theo texture (kết cấu)
+    // Tìm products theo texture (kết cấu)
     List<Product> findByTextureContainingIgnoreCase(String texture);
 
-    // TÃ¬m products theo skinType (loại da)
+    // Tìm products theo skinType (loại da)
     List<Product> findBySkinTypeContainingIgnoreCase(String skinType);
 
     // TÃ¬m products theo price range
     @Query("SELECT p FROM Product p WHERE p.price BETWEEN :minPrice AND :maxPrice")
     List<Product> findByPriceRange(@Param("minPrice") double minPrice, @Param("maxPrice") double maxPrice);
 
-    // TÃ¬m products theo keyword search (name, texture, skinType, description)
-    @Query("SELECT p FROM Product p WHERE " + "LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR "
+    // Tìm products theo keyword search (name, texture, skinType, description, brand, uses, characteristics)
+    @Query("SELECT p FROM Product p WHERE " + 
+            "LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR "
+            + "LOWER(p.brand) LIKE LOWER(CONCAT('%', :keyword, '%')) OR "
             + "LOWER(p.texture) LIKE LOWER(CONCAT('%', :keyword, '%')) OR "
             + "LOWER(p.skinType) LIKE LOWER(CONCAT('%', :keyword, '%')) OR "
-            + "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+            + "LOWER(p.description) LIKE LOWER(CONCAT('%', :keyword, '%')) OR "
+            + "LOWER(p.uses) LIKE LOWER(CONCAT('%', :keyword, '%')) OR "
+            + "LOWER(p.characteristics) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<Product> findByKeyword(@Param("keyword") String keyword);
 
-    // TÃ¬m products submitted bá»Ÿi staff cá»¥ thá»ƒ
+    // Tìm products submitted bởi staff cụ thể
     List<Product> findBySubmittedBy(User submittedBy);
 
-    // TÃ¬m products theo publication date range
+    // Tìm products theo publication date range
     @Query("SELECT p FROM Product p WHERE p.publicationDate BETWEEN :startDate AND :endDate")
     List<Product> findByPublicationDateRange(
             @Param("startDate") java.time.LocalDate startDate, @Param("endDate") java.time.LocalDate endDate);
 
-    // TÃ¬m products cÃ³ inventory
+    // Tìm products có inventory
     @Query("SELECT p FROM Product p WHERE p.inventory IS NOT NULL")
     List<Product> findProductsWithInventory();
 
-    // TÃ¬m products cÃ³ inventory quantity lá»›n hÆ¡n minQuantity
+    // Tìm products có inventory quantity lớn hơn minQuantity
     @Query("SELECT p FROM Product p WHERE p.inventory.stockQuantity > :minQuantity")
     List<Product> findByInventoryQuantityGreaterThan(@Param("minQuantity") int minQuantity);
 
-    // TÃ¬m products cÃ³ discount value lá»›n hÆ¡n discountValue
+    // Tìm products có discount value lớn hơn discountValue
     List<Product> findByDiscountValueGreaterThan(double discountValue);
 
-    // TÃ¬m products ordered by price ascending
+    // Tìm products ordered by price ascending
     List<Product> findByStatusOrderByPriceAsc(ProductStatus status);
 
-    // TÃ¬m products ordered by price descending
+    // Tìm products ordered by price descending
     List<Product> findByStatusOrderByPriceDesc(ProductStatus status);
 
-    // TÃ¬m products ordered by creation date
+    // Tìm products ordered by creation date
     List<Product> findByStatusOrderByCreatedAtDesc(ProductStatus status);
 
-    // TÃ¬m products ordered by update date
+    // Tìm products ordered by update date
     List<Product> findByStatusOrderByUpdatedAtDesc(ProductStatus status);
 
-    // TÃ¬m products ordered by quantity sold
+    // Tìm products ordered by quantity sold
     List<Product> findByStatusOrderByQuantitySoldDesc(ProductStatus status);
 
-    // TÃ­nh sá»‘ lÆ°á»£ng products theo category
+    // Tính số lượng products theo category
     long countByCategoryId(String categoryId);
 
-    // TÃ­nh sá»‘ lÆ°á»£ng products theo status
+    // Tính số lượng products theo status
     long countByStatus(ProductStatus status);
 
-    // TÃ­nh sá»‘ lÆ°á»£ng products submitted bá»Ÿi user cá»¥ thá»ƒ
+    // Tính số lượng products submitted bởi user cụ thể
     long countBySubmittedBy(User submittedBy);
 
-    // TÃ¬m products theo promotion (Nova dùng field promotionApply nên cần @Query tường minh)
+    // Tìm products theo promotion (Nova dùng field promotionApply nên cần @Query tường minh)
     @Query("SELECT p FROM Product p WHERE p.promotionApply.id = :promotionId")
     List<Product> findByPromotionId(@Param("promotionId") String promotionId);
 

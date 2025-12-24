@@ -156,7 +156,7 @@ public class ProductService {
                 .findById(productId)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_EXISTED));
 
-        // Kiá»ƒm tra quyá»n: Admin hoáº·c chá»§ sá»Ÿ há»¯u sáº£n pháº©m
+        // Kiểm tra quyền: Admin hoặc chủ sở hữu sản phẩm
         boolean isAdmin = context.getAuthentication().getAuthorities().stream()
                 .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
 

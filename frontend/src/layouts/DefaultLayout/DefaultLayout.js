@@ -29,7 +29,7 @@ function DefaultLayout({ children }) {
   const [activeModal, setActiveModal] = useState(null);
   const [currentUser, setCurrentUser] = useState(() => storage.get(STORAGE_KEYS.USER));
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  
+
   // Khi reload lại trang, nếu admin đang đăng nhập thì điều hướng về /admin
   React.useEffect(() => {
     const email = currentUser?.email?.toLowerCase();
@@ -50,7 +50,7 @@ function DefaultLayout({ children }) {
       navigate('/customer-support', { replace: true });
     }
   }, [currentUser, navigate, location.pathname]);
-  
+
   // State cho forgot password flow
   const [forgotEmail, setForgotEmail] = useState('');
   const [verifiedOtp, setVerifiedOtp] = useState('');
@@ -157,7 +157,7 @@ function DefaultLayout({ children }) {
       if (e.key === STORAGE_KEYS.USER) {
         try {
           setCurrentUser(storage.get(STORAGE_KEYS.USER));
-        } catch (_) {}
+        } catch (_) { }
       }
     };
     window.addEventListener('storage', onStorage);
@@ -197,11 +197,11 @@ function DefaultLayout({ children }) {
   let currentLabel = BREADCRUMB_LABELS[path] || null;
   const isProductDetail = path.startsWith('/product/');
   const productName = isProductDetail && location.state && location.state.name ? location.state.name : null;
-  
+
   // Get category name from query params if on /products page
   const [categoryName, setCategoryName] = useState(null);
   const categoryId = path === '/products' ? searchParams.get('category') : null;
-  
+
   React.useEffect(() => {
     if (categoryId && path === '/products') {
       const fetchCategoryName = async () => {
@@ -222,7 +222,7 @@ function DefaultLayout({ children }) {
       setCategoryName(null);
     }
   }, [categoryId, path]);
-  
+
   // Override label if category is selected
   if (categoryId && categoryName) {
     currentLabel = categoryName;
@@ -374,12 +374,12 @@ function DefaultLayout({ children }) {
                   setShowLogoutConfirm(false);
                   try {
                     await logout();
-                  } catch (_) {}
+                  } catch (_) { }
                   setCurrentUser(null);
                   try {
                     storage.remove(STORAGE_KEYS.USER);
                     storage.remove(STORAGE_KEYS.TOKEN);
-                  } catch (_) {}
+                  } catch (_) { }
                   // Optional: reload để đảm bảo UI sạch
                   window.location.reload();
                 }}

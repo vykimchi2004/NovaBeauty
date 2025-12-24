@@ -362,38 +362,113 @@ function ChatButton() {
                     setSessionId(response.sessionId);
                 }
 
-                // Check for consultation triggers
+                // --- Improved Product Suggestion Logic ---
                 const lowerMsg = messageContent.toLowerCase();
+                let aiReply = response.reply;
+                let suggestedProducts = [];
+
+                // 1. Ưu tiên trích xuất sản phẩm từ link trong câu trả lời của AI
+                const linkPattern = /\[LINK:\/product\/([^\]]+)\]/g;
+                let match;
+                const extractedIds = new Set();
+                while ((match = linkPattern.exec(aiReply)) !== null) {
+                    extractedIds.add(match[1]);
+                }
+
+                if (extractedIds.size > 0 && allProducts.length > 0) {
+                    suggestedProducts = allProducts.filter(p => extractedIds.has(p.id));
+                }
+
+                // 2. Nếu AI không đưa link cụ thể, Thử match local nếu có trigger tư vấn
                 const isConsultation = lowerMsg.includes('tư vấn') ||
                     lowerMsg.includes('gợi ý') ||
                     lowerMsg.includes('sản phẩm nào') ||
                     lowerMsg.includes('tìm giúp') ||
                     lowerMsg.includes('xem sản phẩm') ||
                     lowerMsg.includes('muốn xem') ||
-                    lowerMsg.includes('tìm sản phẩm');
+                    lowerMsg.includes('tìm sản phẩm') ||
+                    lowerMsg.includes('có son') ||
+                    lowerMsg.includes('có kem') ||
+                    lowerMsg.includes('muốn tìm') ||
+                    lowerMsg.includes('lâu trôi') ||
+                    lowerMsg.includes('12h') ||
+                    lowerMsg.includes('dưỡng ẩm');
 
-                let suggestedProducts = [];
-                if (isConsultation && allProducts.length > 0) {
-                    // Simple keyword matching with randomization for variety
-                    const keywords = messageContent.split(' ').filter(k => k.length >= 2);
-                    const matches = allProducts.filter(p => {
-                        const searchStr = `${p.name} ${p.reviewHighlights || ''} ${p.description || ''} ${p.uses || ''}`.toLowerCase();
-                        return keywords.some(k => searchStr.includes(k.toLowerCase()));
-                    });
+                if (suggestedProducts.length === 0 && isConsultation && allProducts.length > 0) {
+                    // Stop words to filter out noise
+                    const STOP_WORDS = ['tìm', 'muốn', 'cho', 'tôi', 'em', 'cần', 'giá', 'bao', 'nhiêu', 'có', 'gì', 'nào', 'giúp', 'xem', 'sản', 'phẩm', 'loại', 'với', 'da', 'mình', 'về', 'của', 'suốt', 'tại'];
 
-                    // Shuffle and pick at most 3
-                    suggestedProducts = matches
-                        .sort(() => 0.5 - Math.random())
-                        .slice(0, 3);
+                    const keywords = lowerMsg.split(/[\s,?.!]+/)
+                        .filter(k => k.length >= 2 && !STOP_WORDS.includes(k));
+
+                    if (keywords.length > 0) {
+                        const matches = allProducts.filter(p => {
+                            const name = (p.name || '').toLowerCase();
+                            const brand = (p.brand || '').toLowerCase();
+                            const category = (p.categoryName || '').toLowerCase();
+                            const characteristics = (p.characteristics || '').toLowerCase();
+                            const description = `${p.description || ''} ${p.uses || ''}`.toLowerCase();
+
+                            // Weighted Score: Name > Category > Characteristics > Brand > Description
+                            let score = 0;
+                            keywords.forEach(k => {
+                                if (name.includes(k)) score += 10;
+                                if (category.includes(k)) score += 5;
+                                if (characteristics.includes(k)) score += 4;
+                                if (brand.includes(k)) score += 3;
+                                if (description.includes(k)) score += 2; // Tăng trọng số cho description/uses một chút
+                            });
+
+                            p._matchScore = score;
+                            return score > 0;
+                        });
+
+                        // Sort by weighted match score first, then by quantitySold
+                        matches.sort((a, b) => {
+                            if (b._matchScore !== a._matchScore) {
+                                return b._matchScore - a._matchScore;
+                            }
+                            return (b.quantitySold || 0) - (a.quantitySold || 0);
+                        });
+
+                        suggestedProducts = matches.slice(0, 3);
+                    }
                 }
 
-                // Add bot response từ AI
-                let finalReply = response.reply;
+                // Nếu có sản phẩm gợi ý, xử lý text theo yêu cầu USER
                 if (suggestedProducts.length > 0) {
-                    finalReply = 'Tôi có một vài sản phẩm gợi ý theo ý bạn, bạn có thể tham khảo qua nhé:';
+                    // Loại bỏ các danh sách dạng "1. Sản phẩm A..." nếu AI còn sót lại
+                    aiReply = aiReply.replace(/\n\d+\.\s+[^\n]+/g, '').trim();
+                    aiReply = aiReply.replace(/1\.\s+[\w\s]+\n?/g, '').trim();
+
+                    // Lấy từ khóa chính từ câu hỏi của người dùng để điền vào câu trả lời
+                    const STOP_WORDS = ['tìm', 'muốn', 'cho', 'tôi', 'em', 'cần', 'giá', 'bao', 'nhiêu', 'có', 'gì', 'nào', 'giúp', 'xem', 'sản', 'phẩm', 'loại', 'với', 'da', 'mình', 'về', 'của'];
+                    const keywords = lowerMsg.split(/[\s,?.!]+/)
+                        .filter(k => k.length >= 2 && !STOP_WORDS.includes(k));
+
+                    // Cố gắng tìm cụm từ chính
+                    let displayKeyword = '';
+                    const topicTriggers = ['về', 'tìm', 'xem', 'muốn', 'là'];
+                    const words = lowerMsg.split(/\s+/);
+                    for (let i = 0; i < words.length; i++) {
+                        if (topicTriggers.includes(words[i]) && i < words.length - 1) {
+                            const candidate = words.slice(i + 1).filter(w => !STOP_WORDS.includes(w)).join(' ');
+                            if (candidate) {
+                                displayKeyword = candidate;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!displayKeyword) {
+                        displayKeyword = (keywords.join(' ') || (suggestedProducts[0].categoryName?.toLowerCase() || 'mỹ phẩm'));
+                    }
+
+                    aiReply = `Đây là 3 sản phẩm được mua nhiều nhất về ${displayKeyword} tại Nova Beauty, bạn có thể tham khảo qua nhé:`;
                 }
 
-                addBotMessage(finalReply, suggestedProducts);
+                // Add bot response từ AI (Luôn giữ câu trả lời của AI, đã được filter nếu có card)
+                addBotMessage(aiReply, suggestedProducts);
             }
         } catch (error) {
             console.error('Error sending message:', error);

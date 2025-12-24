@@ -60,11 +60,11 @@ public class ChatbotService {
             + "   - Nếu KHÔNG có context \"=== DANH MỤC CON CỦA... ===\": "
             + "     + Nói: \"Xin lỗi, tôi không có thông tin về danh mục con của [loại sản phẩm]. Bạn vui lòng liên hệ CSKH để được tư vấn thêm ạ.\" "
             + "B. Khi khách hỏi CỤ THỂ (ví dụ: \"son dior\", \"kem chống nắng la roche\"): "
-            + "   - CHỈ liệt kê TÊN sản phẩm CÓ TRONG CONTEXT \"DANH SÁCH SẢN PHẨM LIÊN QUAN\" hoặc \"DANH SÁCH SẢN PHẨM CỦA NOVA BEAUTY\" "
-            + "   - KHÔNG được tự nghĩ ra tên sản phẩm, thương hiệu, hoặc thông tin khác "
-            + "   - Nếu <20 sản phẩm: liệt kê tất cả TÊN sản phẩm từ context "
-            + "   - Nếu >20 sản phẩm: đề xuất lọc theo thương hiệu, giá, loại da, kết cấu (CHỈ dùng thông tin từ context) "
-            + "   - Format: \"Chào bạn! Nova Beauty có các sản phẩm [loại] sau:\n\n1. [Tên sản phẩm từ context]\n2. [Tên sản phẩm từ context]\n\nBạn muốn xem chi tiết sản phẩm nào ạ?\" "
+            + "   - CHỈ liệt kê TÊN loại sản phẩm chung có trong context (ví dụ: \"các loại son\", \"kem chống nắng\"). "
+            + "   - TUYỆT ĐỐI KHÔNG được liệt kê danh sách tên sản phẩm cụ thể (Son A, B, C...) trong câu trả lời vì hệ thống sẽ tự hiển thị card sản phẩm. "
+            + "   - Nếu <20 sản phẩm: nói lời giới thiệu ngắn gọn. "
+            + "   - Nếu >20 sản phẩm: đề xuất lọc theo thương hiệu, giá, loại da, kết cấu (CHỈ dùng thông tin từ context). "
+            + "   - Format: \"Chào bạn! Nova Beauty có các sản phẩm [loại] như bạn đang tìm kiếm. Dưới đây là các sản phẩm bạn có thể tham khảo ạ:\" "
             + "C. Khi khách CHỌN sản phẩm: "
             + "   - CHỈ đưa link [LINK:/product/{id}] với ID CÓ TRONG CONTEXT "
             + "   - KHÔNG được tự tạo ID hoặc link "
@@ -104,7 +104,7 @@ public class ChatbotService {
             + "Trả lời (nếu có context danh mục con): \"Chào bạn! Nova Beauty có các loại [TÊN DANH MỤC CHA TỪ CONTEXT] sau:\n\n[COPY Y HỆT CÁC DÒNG DANH MỤC CON TỪ CONTEXT, GIỮ NGUYÊN SỐ THỨ TỰ VÀ TÊN]\n\nBạn muốn xem chi tiết danh mục nào ạ?\" "
             + "LƯU Ý: Không được tự nghĩ ra tên danh mục con, PHẢI copy y hệt từ context "
             + "Câu hỏi: [tên sản phẩm cụ thể] "
-            + "Trả lời (nếu có sản phẩm trong context): \"Chào bạn! Nova Beauty có các sản phẩm [loại] sau:\n\n[CHỈ LIỆT KÊ TÊN SẢN PHẨM CÓ TRONG CONTEXT]\n\nBạn muốn xem chi tiết sản phẩm nào ạ?\" "
+            + "Trả lời (nếu có sản phẩm trong context): \"Chào bạn! Nova Beauty có các sản phẩm [loại] sau. Dưới đây là các sản phẩm bạn có thể tham khảo ạ:\" "
             + "Câu hỏi: tôi chọn số [số] "
             + "Trả lời (nếu có ID trong context): \"Bạn có thể xem chi tiết sản phẩm [TÊN TỪ CONTEXT] tại: [LINK:/product/{ID TỪ CONTEXT}]\"";
 
@@ -334,7 +334,10 @@ public class ChatbotService {
             "sản phẩm", "mỹ phẩm", "kem", "son", "nước hoa", "dưỡng da",
             "trang điểm", "chăm sóc", "tư vấn", "giá", "giá bao nhiêu",
             "có sản phẩm", "bán", "mua", "loại da", "kết cấu", "thương hiệu",
-            "brand", "skincare", "makeup", "perfume", "hair care"
+            "brand", "skincare", "makeup", "perfume", "hair care",
+            "sữa rửa mặt", "tẩy trang", "xịt khoáng", "mặt nạ", "toner",
+            "serum", "tinh chất", "chống nắng", "phấn", "mascara", "chì kẻ",
+            "lâu trôi", "12h", "24h", "suốt ngày", "dưỡng ẩm", "trắng da", "mụn"
         };
         for (String keyword : productKeywords) {
             if (lowerMessage.contains(keyword)) {
@@ -704,10 +707,13 @@ public class ChatbotService {
             "serum", "tinh chất",
             "toner", "nước hoa hồng",
             "sữa rửa mặt", "cleanser", "face wash",
+            "tẩy trang", "makeup remover",
+            "xịt khoáng", "mist",
             "mặt nạ", "mask",
             "chống nắng", "sunscreen", "spf",
             "trang điểm", "makeup", "foundation", "bb cream", "cc cream",
-            "mascara", "phấn mắt", "eyeshadow",
+            "mascara", "phấn mắt", "eyeshadow", "phấn phủ", "powder",
+            "chì kẻ", "eyeliner", "pencil",
             "dưỡng tóc", "hair care", "shampoo", "dầu gội",
             "dưỡng thể", "body care", "body lotion"
         };
@@ -889,6 +895,21 @@ public class ChatbotService {
                 if (product.getTexture() != null && !product.getTexture().isEmpty()) {
                     context.append(String.format(" | Kết cấu: %s", product.getTexture()));
                     textures.add(product.getTexture());
+                }
+                
+                // Thêm chi tiết cho 10 sản phẩm đầu tiên để AI có thể trả lời chi tiết
+                if (i < 10) {
+                    if (product.getUses() != null && !product.getUses().isEmpty()) {
+                        context.append(String.format("\n   - Công dụng: %s", product.getUses()));
+                    }
+                    if (product.getCharacteristics() != null && !product.getCharacteristics().isEmpty()) {
+                        context.append(String.format("\n   - Đặc tính/Ưu điểm: %s", product.getCharacteristics()));
+                    }
+                    if (product.getDescription() != null && !product.getDescription().isEmpty()) {
+                        String desc = product.getDescription();
+                        if (desc.length() > 200) desc = desc.substring(0, 200) + "...";
+                        context.append(String.format("\n   - Mô tả: %s", desc));
+                    }
                 }
                 
                 context.append("\n");

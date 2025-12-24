@@ -56,13 +56,13 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
 
   const initializeGoogleSignIn = () => {
     const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
-    
+
     // Debug: log để kiểm tra biến môi trường và origin
     const currentOrigin = window.location.origin;
     console.log('[Google Sign-In] Client ID:', googleClientId ? 'Found' : 'Missing');
     console.log('[Google Sign-In] Current Origin:', currentOrigin);
     console.log('[Google Sign-In] Please add this origin to Google Cloud Console:', currentOrigin);
-    
+
     if (!googleClientId || googleClientId.trim() === '') {
       console.warn('[Google Sign-In] REACT_APP_GOOGLE_CLIENT_ID is not set. Please check your .env file and restart the server.');
       return;
@@ -90,7 +90,7 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
 
   const handleGoogleCredentialResponse = async (response) => {
     console.log('[Google Sign-In] Full response:', response);
-    
+
     if (!response || !response.credential) {
       console.error('[Google Sign-In] No credential received:', response);
       setPasswordError('Đăng nhập với Google thất bại. Vui lòng thử lại.');
@@ -109,14 +109,13 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
       let userInfo = {
         email: '',
         name: '',
-        picture: '',
       };
 
       try {
         // Kiểm tra xem credential có phải là ID token hợp lệ không (có 3 phần được phân tách bởi dấu chấm)
         const parts = response.credential.split('.');
         console.log('[Google Sign-In] ID token parts count:', parts.length);
-        
+
         if (parts.length !== 3) {
           throw new Error('Invalid ID token format - expected 3 parts, got ' + parts.length);
         }
@@ -124,10 +123,10 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
         // Decode payload (phần thứ 2 của JWT)
         // Base64 URL-safe decode với padding
         let payloadBase64 = parts[1];
-        
+
         // Thay thế URL-safe characters
         payloadBase64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
-        
+
         // Thêm padding nếu cần
         const pad = payloadBase64.length % 4;
         if (pad) {
@@ -136,7 +135,7 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
           }
           payloadBase64 += new Array(5 - pad).join('=');
         }
-        
+
         // Decode base64 với UTF-8 support
         // atob() decode thành binary string, cần convert sang UTF-8
         const binaryString = atob(payloadBase64);
@@ -146,13 +145,12 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
         );
         const payload = JSON.parse(utf8String);
         console.log('[Google Sign-In] Decoded payload:', payload);
-        
+
         userInfo = {
           email: payload.email || '',
           name: payload.name || '',
-          picture: payload.picture || '',
         };
-        
+
         console.log('[Google Sign-In] Extracted user info:', userInfo);
       } catch (decodeError) {
         console.error('[Google Sign-In] Could not decode ID token:', decodeError);
@@ -178,13 +176,12 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
         email: userInfo.email,
         name: userInfo.name,
       });
-      
+
       const authResponse = await loginWithGoogle({
         idToken: response.credential,
         email: userInfo.email,
         name: userInfo.name,
         fullName: userInfo.name,
-        picture: userInfo.picture,
       });
 
       if (authResponse && authResponse.token) {
@@ -243,10 +240,10 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
 
   const handleGoogleButtonClick = () => {
     const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
-    
+
     // Debug: log để kiểm tra biến môi trường
     console.log('[Google Sign-In] Button clicked. Client ID:', googleClientId ? 'Found' : 'Missing');
-    
+
     if (!googleClientId || googleClientId.trim() === '') {
       console.error('[Google Sign-In] REACT_APP_GOOGLE_CLIENT_ID is not set. Please check your .env file and restart the server.');
       alert('Google Sign-In chưa được cấu hình. Vui lòng kiểm tra file .env và restart server.');
@@ -277,7 +274,7 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
               size: 'large',
               text: 'signin_with',
             });
-            
+
             // Đợi một chút để button được render, sau đó click
             setTimeout(() => {
               const googleButton = hiddenDiv.querySelector('div[role="button"]');
@@ -304,11 +301,11 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
       setLoading(false);
       setShowPassword(false);
       setRenderKey((k) => k + 1);
-      
+
       // Kiểm tra xem có lưu email "nhớ tài khoản" không
       const savedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY) || '';
       setRememberMe(!!savedEmail); // Nếu có email đã lưu thì tích checkbox
-      
+
       setTimeout(() => {
         if (savedEmail) {
           // Nếu có email đã lưu, điền vào form
@@ -371,7 +368,7 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
     try {
       // Gọi API login
       const response = await login(email, password);
-      
+
       if (response && response.token) {
         // Xử lý "nhớ tài khoản" - chỉ lưu email
         if (rememberMe) {
@@ -379,7 +376,7 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
         } else {
           localStorage.removeItem(REMEMBER_EMAIL_KEY);
         }
-        
+
         // Lấy thông tin user
         let userInfo = null;
         try {
@@ -402,7 +399,7 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
         // Điều hướng theo tài khoản
         const loggedInEmail = (userInfo?.email || email || '').toLowerCase();
         const roleName = userInfo?.role?.name?.toUpperCase() || '';
-        
+
         if (loggedInEmail === 'admin@novabeauty.com' || roleName === 'ADMIN') {
           if (navigate) {
             navigate('/admin', { replace: true });
@@ -432,15 +429,15 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
       // Kiểm tra xem lỗi có liên quan đến mật khẩu không
       const errorMessage = err.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.';
       const lowerMessage = errorMessage.toLowerCase();
-      
+
       // Nếu lỗi liên quan đến mật khẩu, hiển thị dưới password field
-      if (lowerMessage.includes('mật khẩu') || 
-          lowerMessage.includes('password') || 
-          lowerMessage.includes('unauthorized') || 
-          lowerMessage.includes('unauthenticated') ||
-          lowerMessage.includes('invalid credentials') ||
-          lowerMessage.includes('sai mật khẩu') ||
-          lowerMessage.includes('wrong password')) {
+      if (lowerMessage.includes('mật khẩu') ||
+        lowerMessage.includes('password') ||
+        lowerMessage.includes('unauthorized') ||
+        lowerMessage.includes('unauthenticated') ||
+        lowerMessage.includes('invalid credentials') ||
+        lowerMessage.includes('sai mật khẩu') ||
+        lowerMessage.includes('wrong password')) {
         setPasswordError('Mật khẩu không đúng');
       } else if (lowerMessage.includes('email') || lowerMessage.includes('user not found')) {
         setEmailError(errorMessage);
@@ -471,11 +468,11 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
         <form key={renderKey} onSubmit={handleSubmit} className={cx('form')} noValidate autoComplete="off">
           <div className={cx('formGroup')}>
             <label>Email</label>
-            <input 
-              ref={emailRef} 
-              name="email" 
-              type="email" 
-              placeholder="Nhập email của bạn" 
+            <input
+              ref={emailRef}
+              name="email"
+              type="email"
+              placeholder="Nhập email của bạn"
               disabled={loading}
               autoComplete="off"
             />
@@ -485,11 +482,11 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
           <div className={cx('formGroup')}>
             <label>Mật khẩu</label>
             <div className={cx('passwordWrapper')}>
-              <input 
-                ref={passwordRef} 
-                name="password" 
-                type={showPassword ? 'text' : 'password'} 
-                placeholder="Nhập mật khẩu" 
+              <input
+                ref={passwordRef}
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Nhập mật khẩu"
                 disabled={loading}
                 autoComplete="new-password"
               />
@@ -502,11 +499,11 @@ function LoginModal({ isOpen, onClose, onLoginSuccess, onOpenRegister, onOpenFor
 
           <div className={cx('options')}>
             <label className={cx('remember')}>
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                disabled={loading} 
+                disabled={loading}
               /> Nhớ tài khoản
             </label>
             <p className={cx('forgot')}>

@@ -2,18 +2,18 @@ package com.nova_beauty.backend.service;
 
 import java.text.ParseException;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.StringJoiner;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-
-import java.time.LocalDate;
 
 import com.nova_beauty.backend.dto.request.AuthenticationRequest;
 import com.nova_beauty.backend.dto.request.GoogleLoginRequest;
@@ -22,7 +22,6 @@ import com.nova_beauty.backend.dto.request.LogoutRequest;
 import com.nova_beauty.backend.dto.request.RefreshRequest;
 import com.nova_beauty.backend.dto.response.AuthenticationResponse;
 import com.nova_beauty.backend.dto.response.IntrospectResponse;
-import com.nova_beauty.backend.entity.InvalidatedToken;
 import com.nova_beauty.backend.entity.Role;
 import com.nova_beauty.backend.entity.User;
 import com.nova_beauty.backend.exception.AppException;
@@ -63,21 +62,22 @@ public class AuthenticationService {
     @Value("${jwt.refreshable-duration}")
     protected long REFRESHABLE_DURATION;
 
-    // Kiểm tra token
+    // =========================
+    // INTROSPECT
+    // =========================
     public IntrospectResponse introspect(IntrospectRequest request) throws JOSEException, ParseException {
         var token = request.getToken();
-
         boolean isValid = true;
 
-        // spotless:off
         try {
-            verifyToken(token, false);
+            verifyToken(token, false); // access token
         } catch (AppException e) {
             isValid = false;
         }
-        // spotless:on
 
-        return IntrospectResponse.builder().valid(isValid).build();
+        return IntrospectResponse.builder()
+                .valid(isValid)
+                .build();
     }
 
     /**
@@ -87,18 +87,18 @@ public class AuthenticationService {
     private java.util.Optional<User> findUserByEmailSafe(String email) {
         try {
             return userRepository.findByEmail(email);
-        } catch (org.springframework.dao.IncorrectResultSizeDataAccessException e) {
-            // Nếu có duplicate email, lấy user mới nhất
+        } catch (IncorrectResultSizeDataAccessException e) {
             log.warn("Duplicate email found: {}, using findFirstByEmailOrderByCreateAtDesc", email);
             return userRepository.findFirstByEmailOrderByCreateAtDesc(email);
         }
     }
 
-    // Verify email, password request vs repository
+    // =========================
+    // LOGIN EMAIL/PASSWORD
+    // =========================
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
         PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
-        
-        // Xử lý trường hợp duplicate email: lấy user đầu tiên (hoặc mới nhất)
+
         User user = findUserByEmailSafe(request.getEmail())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
@@ -107,10 +107,8 @@ public class AuthenticationService {
         }
 
         boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
-
         if (!authenticated) throw new AppException(ErrorCode.UNAUTHENTICATED);
 
-        // Tạo access token (ngắn hạn) và refresh token (dài hạn)
         var accessToken = generateAccessToken(user);
         var refreshToken = generateRefreshToken(user);
 
@@ -121,41 +119,146 @@ public class AuthenticationService {
                 .build();
     }
 
+    // =========================
+    // LOGOUT
+    // =========================
     public void logout(LogoutRequest request) throws ParseException, JOSEException {
         try {
-            var signToken = verifyToken(request.getToken(), true);
-
+            var signToken = verifyToken(request.getToken(), false); // access token logout
             String jit = signToken.getJWTClaimsSet().getJWTID();
             Date expiryTime = signToken.getJWTClaimsSet().getExpirationTime();
 
-            // Use upsert to avoid duplicate key on concurrent/logout retries
             invalidatedRepository.saveOrUpdate(jit, expiryTime);
         } catch (AppException ex) {
-            log.info("Token already expired");
+            log.info("Token already expired or invalid");
         }
     }
 
+    // =========================
+    // REFRESH TOKEN
+    // =========================
+    public AuthenticationResponse refreshToken(RefreshRequest request) throws ParseException, JOSEException {
+        // verify refresh token
+        var signJWT = verifyToken(request.getToken(), true);
+
+        var jit = signJWT.getJWTClaimsSet().getJWTID();
+        var expiryTime = signJWT.getJWTClaimsSet().getExpirationTime();
+
+        // invalidate old refresh token
+        invalidatedRepository.saveOrUpdate(jit, expiryTime);
+
+        var email = signJWT.getJWTClaimsSet().getSubject();
+        var user = findUserByEmailSafe(email).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        // create new pair
+        var accessToken = generateAccessToken(user);
+        var newRefreshToken = generateRefreshToken(user);
+
+        return AuthenticationResponse.builder()
+                .token(accessToken)
+                .refreshToken(newRefreshToken)
+                .authenticated(true)
+                .build();
+    }
+
+    // =========================
+    // GOOGLE LOGIN
+    // =========================
+    public AuthenticationResponse authenticateWithGoogle(GoogleLoginRequest request) {
+        if (request.getEmail() == null || request.getEmail().isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_KEY, "Email từ Google không hợp lệ");
+        }
+
+        String email = request.getEmail().toLowerCase().trim();
+        User user = findUserByEmailSafe(email).orElse(null);
+
+        if (user == null) {
+            log.info("Creating new user from Google login: {}", email);
+
+            Role customerRole = roleRepository.findById("CUSTOMER")
+                    .orElseThrow(() -> new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "Không tìm thấy role CUSTOMER"));
+
+            user = User.builder()
+                    .email(email)
+                    .fullName(request.getFullName() != null ? request.getFullName() : email.split("@")[0])
+                    .password("")
+                    .isActive(true)
+                    .createAt(LocalDate.now())
+                    .role(customerRole)
+                    .phoneNumber("")
+                    .address("")
+                    .build();
+
+            try {
+                user = userRepository.save(user);
+                log.info("Created new user from Google: {}", user.getId());
+            } catch (Exception e) {
+                log.error("Error creating user from Google login", e);
+                throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "Không thể tạo tài khoản từ Google");
+            }
+        } else {
+            if (!user.isActive()) {
+                throw new AppException(ErrorCode.ACCOUNT_LOCKED);
+            }
+            log.info("Existing user logging in with Google: {}", email);
+        }
+
+        var accessToken = generateAccessToken(user);
+        var refreshToken = generateRefreshToken(user);
+
+        return AuthenticationResponse.builder()
+                .token(accessToken)
+                .refreshToken(refreshToken)
+                .authenticated(true)
+                .build();
+    }
+
+    // =========================
+    // VERIFY TOKEN (CORE)
+    // =========================
     private SignedJWT verifyToken(String token, boolean isRefresh) throws JOSEException, ParseException {
         JWSVerifier verifier = new MACVerifier(getSignerKeyBytes());
-
         SignedJWT signedJWT = SignedJWT.parse(token);
 
-        var verified = signedJWT.verify(verifier);
-
-        // Lấy thời điểm hết hạn
+        boolean verified = signedJWT.verify(verifier);
         Date expiryTime = signedJWT.getJWTClaimsSet().getExpirationTime();
 
-        // Kiểm tra hết hạn token
-        if (!(verified && expiryTime.after(new Date()))) throw new AppException(ErrorCode.UNAUTHENTICATED);
-
-        // Kiểm tra token tồn tại trong invalidatedRepository
-        if (invalidatedRepository.existsById(signedJWT.getJWTClaimsSet().getJWTID()))
+        // signature + expiry
+        if (!(verified && expiryTime.after(new Date()))) {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+
+        // invalidated token
+        String jti = signedJWT.getJWTClaimsSet().getJWTID();
+        if (invalidatedRepository.existsById(jti)) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+
+        // token type check (access vs refresh)
+        Object typeObj = signedJWT.getJWTClaimsSet().getClaim("type");
+        String type = typeObj == null ? "" : typeObj.toString();
+
+        if (isRefresh) {
+            if (!"refresh".equals(type)) throw new AppException(ErrorCode.UNAUTHENTICATED);
+        } else {
+            if (!"access".equals(type)) throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+
+        // check user active
+        String email = signedJWT.getJWTClaimsSet().getSubject();
+        User user = findUserByEmailSafe(email)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        if (!user.isActive()) {
+            throw new AppException(ErrorCode.ACCOUNT_LOCKED);
+        }
 
         return signedJWT;
     }
 
-    // Tạo Access Token (ngắn hạn - dùng cho API calls)
+    // =========================
+    // TOKEN GENERATION
+    // =========================
     private String generateAccessToken(User user) {
         JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
 
@@ -183,7 +286,6 @@ public class AuthenticationService {
         }
     }
 
-    // Tạo Refresh Token (dài hạn - chỉ dùng để lấy access token mới)
     private String generateRefreshToken(User user) {
         JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
 
@@ -215,97 +317,14 @@ public class AuthenticationService {
         return sanitized.getBytes();
     }
 
-    public AuthenticationResponse refreshToken(RefreshRequest request) throws ParseException, JOSEException {
-        // Verify refresh token
-        var signJWT = verifyToken(request.getToken(), true);
-
-        var jit = signJWT.getJWTClaimsSet().getJWTID();
-        var expiryTime = signJWT.getJWTClaimsSet().getExpirationTime();
-
-        // Invalidate old refresh token
-        invalidatedRepository.saveOrUpdate(jit, expiryTime);
-
-        var email = signJWT.getJWTClaimsSet().getSubject();
-        var user = findUserByEmailSafe(email).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
-
-        // Tạo cặp token mới
-        var accessToken = generateAccessToken(user);
-        var newRefreshToken = generateRefreshToken(user);
-
-        return AuthenticationResponse.builder()
-                .token(accessToken)
-                .refreshToken(newRefreshToken)
-                .authenticated(true)
-                .build();
-    }
-
-    // Google OAuth login
-    public AuthenticationResponse authenticateWithGoogle(GoogleLoginRequest request) {
-        if (request.getEmail() == null || request.getEmail().isEmpty()) {
-            throw new AppException(ErrorCode.INVALID_KEY, "Email từ Google không hợp lệ");
-        }
-
-        String email = request.getEmail().toLowerCase().trim();
-        
-        // Tìm user theo email (xử lý duplicate email)
-        User user = findUserByEmailSafe(email).orElse(null);
-
-        // Nếu user chưa tồn tại, tạo tài khoản mới
-        if (user == null) {
-            log.info("Creating new user from Google login: {}", email);
-            
-            // Lấy role CUSTOMER mặc định
-            Role customerRole = roleRepository.findById("CUSTOMER")
-                    .orElseThrow(() -> new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "Không tìm thấy role CUSTOMER"));
-            
-            // Tạo user mới
-            user = User.builder()
-                    .email(email)
-                    .fullName(request.getFullName() != null ? request.getFullName() : email.split("@")[0])
-                    .password("") // Google login không cần password
-                    .isActive(true) // Tự động kích hoạt
-                    .createAt(LocalDate.now())
-                    .role(customerRole)
-                    .phoneNumber("")
-                    .address("")
-                    .build();
-            
-            try {
-                user = userRepository.save(user);
-                log.info("Created new user from Google: {}", user.getId());
-            } catch (Exception e) {
-                log.error("Error creating user from Google login", e);
-                throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "Không thể tạo tài khoản từ Google");
-            }
-        } else {
-            // User đã tồn tại, kiểm tra trạng thái
-            if (!user.isActive()) {
-                throw new AppException(ErrorCode.ACCOUNT_LOCKED);
-            }
-            log.info("Existing user logging in with Google: {}", email);
-        }
-
-        // Tạo access token và refresh token
-        var accessToken = generateAccessToken(user);
-        var refreshToken = generateRefreshToken(user);
-
-        return AuthenticationResponse.builder()
-                .token(accessToken)
-                .refreshToken(refreshToken)
-                .authenticated(true)
-                .build();
-    }
-
     private String buildScope(User user) {
         StringJoiner stringJoiner = new StringJoiner(" ");
-
         if (user.getRole() != null) {
             Role role = user.getRole();
             stringJoiner.add(role.getName());
             if (!CollectionUtils.isEmpty(role.getPermissions()))
                 role.getPermissions().forEach(permission -> stringJoiner.add(permission.getName()));
         }
-
         return stringJoiner.toString();
     }
 }
