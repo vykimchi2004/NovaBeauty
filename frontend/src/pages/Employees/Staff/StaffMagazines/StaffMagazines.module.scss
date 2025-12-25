@@ -1,9 +1,255 @@
-.wrapper { padding: 20px; }
-.header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
-.addBtn { background:#e5677d; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
-.list { display:flex; flex-wrap:wrap; gap:12px; }
-.item { width:320px; background:#fff; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.06); overflow:hidden; display:flex; }
-.item img { width:120px; height:120px; object-fit:cover; }
-.meta { padding:10px; }
-.meta h3 { margin:0 0 6px; font-size:16px }
-.meta p { margin:0; color:#666; font-size:13px }
+.wrapper {
+  padding: 20px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  
+  h1 {
+    margin: 0;
+    font-size: 24px;
+    color: #333;
+  }
+}
+
+.addBtn {
+  background: #e5677d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: #d04d68;
+  }
+}
+
+// Table wrapper
+.tableWrapper {
+  margin-bottom: 24px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+// Table styles
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  
+  thead {
+    background: #e5677d;
+    color: white;
+    
+    tr {
+      th {
+        padding: 14px 12px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 13px;
+        letter-spacing: 0.5px;
+      }
+    }
+  }
+  
+  tbody {
+    tr {
+      border-bottom: 1px solid #e9ecef;
+      transition: background-color 0.2s ease;
+      
+      &:hover {
+        background: #f9f9f9;
+      }
+      
+      td {
+        padding: 14px 12px;
+        font-size: 13px;
+      }
+    }
+  }
+}
+
+// Column widths
+.colImage {
+  width: 80px;
+}
+
+.colTitle {
+  width: 250px;
+}
+
+.colCategory {
+  width: 120px;
+}
+
+.colDesc {
+  width: 350px;
+}
+
+.colDate {
+  width: 120px;
+}
+
+.colAction {
+  width: 120px;
+}
+
+// Cell styles
+.imageCell {
+  text-align: center;
+  
+  img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+}
+
+.titleCell {
+  font-weight: 500;
+  color: #333;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.categoryCell {
+  text-align: center;
+}
+
+.badge {
+  display: inline-block;
+  background: #f0f0f0;
+  color: #666;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.descriptionCell {
+  color: #666;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+.dateCell {
+  color: #999;
+  font-size: 12px;
+}
+
+.actionCell {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.actionBtn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: #e5677d;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: #d04d68;
+    transform: scale(1.05);
+  }
+  
+  &.viewBtn {
+    background: #e5677d;
+  }
+  
+  &.editBtn {
+    background: #95a5c7;
+    
+    &:hover {
+      background: #7a8aa8;
+    }
+  }
+  
+  &.deleteBtn {
+    background: #e5677d;
+  }
+}
+
+.loadingRow,
+.emptyRow {
+  text-align: center;
+  padding: 20px !important;
+  color: #666;
+  font-size: 14px;
+}
+
+.debug {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #e5677d;
+  background: #fff6f8;
+  border: 1px dashed #f3c9d0;
+  border-radius: 6px;
+  margin: 12px;
+  display: inline-block;
+}
+
+// Pagination styles
+.pagination {
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.paginationBtn {
+  min-width: 96px;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid #e9ecef;
+  background: #fff;
+  font-weight: 600;
+  color: #e5677d;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &:not(:disabled):hover {
+    background: #e5677d;
+    color: #fff;
+    border-color: #e5677d;
+  }
+  
+  &:not(:disabled):active {
+    transform: scale(0.98);
+  }
+}
+
+.paginationInfo {
+  font-weight: 600;
+  color: #e5677d;
+  font-size: 14px;
+  min-width: 80px;
+  text-align: center;
+}

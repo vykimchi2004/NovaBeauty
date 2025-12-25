@@ -15,6 +15,7 @@ import com.nova_beauty.backend.exception.AppException;
 import com.nova_beauty.backend.exception.ErrorCode;
 import com.nova_beauty.backend.mapper.AddressMapper;
 import com.nova_beauty.backend.repository.AddressRepository;
+import com.nova_beauty.backend.repository.OrderRepository;
 import com.nova_beauty.backend.repository.UserRepository;
 import com.nova_beauty.backend.util.SecurityUtil;
 
@@ -32,6 +33,7 @@ public class AddressService {
     AddressRepository addressRepository;
     AddressMapper addressMapper;
     UserRepository userRepository;
+    OrderRepository orderRepository;
 
     @Transactional
     public AddressResponse createAddress(AddressCreationRequest request) {
@@ -99,6 +101,12 @@ public class AddressService {
             throw new AppException(ErrorCode.BAD_REQUEST);
         }
 
+        // Check if address is being used by any orders
+        if (orderRepository.existsByAddressAddressId(addressId)) {
+            log.warn("Cannot delete address {} - it is being used by orders", addressId);
+            throw new AppException(ErrorCode.ADDRESS_IN_USE);
+        }
+
         currentUser.getAddresses().remove(address);
         userRepository.save(currentUser);
 
@@ -141,7 +149,8 @@ public class AddressService {
         address.setUpdatedAt(LocalDateTime.now());
 
         Address savedAddress = addressRepository.save(address);
-        log.info("Address set as default with ID: {} for user: {}", savedAddress.getAddressId(), currentUser.getEmail());
+        log.info("Address set as default with ID: {} for user: {}", savedAddress.getAddressId(),
+                currentUser.getEmail());
         return addressMapper.toAddressResponse(savedAddress);
     }
 
@@ -155,4 +164,3 @@ public class AddressService {
                 });
     }
 }
-

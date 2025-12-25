@@ -30,7 +30,8 @@ public enum ErrorCode {
     INVALID_PROMOTION_SCOPE(2003, "Phạm vi áp dụng khuyến mãi không hợp lệ", HttpStatus.BAD_REQUEST),
     PROMOTION_PRODUCT_CONFLICT(2004, "Một số sản phẩm đã có khuyến mãi đang hoạt động", HttpStatus.BAD_REQUEST),
     PROMOTION_CODE_ALREADY_EXISTS(2005, "Mã khuyến mãi đã tồn tại", HttpStatus.BAD_REQUEST),
-    PROMOTION_OVERLAP_CONFLICT(2006, "Khuyến mãi trùng lặp với chương trình khác trong cùng khoảng thời gian", HttpStatus.BAD_REQUEST),
+    PROMOTION_OVERLAP_CONFLICT(2006, "Khuyến mãi trùng lặp với chương trình khác trong cùng khoảng thời gian",
+            HttpStatus.BAD_REQUEST),
 
     // Voucher
     VOUCHER_NOT_EXISTED(3001, "Voucher không tồn tại", HttpStatus.NOT_FOUND),
@@ -49,7 +50,8 @@ public enum ErrorCode {
     // REVIEW
     REVIEW_NOT_EXISTED(5001, "Review không tồn tại", HttpStatus.NOT_FOUND),
     REVIEW_NOT_PURCHASED(5002, "Bạn chưa mua sản phẩm này, không thể đánh giá", HttpStatus.BAD_REQUEST),
-    REVIEW_ALREADY_EXISTS(5003, "Bạn đã đánh giá đơn hàng này rồi. Mỗi đơn hàng chỉ được đánh giá 1 lần", HttpStatus.BAD_REQUEST),
+    REVIEW_ALREADY_EXISTS(5003, "Bạn đã đánh giá đơn hàng này rồi. Mỗi đơn hàng chỉ được đánh giá 1 lần",
+            HttpStatus.BAD_REQUEST),
 
     // PRODUCT
     PRODUCT_NOT_EXISTED(6001, "Product không tồn tại", HttpStatus.NOT_FOUND),
@@ -57,7 +59,8 @@ public enum ErrorCode {
     CATEGORY_ALREADY_EXISTS(6005, "Mã danh mục hoặc tên danh mục đã tồn tại", HttpStatus.BAD_REQUEST),
     CATEGORY_HAS_PRODUCTS(6006, "Không thể xóa danh mục vì còn sản phẩm thuộc danh mục này", HttpStatus.BAD_REQUEST),
     CATEGORY_HAS_SUBCATEGORIES(6007, "Không thể xóa danh mục vì còn danh mục con", HttpStatus.BAD_REQUEST),
-    CATEGORY_CANNOT_CHANGE_ID_HAS_CHILDREN(6008, "Không thể đổi ID danh mục. Vui lòng xóa danh mục con trước", HttpStatus.BAD_REQUEST),
+    CATEGORY_CANNOT_CHANGE_ID_HAS_CHILDREN(6008, "Không thể đổi ID danh mục. Vui lòng xóa danh mục con trước",
+            HttpStatus.BAD_REQUEST),
     OUT_OF_STOCK(6002, "Hết hàng", HttpStatus.BAD_REQUEST),
 
     // ORDER - SHIPMENT - CART - ADDRESS
@@ -65,6 +68,7 @@ public enum ErrorCode {
     ORDER_NOT_EXISTED(7002, "Đơn hàng không tồn tại", HttpStatus.NOT_FOUND),
     EXTERNAL_SERVICE_ERROR(7003, "Lỗi kết nối dịch vụ vận chuyển", HttpStatus.BAD_GATEWAY),
     ADDRESS_NOT_EXISTED(7004, "Địa chỉ không tồn tại", HttpStatus.NOT_FOUND),
+    ADDRESS_IN_USE(7007, "Không thể xóa địa chỉ này vì đang được sử dụng trong đơn hàng", HttpStatus.BAD_REQUEST),
     SHIPMENT_NOT_EXISTED(7005, "Vận đơn không tồn tại", HttpStatus.NOT_FOUND),
     BAD_REQUEST(7006, "Yêu cầu không hợp lệ", HttpStatus.BAD_REQUEST),
 

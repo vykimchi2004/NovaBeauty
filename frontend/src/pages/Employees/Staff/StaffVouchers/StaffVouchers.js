@@ -82,6 +82,8 @@ function StaffVouchers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 4;
 
   const [voucherList, setVoucherList] = useState([]);
   const [promotionList, setPromotionList] = useState([]);
@@ -266,6 +268,17 @@ function StaffVouchers() {
       return bDate - aDate;
     });
   }, [filteredVouchers, filteredPromotions]);
+
+  // Reset về trang 1 khi filter thay đổi
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedDate, statusFilter]);
+
+  // Tính toán pagination
+  const totalPages = Math.ceil(combinedEntries.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedEntries = combinedEntries.slice(startIndex, endIndex);
 
   const renderStatusBadge = (status) => {
     const mapped = status || 'PENDING_APPROVAL';
@@ -839,7 +852,7 @@ function StaffVouchers() {
                   </td>
                 </tr>
               ) : (
-                combinedEntries.map((item) => {
+                paginatedEntries.map((item) => {
                   const itemType = resolveItemType(item);
                   const typedItem = { ...item, itemType };
                   const isVoucher = itemType === 'voucher';
@@ -905,6 +918,31 @@ function StaffVouchers() {
           </table>
         </div>
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className={cx('pagination')}>
+          <button
+            type="button"
+            className={cx('pagination-btn')}
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+          >
+            Trước
+          </button>
+          <span className={cx('pagination-info')}>
+            Trang {currentPage}/{totalPages}
+          </span>
+          <button
+            type="button"
+            className={cx('pagination-btn')}
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+          >
+            Tiếp
+          </button>
+        </div>
+      )}
 
       <VoucherFormModal
         open={showVoucherModal}

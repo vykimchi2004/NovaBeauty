@@ -19,6 +19,8 @@ import ChatDetailPage from './ChatSupport/ChatDetailPage';
 import ticketService from '~/services/ticket';
 import { getAllReviews } from '~/services/review';
 import { getApiBaseUrl, getStoredToken } from '~/services/utils';
+import notificationService from '~/services/notificationService';
+import { notify } from '~/utils/notification';
 
 const cx = classNames.bind(styles);
 
@@ -135,12 +137,36 @@ export default function CustomerSupportPage() {
         .map((word) => word[0]?.toUpperCase())
         .join('');
 
-    // Fetch notifications từ tickets, reviews và refund requests
+    // Fetch notifications từ tickets, reviews, refund requests, và CHAT
     const fetchNotifications = useCallback(async () => {
         setLoadingNotifications(true);
         const notificationList = [];
 
         try {
+            // 0. Fetch CHAT notifications από backend (mới thêm!)
+            try {
+                const chatNotifs = await notificationService.getMyNotifications();
+                if (Array.isArray(chatNotifs)) {
+                    // Chỉ lấy notifications type='CHAT' và chưa đọc
+                    const chatNotifications = chatNotifs.filter(
+                        (n) => n.type === 'CHAT' && !n.isRead
+                    );
+                    chatNotifications.forEach((notif) => {
+                        notificationList.push({
+                            id: `chat-${notif.id}`,
+                            backendId: notif.id, // Lưu ID từ backend để mark as read
+                            type: 'chat',
+                            title: notif.title || 'Tin nhắn mới',
+                            message: notif.message || 'Bạn có tin nhắn mới',
+                            createdAt: notif.createdAt,
+                            link: '/customer-support/chat-support',
+                        });
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching chat notifications:', error);
+            }
+
             // 1. Fetch tickets (khiếu nại) - lọc những cái cần CSKH xử lý
             const tickets = await ticketService.getAllTickets();
             if (Array.isArray(tickets)) {
@@ -237,8 +263,8 @@ export default function CustomerSupportPage() {
     // Fetch notifications khi component mount và khi path thay đổi
     useEffect(() => {
         fetchNotifications();
-        // Refresh notifications mỗi 30 giây
-        const interval = setInterval(fetchNotifications, 30000);
+        // Refresh notifications mỗi 30 giây -> giảm xuống 10 giây để real-time hơn cho chat
+        const interval = setInterval(fetchNotifications, 10000);
         return () => clearInterval(interval);
     }, [fetchNotifications]);
 
@@ -356,7 +382,7 @@ export default function CustomerSupportPage() {
                                                 style={{ cursor: 'pointer' }}
                                             >
                                                 <div className={cx('notificationIcon')}>
-                                                    {item.type === 'complaint' ? '⚠️' : item.type === 'review' ? '💬' : '💰'}
+                                                    {item.type === 'chat' ? '💬' : item.type === 'complaint' ? '⚠️' : item.type === 'review' ? '💭' : '💰'}
                                                 </div>
                                                 <div className={cx('notificationContent')}>
                                                     <div className={cx('notificationTitle')}>{item.title}</div>
