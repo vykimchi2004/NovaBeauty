@@ -34,6 +34,9 @@ public class Banner {
     @Column(name = "link_url")
     String linkUrl;
 
+    @Column(name = "is_magazine")
+    Boolean isMagazine;
+
     @Column(name = "status", nullable = false)
     Boolean status;
 
@@ -57,6 +60,9 @@ public class Banner {
 
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     String rejectionReason;
+
+    @Column(name = "category")
+    String category;
 
     // Created by user
     @ManyToOne(fetch = FetchType.LAZY)

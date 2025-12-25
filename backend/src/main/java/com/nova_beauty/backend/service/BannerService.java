@@ -155,6 +155,14 @@ public class BannerService {
             banner.setEndDate(request.getEndDate());
         }
 
+        if (request.getIsMagazine() != null) {
+            banner.setIsMagazine(request.getIsMagazine());
+        }
+
+        if (request.getCategory() != null) {
+            banner.setCategory(request.getCategory());
+        }
+
         banner.setUpdatedAt(LocalDateTime.now());
 
         // Update products if provided

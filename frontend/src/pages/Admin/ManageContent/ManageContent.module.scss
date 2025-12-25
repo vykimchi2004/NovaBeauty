@@ -1,5 +1,144 @@
 @import '../ManageProduct/ManageProduct.module.scss';
 
+.wrapper {
+  padding: 24px;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+.header {
+  margin-bottom: 20px;
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.tabs-container {
+  display: inline-flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.tab {
+  padding: 10px 24px;
+  border: 1px solid #ddd;
+  background: white;
+  color: #212529;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &.active {
+    background: #e5677d;
+    color: #fff;
+    border-color: #e5677d;
+    box-shadow: 0 4px 12px rgba(229, 103, 125, 0.3);
+  }
+
+  &:hover:not(.active) {
+    border-color: #e5677d;
+    color: #e5677d;
+  }
+}
+
+.headerActions {
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.contentSections {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+}
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 0;
+  border: none;
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.card-header {
+  background: #e5677d;
+  padding: 16px 20px;
+  font-weight: 700;
+  font-size: 18px;
+  color: #fff;
+}
+
+.tableWrapper {
+  padding: 0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
+
+  thead {
+    background: #e5677d;
+    color: #fff;
+
+    th {
+      padding: 16px 12px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 14px;
+      white-space: nowrap;
+
+      &:first-child {
+        border-top-left-radius: 12px;
+      }
+
+      &:last-child {
+        border-top-right-radius: 12px;
+      }
+    }
+  }
+
+  tbody tr {
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.2s;
+
+    &:hover {
+      background: #fffafa;
+    }
+  }
+
+  td {
+    padding: 16px 24px;
+    vertical-align: middle;
+  }
+}
+
+.categoryTag {
+  background: #fff0f3;
+  color: #e5677d;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .thumbnail {
   width: 60px;
   height: 60px;

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faPlus, faEdit, faTrash, faEye } from '@fortawesome/free-solid-svg-icons';
 import BannerFormModal from './components/BannerFormModal';
+import MagazineFormModal from './components/MagazineFormModal';
 import notify from '~/utils/notification';
 import { getBanners, createBanner, updateBanner, deleteBanner } from '~/services/banner';
 import { uploadProductMedia } from '~/services/media';
@@ -28,6 +29,7 @@ const DEFAULT_BANNER_FORM = {
   brand: '',
   targetType: 'all',
   linkUrl: '',
+  isMagazine: false,
 };
 
 const getDefaultStartDate = () => {
@@ -37,12 +39,12 @@ const getDefaultStartDate = () => {
 
 function StaffBanners() {
   const navigate = useNavigate();
-  
+
   // Get current user to check role and token
   const currentUser = storage.get(STORAGE_KEYS.USER);
   const userRole = currentUser?.role?.name?.toUpperCase() || '';
   const hasDeletePermission = userRole === 'ADMIN' || userRole === 'STAFF';
-  
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
 
@@ -67,6 +69,14 @@ function StaffBanners() {
   const [bannerImagePreview, setBannerImagePreview] = useState('');
   const [uploadingBannerImage, setUploadingBannerImage] = useState(false);
 
+  const [showMagazineModal, setShowMagazineModal] = useState(false);
+  const [magazineForm, setMagazineForm] = useState({ id: '', title: '', description: '', imageUrl: '' });
+  const [magazineErrors, setMagazineErrors] = useState({});
+  const [magazineImageFile, setMagazineImageFile] = useState(null);
+  const [magazineImagePreview, setMagazineImagePreview] = useState('');
+  const [uploadingMagazineImage, setUploadingMagazineImage] = useState(false);
+
+  const [activeTab, setActiveTab] = useState('banners');
   const [detailItem, setDetailItem] = useState(null);
 
   useEffect(() => {
@@ -86,7 +96,7 @@ function StaffBanners() {
       const data = await getBanners();
       const currentUser = storage.get(STORAGE_KEYS.USER);
       const userId = currentUser?.id;
-      
+
       // Filter banners created by current user
       const myBanners = (data || []).filter(
         (banner) => banner.createdBy === userId
@@ -148,6 +158,7 @@ function StaffBanners() {
       productIds: products.map((product) => product.id),
       targetType: 'all',
       linkUrl: '',
+      isMagazine: false,
     });
     setBannerErrors({});
     setBannerImageFile(null);
@@ -155,9 +166,145 @@ function StaffBanners() {
     setShowBannerModal(true);
   };
 
+  const openAddMagazine = () => {
+    setMagazineForm({ id: '', title: '', description: '', imageUrl: '', category: '' });
+    setMagazineErrors({});
+    setMagazineImageFile(null);
+    setMagazineImagePreview('');
+    setShowMagazineModal(true);
+  };
+
+  const closeMagazineModal = () => {
+    setShowMagazineModal(false);
+    setMagazineErrors({});
+    if (magazineImagePreview && magazineImagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(magazineImagePreview);
+    }
+    setMagazineImagePreview('');
+    setMagazineImageFile(null);
+    setMagazineForm({ id: '', title: '', description: '', imageUrl: '', category: '' });
+  };
+
+  const handleMagazineChange = (field, value) => {
+    setMagazineForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleMagazineFileChange = (file) => {
+    if (!file) {
+      if (magazineImagePreview && magazineImagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(magazineImagePreview);
+      }
+      setMagazineImageFile(null);
+      setMagazineImagePreview('');
+      setMagazineForm((prev) => ({ ...prev, imageUrl: '' }));
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      notify.error('Kích thước file không được vượt quá 5MB');
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      notify.error('File phải là hình ảnh');
+      return;
+    }
+
+    setMagazineImageFile(file);
+    const previewUrl = URL.createObjectURL(file);
+    setMagazineImagePreview(previewUrl);
+    setMagazineForm((prev) => ({ ...prev, imageUrl: '' }));
+  };
+
+  const validateMagazineForm = () => {
+    const errors = {};
+    if (!magazineForm.title?.trim()) errors.title = 'Tiêu đề không được để trống';
+    if (!magazineForm.category) errors.category = 'Vui lòng chọn danh mục';
+    if (!magazineForm.imageUrl?.trim() && !magazineImageFile) {
+      errors.imageUrl = 'Vui lòng chọn hoặc upload ảnh tạp chí';
+    }
+    setMagazineErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const submitMagazine = async (e) => {
+    e.preventDefault();
+    if (!validateMagazineForm()) return;
+
+    try {
+      let finalImageUrl = magazineForm.imageUrl;
+
+      if (magazineImageFile) {
+        setUploadingMagazineImage(true);
+        try {
+          const uploadResult = await uploadProductMedia([magazineImageFile]);
+          if (uploadResult && uploadResult.length > 0) {
+            finalImageUrl = uploadResult[0];
+          } else {
+            throw new Error('Upload ảnh thất bại');
+          }
+        } catch (uploadErr) {
+          console.error('Error uploading magazine image:', uploadErr);
+          notify.error('Không thể upload ảnh. Vui lòng thử lại.');
+          setUploadingMagazineImage(false);
+          return;
+        } finally {
+          setUploadingMagazineImage(false);
+        }
+      }
+
+      // Use banner API with isMagazine flag set
+      const today = new Date();
+      const startDate = today.toISOString().split('T')[0];
+      const end = new Date();
+      end.setFullYear(end.getFullYear() + 1);
+      const endDate = end.toISOString().split('T')[0];
+
+      const payload = {
+        title: magazineForm.title.trim(),
+        description: magazineForm.description?.trim() || null,
+        imageUrl: finalImageUrl,
+        category: magazineForm.category,
+        startDate,
+        endDate,
+        status: true,
+        productIds: null,
+        linkUrl: null,
+        isMagazine: true,
+      };
+
+      if (magazineForm.id) {
+        await updateBanner(magazineForm.id, payload);
+        notify.success('Cập nhật tạp chí thành công!');
+      } else {
+        await createBanner(payload);
+        notify.success('Thêm tạp chí thành công!');
+      }
+      closeMagazineModal();
+      refreshBannerList();
+    } catch (error) {
+      console.error('Error submitting magazine:', error);
+      notify.error(error.message || 'Không thể lưu tạp chí. Vui lòng thử lại.');
+    }
+  };
+
+  const openEditMagazine = (banner) => {
+    setMagazineForm({
+      id: banner.id,
+      title: banner.title || '',
+      description: banner.description || '',
+      imageUrl: banner.imageUrl || '',
+      category: banner.category || '',
+    });
+    setMagazineErrors({});
+    setMagazineImageFile(null);
+    setMagazineImagePreview(banner.imageUrl || '');
+    setShowMagazineModal(true);
+  };
+
   const openEditBanner = (banner) => {
     // Staff và Admin đều có thể sửa banner, không cần kiểm tra trạng thái duyệt
-    
+
     const startDate = banner.startDate ? banner.startDate.split('T')[0] : getDefaultStartDate();
     const derivedSelection = deriveSelectionFromProductIds(banner.productIds || []);
 
@@ -174,6 +321,7 @@ function StaffBanners() {
       brand: derivedSelection.brand || '',
       targetType: derivedSelection.targetType || '',
       linkUrl: banner.linkUrl || '',
+      isMagazine: banner.isMagazine === true,
     });
     setBannerErrors({});
     setBannerImageFile(null);
@@ -519,6 +667,7 @@ function StaffBanners() {
         status: true,
         productIds: bannerForm.productIds.length > 0 ? bannerForm.productIds : null,
         linkUrl: buildBannerLinkUrl(bannerForm),
+        isMagazine: bannerForm.isMagazine === true,
       };
 
       if (bannerForm.id) {
@@ -569,10 +718,10 @@ function StaffBanners() {
       }
     } catch (error) {
       console.error('Error deleting banner:', error);
-      
+
       // Xử lý lỗi chi tiết hơn
       let errorMessage = 'Không thể xóa banner. Vui lòng thử lại.';
-      
+
       if (error.status === 403 || error.message?.includes('permission') || error.message?.includes('quyền') || error.message?.includes('You do not have permission')) {
         errorMessage = 'Bạn không có quyền xóa banner này. Vui lòng kiểm tra lại quyền truy cập của tài khoản hoặc liên hệ admin.';
       } else if (error.status === 401) {
@@ -580,7 +729,7 @@ function StaffBanners() {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       notify.error(errorMessage);
     }
   };
@@ -600,6 +749,10 @@ function StaffBanners() {
     );
   }, [products]);
 
+  const stripHtml = (html) => {
+    return html?.replace(/<[^>]*>?/gm, '') || '';
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return '-';
     const date = new Date(dateString);
@@ -609,7 +762,7 @@ function StaffBanners() {
   return (
     <div className={cx('wrapper')}>
       <div className={cx('pageHeader')}>
-        <h1 className={cx('pageTitle')}>Quản lý nội dung (Banners)</h1>
+        <h1 className={cx('pageTitle')}>Quản lý nội dung</h1>
         <button
           type="button"
           className={cx('dashboardBtn')}
@@ -617,6 +770,21 @@ function StaffBanners() {
         >
           <FontAwesomeIcon icon={faArrowLeft} />
           Dashboard
+        </button>
+      </div>
+
+      <div className={cx('tabs-container')}>
+        <button
+          className={cx('tab', { active: activeTab === 'banners' })}
+          onClick={() => setActiveTab('banners')}
+        >
+          Quản lý Banner
+        </button>
+        <button
+          className={cx('tab', { active: activeTab === 'magazines' })}
+          onClick={() => setActiveTab('magazines')}
+        >
+          Quản lý Tạp chí
         </button>
       </div>
 
@@ -635,106 +803,211 @@ function StaffBanners() {
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
           />
-          <button type="button" className={cx('addBtn')} onClick={openAddBanner}>
-            <FontAwesomeIcon icon={faPlus} />
-            Thêm banner
-          </button>
+          {activeTab === 'banners' ? (
+            <button type="button" className={cx('addBtn')} onClick={openAddBanner}>
+              <FontAwesomeIcon icon={faPlus} />
+              Thêm banner
+            </button>
+          ) : (
+            <button type="button" className={cx('addBtn')} onClick={openAddMagazine}>
+              <FontAwesomeIcon icon={faPlus} />
+              Thêm Tạp chí
+            </button>
+          )}
         </div>
       </section>
 
-      <div className={cx('tableWrapper')}>
+      <div className={cx('contentSections')}>
         {bannerLoading ? (
           <div className={cx('loading')}>Đang tải dữ liệu...</div>
         ) : (
-          <table className={cx('table')}>
-            <thead>
-              <tr>
-                <th>Ảnh</th>
-                <th>Tiêu đề</th>
-                <th>Mô tả</th>
-                <th>Ngày tạo</th>
-                <th>Ngày bắt đầu</th>
-                <th>Ngày kết thúc</th>
-                <th>Sản phẩm</th>
-                <th>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredBanners.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className={cx('empty')}>
-                    Không có banner nào
-                  </td>
-                </tr>
-              ) : (
-                filteredBanners.map((banner) => {
-                  return (
-                    <tr key={banner.id}>
-                      <td>
-                        {banner.imageUrl ? (
-                          <img src={banner.imageUrl} alt={banner.title} className={cx('thumbnail')} />
+          <>
+            {/* Banner Section */}
+            {activeTab === 'banners' && (
+              <div className={cx('section')}>
+                <div className={cx('card')}>
+                  <div className={cx('tableWrapper')}>
+                    <table className={cx('table')}>
+                      <thead>
+                        <tr>
+                          <th>Ảnh</th>
+                          <th>Tiêu đề</th>
+                          <th>Mô tả</th>
+                          <th>Ngày bắt đầu</th>
+                          <th>Ngày kết thúc</th>
+                          <th>Sản phẩm</th>
+                          <th>Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredBanners.filter((b) => !b.isMagazine).length === 0 ? (
+                          <tr>
+                            <td colSpan="7" className={cx('empty')}>
+                              Không có banner nào
+                            </td>
+                          </tr>
                         ) : (
-                          <span className={cx('noImage')}>-</span>
+                          filteredBanners
+                            .filter((b) => !b.isMagazine)
+                            .map((banner) => (
+                              <tr key={banner.id}>
+                                <td>
+                                  {banner.imageUrl ? (
+                                    <img src={banner.imageUrl} alt={banner.title} className={cx('thumbnail')} />
+                                  ) : (
+                                    <span className={cx('noImage')}>-</span>
+                                  )}
+                                </td>
+                                <td className={cx('titleCell')}>{banner.title}</td>
+                                <td className={cx('descriptionCell')}>
+                                  {banner.description ? (
+                                    <span title={banner.description}>
+                                      {banner.description.length > 50
+                                        ? `${banner.description.substring(0, 50)}...`
+                                        : banner.description}
+                                    </span>
+                                  ) : (
+                                    '-'
+                                  )}
+                                </td>
+                                <td>{formatDate(banner.startDate)}</td>
+                                <td>{formatDate(banner.endDate)}</td>
+                                <td>
+                                  {banner.productNames && banner.productNames.length > 0 ? (
+                                    <span title={banner.productNames.join(', ')}>
+                                      {banner.productNames.length} sản phẩm
+                                    </span>
+                                  ) : (
+                                    '-'
+                                  )}
+                                </td>
+                                <td>
+                                  <div className={cx('actions')}>
+                                    <button
+                                      type="button"
+                                      className={cx('actionBtn', 'viewBtn')}
+                                      onClick={() => setDetailItem(banner)}
+                                      title="Chi tiết"
+                                    >
+                                      <FontAwesomeIcon icon={faEye} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={cx('actionBtn', 'editBtn')}
+                                      onClick={() => openEditBanner(banner)}
+                                      title="Sửa"
+                                    >
+                                      <FontAwesomeIcon icon={faEdit} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={cx('actionBtn', 'deleteBtn')}
+                                      onClick={() => handleDelete(banner.id)}
+                                      title="Xóa"
+                                    >
+                                      <FontAwesomeIcon icon={faTrash} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
                         )}
-                      </td>
-                      <td className={cx('titleCell')}>{banner.title}</td>
-                      <td className={cx('descriptionCell')}>
-                        {banner.description ? (
-                          <span title={banner.description}>
-                            {banner.description.length > 50
-                              ? `${banner.description.substring(0, 50)}...`
-                              : banner.description}
-                          </span>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Magazine Section */}
+            {activeTab === 'magazines' && (
+              <div className={cx('section', 'magazineSection')}>
+                <div className={cx('card')}>
+                  <div className={cx('tableWrapper')}>
+                    <table className={cx('table')}>
+                      <thead>
+                        <tr>
+                          <th>Ảnh</th>
+                          <th>Tiêu đề</th>
+                          <th>Danh mục</th>
+                          <th>Mô tả</th>
+                          <th>Ngày tạo</th>
+                          <th>Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredBanners.filter((b) => b.isMagazine).length === 0 ? (
+                          <tr>
+                            <td colSpan="6" className={cx('empty')}>
+                              Không có bài viết tạp chí nào
+                            </td>
+                          </tr>
                         ) : (
-                          '-'
+                          filteredBanners
+                            .filter((b) => b.isMagazine)
+                            .map((magazine) => (
+                              <tr key={magazine.id}>
+                                <td>
+                                  {magazine.imageUrl ? (
+                                    <img src={magazine.imageUrl} alt={magazine.title} className={cx('thumbnail')} />
+                                  ) : (
+                                    <span className={cx('noImage')}>-</span>
+                                  )}
+                                </td>
+                                <td className={cx('titleCell')}>{magazine.title}</td>
+                                <td>
+                                  <span className={cx('categoryTag')}>{magazine.category || '-'}</span>
+                                </td>
+                                <td className={cx('descriptionCell')}>
+                                  {magazine.description ? (
+                                    <span title={magazine.description}>
+                                      {stripHtml(magazine.description).length > 50
+                                        ? `${stripHtml(magazine.description).substring(0, 50)}...`
+                                        : stripHtml(magazine.description)}
+                                    </span>
+                                  ) : (
+                                    '-'
+                                  )}
+                                </td>
+                                <td>{formatDate(magazine.createdAt)}</td>
+                                <td>
+                                  <div className={cx('actions')}>
+                                    <button
+                                      type="button"
+                                      className={cx('actionBtn', 'viewBtn')}
+                                      onClick={() => setDetailItem(magazine)}
+                                      title="Chi tiết"
+                                    >
+                                      <FontAwesomeIcon icon={faEye} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={cx('actionBtn', 'editBtn')}
+                                      onClick={() => openEditMagazine(magazine)}
+                                      title="Sửa"
+                                    >
+                                      <FontAwesomeIcon icon={faEdit} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={cx('actionBtn', 'deleteBtn')}
+                                      onClick={() => handleDelete(magazine.id)}
+                                      title="Xóa"
+                                    >
+                                      <FontAwesomeIcon icon={faTrash} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
                         )}
-                      </td>
-                      <td>{formatDate(banner.createdAt)}</td>
-                      <td>{formatDate(banner.startDate)}</td>
-                      <td>{formatDate(banner.endDate)}</td>
-                      <td>
-                        {banner.productNames && banner.productNames.length > 0 ? (
-                          <span title={banner.productNames.join(', ')}>
-                            {banner.productNames.length} sản phẩm
-                          </span>
-                        ) : (
-                          '-'
-                        )}
-                      </td>
-                      <td>
-                        <div className={cx('actions')}>
-                          <button
-                            type="button"
-                            className={cx('actionBtn', 'viewBtn')}
-                            onClick={() => setDetailItem(banner)}
-                            title="Chi tiết"
-                          >
-                            <FontAwesomeIcon icon={faEye} />
-                          </button>
-                          <button
-                            type="button"
-                            className={cx('actionBtn', 'editBtn')}
-                            onClick={() => openEditBanner(banner)}
-                            title="Sửa"
-                          >
-                            <FontAwesomeIcon icon={faEdit} />
-                          </button>
-                          <button
-                            type="button"
-                            className={cx('actionBtn', 'deleteBtn')}
-                            onClick={() => handleDelete(banner.id)}
-                            title="Xóa"
-                          >
-                            <FontAwesomeIcon icon={faTrash} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -756,6 +1029,21 @@ function StaffBanners() {
         onSelectCategory={handleBannerCategorySelect}
         onSelectBrand={handleBannerBrandSelect}
         onSelectTargetType={handleTargetTypeChange}
+        isStaff={userRole === 'STAFF'}
+      />
+
+      {/* Magazine Form Modal */}
+      <MagazineFormModal
+        open={showMagazineModal}
+        mode={magazineForm.id ? 'edit' : 'add'}
+        formData={magazineForm}
+        formErrors={magazineErrors}
+        previewUrl={magazineImagePreview}
+        uploadingImage={uploadingMagazineImage}
+        onClose={closeMagazineModal}
+        onChange={handleMagazineChange}
+        onSubmit={submitMagazine}
+        onFileChange={handleMagazineFileChange}
       />
 
       {/* Detail Modal */}

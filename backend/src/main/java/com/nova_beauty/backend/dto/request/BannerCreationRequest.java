@@ -19,8 +19,10 @@ public class BannerCreationRequest {
     @Size(max = 255, message = "Tiêu đề không được vượt quá 255 ký tự")
     String title;
 
-    @Size(max = 1000, message = "Mô tả không được vượt quá 1000 ký tự")
+    @Size(max = 30000, message = "Mô tả không được vượt quá 30000 ký tự")
     String description;
+
+    String category;
 
     @NotBlank(message = "URL hình ảnh không được để trống")
     String imageUrl;
@@ -38,4 +40,7 @@ public class BannerCreationRequest {
     LocalDate startDate;
 
     LocalDate endDate;
+    
+    // Mark this banner as magazine content (staff can set)
+    Boolean isMagazine;
 }

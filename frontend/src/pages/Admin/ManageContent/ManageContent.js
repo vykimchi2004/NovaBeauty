@@ -10,6 +10,7 @@ import fallbackImage from '~/assets/images/products/image1.jpg';
 const cx = classNames.bind(styles);
 
 function ManageContent() {
+  const [activeTab, setActiveTab] = useState('banners');
   const [banners, setBanners] = useState([]);
   const [filteredBanners, setFilteredBanners] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,9 +29,9 @@ function ManageContent() {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (banner) =>
-        banner.title?.toLowerCase().includes(term) ||
+          banner.title?.toLowerCase().includes(term) ||
           banner.description?.toLowerCase().includes(term) ||
-        banner.id?.toLowerCase().includes(term)
+          banner.id?.toLowerCase().includes(term)
       );
     }
 
@@ -72,7 +73,7 @@ function ManageContent() {
       'Xóa',
       'Hủy'
     );
-    
+
     if (!confirmed) return;
 
     try {
@@ -106,103 +107,211 @@ function ManageContent() {
   return (
     <div className={cx('wrapper')}>
       <div className={cx('header')}>
-        <h2 className={cx('title')}>Quản lý nội dung (Banners)</h2>
-        <div className={cx('headerActions')}>
-          <div className={cx('searchBox')}>
-            <input
-              type="text"
-              placeholder="Tìm kiếm theo tiêu đề, mô tả..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className={cx('searchInput')}
-            />
-            <button type="button" className={cx('searchBtn')}>
-              <FontAwesomeIcon icon={faSearch} />
-            </button>
-          </div>
+        <h2 className={cx('title')}>Quản lý nội dung</h2>
+      </div>
+
+      <div className={cx('tabs-container')}>
+        <button
+          className={cx('tab', { active: activeTab === 'banners' })}
+          onClick={() => setActiveTab('banners')}
+        >
+          Quản lý Banner
+        </button>
+        <button
+          className={cx('tab', { active: activeTab === 'magazines' })}
+          onClick={() => setActiveTab('magazines')}
+        >
+          Quản lý Tạp chí
+        </button>
+      </div>
+
+      <div className={cx('headerActions')}>
+        <div className={cx('searchBox')}>
+          <input
+            type="text"
+            placeholder="Tìm kiếm theo tiêu đề, mô tả..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={cx('searchInput')}
+          />
+          <button type="button" className={cx('searchBtn')}>
+            <FontAwesomeIcon icon={faSearch} />
+          </button>
         </div>
       </div>
 
-      <div className={cx('tableWrapper')}>
-        <table className={cx('table')}>
-          <thead>
-            <tr>
-              <th>Ảnh</th>
-              <th>Tiêu đề</th>
-              <th>Mô tả</th>
-              <th>Ngày tạo</th>
-              <th>Ngày bắt đầu</th>
-              <th>Ngày kết thúc</th>
-              <th>Sản phẩm</th>
-              <th>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-        {filteredBanners.length === 0 ? (
-              <tr>
-                <td colSpan="8" className={cx('empty')}>
-                  Không có banner nào
-                </td>
-              </tr>
-            ) : (
-              filteredBanners.map((banner) => (
-                <tr key={banner.id}>
-                  <td>
-                    {banner.imageUrl ? (
-                      <img src={banner.imageUrl} alt={banner.title} className={cx('thumbnail')} />
+      <div className={cx('contentSections')}>
+        {/* Banner Table */}
+        {activeTab === 'banners' && (
+          <div className={cx('section')}>
+            <div className={cx('card')}>
+              <div className={cx('tableWrapper')}>
+                <table className={cx('table')}>
+                  <thead>
+                    <tr>
+                      <th>Ảnh</th>
+                      <th>Tiêu đề</th>
+                      <th>Mô tả</th>
+                      <th>Ngày tạo</th>
+                      <th>Ngày bắt đầu</th>
+                      <th>Ngày kết thúc</th>
+                      <th>Sản phẩm</th>
+                      <th>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredBanners.filter((b) => !b.isMagazine).length === 0 ? (
+                      <tr>
+                        <td colSpan="8" className={cx('empty')}>
+                          Không có banner nào
+                        </td>
+                      </tr>
                     ) : (
-                      <span className={cx('noImage')}>-</span>
+                      filteredBanners
+                        .filter((b) => !b.isMagazine)
+                        .map((banner) => (
+                          <tr key={banner.id}>
+                            <td>
+                              {banner.imageUrl ? (
+                                <img src={banner.imageUrl} alt={banner.title} className={cx('thumbnail')} />
+                              ) : (
+                                <span className={cx('noImage')}>-</span>
+                              )}
+                            </td>
+                            <td className={cx('titleCell')}>{banner.title}</td>
+                            <td className={cx('descriptionCell')}>
+                              {banner.description ? (
+                                <span title={banner.description}>
+                                  {banner.description.length > 50
+                                    ? `${banner.description.substring(0, 50)}...`
+                                    : banner.description}
+                                </span>
+                              ) : (
+                                '-'
+                              )}
+                            </td>
+                            <td>{formatDate(banner.createdAt)}</td>
+                            <td>{formatDate(banner.startDate)}</td>
+                            <td>{formatDate(banner.endDate)}</td>
+                            <td>
+                              {banner.productNames && banner.productNames.length > 0 ? (
+                                <span title={banner.productNames.join(', ')}>
+                                  {banner.productNames.length} sản phẩm
+                                </span>
+                              ) : (
+                                '-'
+                              )}
+                            </td>
+                            <td>
+                              <div className={cx('actions')}>
+                                <button
+                                  type="button"
+                                  className={cx('actionBtn', 'viewBtn')}
+                                  onClick={() => handleViewDetail(banner)}
+                                  title="Chi tiết"
+                                >
+                                  <FontAwesomeIcon icon={faEye} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className={cx('actionBtn', 'deleteBtn')}
+                                  onClick={() => handleDelete(banner.id)}
+                                  title="Xóa"
+                                >
+                                  <FontAwesomeIcon icon={faTrash} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
                     )}
-                  </td>
-                  <td className={cx('titleCell')}>{banner.title}</td>
-                  <td className={cx('descriptionCell')}>
-                    {banner.description ? (
-                      <span title={banner.description}>
-                        {banner.description.length > 50
-                          ? `${banner.description.substring(0, 50)}...`
-                          : banner.description}
-                      </span>
-                    ) : (
-                      '-'
-                    )}
-                  </td>
-                  <td>{formatDate(banner.createdAt)}</td>
-                  <td>{formatDate(banner.startDate)}</td>
-                  <td>{formatDate(banner.endDate)}</td>
-                  <td>
-                    {banner.productNames && banner.productNames.length > 0 ? (
-                      <span title={banner.productNames.join(', ')}>
-                        {banner.productNames.length} sản phẩm
-                  </span>
-                    ) : (
-                      '-'
-                    )}
-                  </td>
-                  <td>
-                <div className={cx('actions')}>
-                  <button
-                    type="button"
-                        className={cx('actionBtn', 'viewBtn')}
-                        onClick={() => handleViewDetail(banner)}
-                        title="Chi tiết"
-                      >
-                        <FontAwesomeIcon icon={faEye} />
-                  </button>
-                  <button
-                    type="button"
-                    className={cx('actionBtn', 'deleteBtn')}
-                    onClick={() => handleDelete(banner.id)}
-                    title="Xóa"
-                  >
-                    <FontAwesomeIcon icon={faTrash} />
-                  </button>
-                </div>
-                  </td>
-                </tr>
-          ))
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         )}
-          </tbody>
-        </table>
+
+        {/* Magazine Table */}
+        {activeTab === 'magazines' && (
+          <div className={cx('section')}>
+            <div className={cx('card')}>
+              <div className={cx('tableWrapper')}>
+                <table className={cx('table')}>
+                  <thead>
+                    <tr>
+                      <th>Ảnh</th>
+                      <th>Tiêu đề</th>
+                      <th>Danh mục</th>
+                      <th>Mô tả</th>
+                      <th>Ngày tạo</th>
+                      <th>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredBanners.filter((b) => b.isMagazine).length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className={cx('empty')}>
+                          Không có bài viết tạp chí nào
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredBanners
+                        .filter((b) => b.isMagazine)
+                        .map((magazine) => (
+                          <tr key={magazine.id}>
+                            <td>
+                              {magazine.imageUrl ? (
+                                <img src={magazine.imageUrl} alt={magazine.title} className={cx('thumbnail')} />
+                              ) : (
+                                <span className={cx('noImage')}>-</span>
+                              )}
+                            </td>
+                            <td className={cx('titleCell')}>{magazine.title}</td>
+                            <td>
+                              <span className={cx('categoryTag')}>{magazine.category || '-'}</span>
+                            </td>
+                            <td className={cx('descriptionCell')}>
+                              {magazine.description ? (
+                                <span title={magazine.description}>
+                                  {magazine.description.length > 50
+                                    ? `${magazine.description.substring(0, 50)}...`
+                                    : magazine.description}
+                                </span>
+                              ) : (
+                                '-'
+                              )}
+                            </td>
+                            <td>{formatDate(magazine.createdAt)}</td>
+                            <td>
+                              <div className={cx('actions')}>
+                                <button
+                                  type="button"
+                                  className={cx('actionBtn', 'viewBtn')}
+                                  onClick={() => handleViewDetail(magazine)}
+                                  title="Chi tiết"
+                                >
+                                  <FontAwesomeIcon icon={faEye} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className={cx('actionBtn', 'deleteBtn')}
+                                  onClick={() => handleDelete(magazine.id)}
+                                  title="Xóa"
+                                >
+                                  <FontAwesomeIcon icon={faTrash} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {showModal && selectedBanner && (
@@ -221,12 +330,12 @@ function ManageContent() {
                     }}
                   />
                 </div>
-            </div>
+              </div>
 
               <div className={cx('detailRight')}>
                 <div className={cx('detailHeaderBlock')}>
                   <h3>Chi tiết banner</h3>
-              </div>
+                </div>
 
                 <div className={cx('detailInfoList')}>
                   {[
@@ -252,18 +361,18 @@ function ManageContent() {
                       <span className={cx('detailValue')}>{item.value}</span>
                     </div>
                   ))}
-              </div>
+                </div>
 
-              <div className={cx('detailActions')}>
-                <button
-                  type="button"
-                  className={cx('actionBtn', 'deleteBtn')}
-                  onClick={() => handleDelete(selectedBanner.id)}
-                >
-                  <FontAwesomeIcon icon={faTrash} />
-                  Xóa
-                </button>
-              </div>
+                <div className={cx('detailActions')}>
+                  <button
+                    type="button"
+                    className={cx('actionBtn', 'deleteBtn')}
+                    onClick={() => handleDelete(selectedBanner.id)}
+                  >
+                    <FontAwesomeIcon icon={faTrash} />
+                    Xóa
+                  </button>
+                </div>
               </div>
             </div>
           </div>

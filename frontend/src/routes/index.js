@@ -18,6 +18,8 @@ import CheckoutDetailPage from '../pages/CheckoutPage/CheckoutDetails/CheckoutDe
 import ConfirmCheckoutPage from '../pages/CheckoutPage/ConfirmCheckout/ConfirmCheckoutPage';
 import OrderSuccessPage from '../pages/CheckoutPage/OrderSuccess/OrderSuccessPage';
 import Vouchers from '../pages/Vouchers/Vouchers';
+import MagazineDetail from '../pages/MagazineDetail/MagazineDetail';
+import MagazineList from '../pages/MagazineList/MagazineList';
 
 // Layouts
 import DefaultLayout from '../layouts/DefaultLayout/DefaultLayout';
@@ -46,6 +48,8 @@ const publicRoutes = [
   { path: '/checkout/confirm', component: ConfirmCheckoutPage, layout: DefaultLayout },
   { path: '/order-success', component: OrderSuccessPage, layout: DefaultLayout },
   { path: '/vouchers', component: Vouchers, layout: DefaultLayout },
+  { path: '/magazine/:id', component: MagazineDetail, layout: DefaultLayout },
+  { path: '/magazines', component: MagazineList, layout: DefaultLayout },
   // Admin shell with nested routes
   { path: '/admin/*', component: AdminPage },
   // Staff shell with nested routes

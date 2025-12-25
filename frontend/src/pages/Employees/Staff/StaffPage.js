@@ -322,6 +322,7 @@ function StaffPage() {
             <Route index element={<StaffDashboard />} />
             <Route path="products" element={<StaffProducts />} />
             <Route path="content" element={<StaffBanners />} />
+ 
             <Route path="vouchers" element={<StaffVouchers />} />
             <Route path="orders" element={<StaffOrder />} />
             <Route path="refund-orders/:id" element={<RefundOrderDetailPage />} />
