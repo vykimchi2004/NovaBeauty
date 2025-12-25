@@ -42,7 +42,7 @@ brevo:
 #  Secret Key
 jwt:
   signerKey: "/nvphzRqEgduNfnKy2ztU3XBeojbmK8jzDivxOxLIGnl+D5GfkjyXdLq15xz9af/\n"
-  valid-duration: 3600  # in second
+  valid-duration: 7200  # in second
   refreshable-duration: 360000 # in seconds
 
 app:
