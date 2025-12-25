@@ -20,7 +20,7 @@ function ChatButton() {
         {
             id: 1,
             type: 'bot',
-            content: 'Xin chào! 👋 Tôi là trợ lý AI của Nova Beauty. Tôi có thể giúp bạn tư vấn sản phẩm, giải đáp thắc mắc về đơn hàng, chính sách đổi trả và nhiều hơn nữa. Bạn cần hỗ trợ gì hôm nay?',
+            content: 'Xin chào! Tôi là trợ lý AI của Nova Beauty. Tôi có thể giúp bạn tư vấn sản phẩm, giải đáp thắc mắc về đơn hàng, chính sách đổi trả. Bạn cần hỗ trợ gì hôm nay?',
             time: new Date()
         }
     ]);
@@ -36,9 +36,7 @@ function ChatButton() {
 
     const currentUser = storage.get(STORAGE_KEYS.USER);
 
-    /**
-     * Parse message content để render links và product cards
-     */
+    
     const renderMessageContent = (message) => {
         const { content, products } = message;
         if (!content && !products) return null;
@@ -197,7 +195,7 @@ function ChatButton() {
             );
 
             if (!confirmed) {
-                return; // Không đóng nếu hủy
+                return; 
             }
 
             // Gửi thông báo ngắt kết nối cho CSKH
@@ -223,7 +221,7 @@ function ChatButton() {
                 {
                     id: 1,
                     type: 'bot',
-                    content: 'Xin chào! 👋 Tôi là trợ lý AI của Nova Beauty. Tôi có thể giúp bạn tư vấn sản phẩm, giải đáp thắc mắc về đơn hàng, chính sách đổi trả và nhiều hơn nữa. Bạn cần hỗ trợ gì hôm nay?',
+                    content: 'Xin chào! Tôi là trợ lý AI của Nova Beauty. Tôi có thể giúp bạn tư vấn sản phẩm, giải đáp thắc mắc về đơn hàng, chính sách đổi trả và nhiều hơn nữa. Bạn cần hỗ trợ gì hôm nay?',
                     time: new Date()
                 }
             ]);
@@ -248,7 +246,7 @@ function ChatButton() {
             {
                 id: 1,
                 type: 'bot',
-                content: 'Xin chào! 👋 Tôi là trợ lý AI của Nova Beauty. Tôi có thể giúp bạn tư vấn sản phẩm, giải đáp thắc mắc về đơn hàng, chính sách đổi trả và nhiều hơn nữa. Bạn cần hỗ trợ gì hôm nay?',
+                content: 'Xin chào! Tôi là trợ lý AI của Nova Beauty. Tôi có thể giúp bạn tư vấn sản phẩm, giải đáp thắc mắc về đơn hàng, chính sách đổi trả và nhiều hơn nữa. Bạn cần hỗ trợ gì hôm nay?',
                 time: new Date()
             }
         ]);
@@ -269,10 +267,10 @@ function ChatButton() {
     };
 
     const quickReplies = [
-        { id: 1, text: 'Tình trạng đơn hàng', icon: '📦' },
-        { id: 2, text: 'Đổi trả sản phẩm', icon: '🔄' },
-        { id: 3, text: 'Khiếu nại', icon: '⚠️' },
-        { id: 4, text: 'Tư vấn sản phẩm', icon: '💄' },
+        { id: 1, text: 'Tình trạng đơn hàng' },
+        { id: 2, text: 'Đổi trả sản phẩm' },
+        { id: 3, text: 'Khiếu nại' },
+        { id: 4, text: 'Tư vấn sản phẩm'},
     ];
 
     const formatTime = (date) => {
@@ -409,7 +407,7 @@ function ChatButton() {
                             const characteristics = (p.characteristics || '').toLowerCase();
                             const description = `${p.description || ''} ${p.uses || ''}`.toLowerCase();
 
-                            // Weighted Score: Name > Category > Characteristics > Brand > Description
+                            
                             let score = 0;
                             keywords.forEach(k => {
                                 if (name.includes(k)) score += 10;
@@ -423,7 +421,7 @@ function ChatButton() {
                             return score > 0;
                         });
 
-                        // Sort by weighted match score first, then by quantitySold
+                        
                         matches.sort((a, b) => {
                             if (b._matchScore !== a._matchScore) {
                                 return b._matchScore - a._matchScore;
@@ -472,7 +470,7 @@ function ChatButton() {
             }
         } catch (error) {
             console.error('Error sending message:', error);
-            addBotMessage('Xin lỗi, có lỗi xảy ra khi xử lý tin nhắn của bạn. Vui lòng thử lại sau hoặc liên hệ hotline 1900 636 467 để được hỗ trợ.');
+            addBotMessage('Xin lỗi, có lỗi xảy ra khi xử lý tin nhắn của bạn. Vui lòng thử lại sau hoặc liên hệ hotline 0123 456 789 để được hỗ trợ.');
         } finally {
             setIsSending(false);
         }

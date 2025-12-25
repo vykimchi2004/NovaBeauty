@@ -105,7 +105,7 @@ function PromotionFormModal({
             {formErrors.discountValue && <span className={cx('errorText')}>{formErrors.discountValue}</span>}
           </div>
 
-          <div className={cx('formGroup')}>
+          {/* <div className={cx('formGroup')}>
             <label>Đơn hàng tối thiểu</label>
             <input
               type="number"
@@ -113,7 +113,7 @@ function PromotionFormModal({
               value={formData.minOrderValue}
               onChange={(e) => onChange('minOrderValue', e.target.value)}
             />
-          </div>
+          </div> */}
 
           <div className={cx('formRow')}>
             <div className={cx('formGroup', { error: formErrors.startDate })}>
