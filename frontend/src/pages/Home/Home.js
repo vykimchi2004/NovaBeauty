@@ -6,17 +6,20 @@ import BestSellers from '../../components/Sections/BestSellers/BestSellers';
 import Vouchers from '../../components/Sections/Vouchers/Vouchers';
 import NewArrivals from '../../components/Sections/NewArrivals/NewArrivals';
 import HotPromotions from '../../components/Sections/HotPromotions/HotPromotions';
+import BeautyMagazine from '../../components/Sections/BeautyMagazine/BeautyMagazine';
 
 const Home = () => {
   const cx = classNames.bind(styles);
 
   return (
     <div className={cx('home')}>
+
       <Vouchers />
       <BestSellers />
       <HotPromotions />
       <NewArrivals />
       <Hero />
+      <BeautyMagazine />
       {/* other home sections can be added here */}
     </div>
   );

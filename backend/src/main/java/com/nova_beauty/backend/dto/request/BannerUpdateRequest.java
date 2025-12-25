@@ -18,8 +18,10 @@ public class BannerUpdateRequest {
     @Size(max = 255, message = "Tiêu đề không được vượt quá 255 ký tự")
     String title;
 
-    @Size(max = 1000, message = "Mô tả không được vượt quá 1000 ký tự")
+    @Size(max = 30000, message = "Mô tả không được vượt quá 30000 ký tự")
     String description;
+
+    String category;
 
     String imageUrl;
     String linkUrl;
@@ -36,4 +38,7 @@ public class BannerUpdateRequest {
     LocalDate startDate;
 
     LocalDate endDate;
+    
+    // Allow updating magazine flag (only staff should be able to set this via UI)
+    Boolean isMagazine;
 }

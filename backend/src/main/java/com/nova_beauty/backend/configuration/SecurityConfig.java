@@ -53,7 +53,7 @@ public class SecurityConfig {
         "/categories/**",
         "/uploads/**",
         "/assets/**",
-        "/banners/active",
+        "/banners/**",
         "/shipments/ghn/provinces",
         "/shipments/ghn/districts",
         "/shipments/ghn/wards",

@@ -27,7 +27,7 @@ const Hero = () => {
         if (mounted) {
           // Filter only active banners with an image
           const approvedBanners = (bannerRes || []).filter(
-            (banner) => banner.status === true && !!banner.imageUrl
+            (banner) => banner.status === true && !!banner.imageUrl && banner.isMagazine !== true
           );
           // Sort by orderIndex
           approvedBanners.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));

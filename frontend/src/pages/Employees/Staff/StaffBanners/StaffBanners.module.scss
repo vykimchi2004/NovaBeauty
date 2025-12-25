@@ -1,5 +1,39 @@
 @import '../StaffVouchers/StaffVouchers.module.scss';
 
+.wrapper {
+  padding: 24px;
+}
+
+.tabs-container {
+  display: inline-flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.tab {
+  padding: 10px 20px;
+  border: 1px solid #ddd;
+  background: white;
+  color: #212529;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &.active {
+    background: #e5677d;
+    color: #fff;
+    border-color: #e5677d;
+    box-shadow: 0 2px 8px rgba(229, 103, 125, 0.3);
+  }
+
+  &:hover:not(.active) {
+    border-color: #e5677d;
+    color: #e5677d;
+  }
+}
+
 .thumbnail {
   width: 60px;
   height: 60px;
@@ -286,13 +320,13 @@
 .actionBtn {
   flex-shrink: 0;
   white-space: nowrap;
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     background: #e0e0e0 !important;
     color: #999 !important;
-    
+
     &:hover {
       transform: none;
       background: #e0e0e0 !important;
@@ -340,20 +374,30 @@
 
 .table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   background-color: #ffffff;
-  border-radius: 10px;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
 
   thead {
     background: #e5677d;
     color: #fff;
 
     th {
-      padding: 16px;
+      padding: 16px 12px;
       text-align: left;
       font-weight: 600;
       font-size: 14px;
-      color: #ffffff;
+      white-space: nowrap;
+
+      &:first-child {
+        border-top-left-radius: 12px;
+      }
+
+      &:last-child {
+        border-top-right-radius: 12px;
+      }
     }
   }
 
@@ -384,3 +428,53 @@
   }
 }
 
+.card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 0;
+  border: none;
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.card-header {
+  background: #e5677d;
+  padding: 16px 20px;
+  font-weight: 700;
+  font-size: 18px;
+  color: #fff;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e5677d;
+}
+
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2b1b3d;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.categoryTag {
+  background: #fff0f3;
+  color: #e5677d;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}

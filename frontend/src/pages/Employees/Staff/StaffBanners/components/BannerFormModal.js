@@ -23,6 +23,7 @@ function BannerFormModal({
   onSelectCategory,
   onSelectBrand,
   onSelectTargetType,
+  isStaff,
 }) {
 
   if (!open) return null;
@@ -244,6 +245,19 @@ function BannerFormModal({
               <span className={cx('errorText')}>{formErrors.productIds}</span>
             )}
           </div>
+
+          {isStaff && (
+            <div className={cx('formGroup')}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={!!formData.isMagazine}
+                  onChange={(e) => onChange('isMagazine', e.target.checked)}
+                />
+                &nbsp;Đánh dấu là Tạp chí làm đẹp
+              </label>
+            </div>
+          )}
 
           <div className={cx('formActions')}>
             <button type="button" className={cx('cancelBtn')} onClick={onClose}>

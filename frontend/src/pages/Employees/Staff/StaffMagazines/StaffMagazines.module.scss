@@ -1,0 +1,9 @@
+.wrapper { padding: 20px; }
+.header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+.addBtn { background:#e5677d; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
+.list { display:flex; flex-wrap:wrap; gap:12px; }
+.item { width:320px; background:#fff; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.06); overflow:hidden; display:flex; }
+.item img { width:120px; height:120px; object-fit:cover; }
+.meta { padding:10px; }
+.meta h3 { margin:0 0 6px; font-size:16px }
+.meta p { margin:0; color:#666; font-size:13px }

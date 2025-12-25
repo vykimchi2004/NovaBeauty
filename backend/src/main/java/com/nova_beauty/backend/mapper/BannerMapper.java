@@ -21,6 +21,7 @@ public interface BannerMapper {
     @Mapping(target = "createdByName", source = "createdBy.fullName")
     @Mapping(target = "productIds", source = "products", qualifiedByName = "mapProductIds")
     @Mapping(target = "productNames", source = "products", qualifiedByName = "mapProductNames")
+    @Mapping(target = "isMagazine", source = "isMagazine")
     BannerResponse toResponse(Banner banner);
 
     // Request to Entity
