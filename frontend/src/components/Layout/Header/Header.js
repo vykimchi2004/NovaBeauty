@@ -1,5 +1,5 @@
 import classNames from 'classnames/bind';
-import React, { useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './Header.module.scss';
 import Hamburger from '~/components/Common/Hamburger';
@@ -10,12 +10,17 @@ import { Link } from 'react-router-dom';
 import { normalizeMediaUrl } from '~/services/productUtils';
 import { getApiBaseUrl } from '~/services/utils';
 import { useProductSearch } from '~/hooks/useProductSearch';
+import { getRootCategories } from '~/services/category';
 
 const cx = classNames.bind(styles);
 
 function Header({ cartCount = 0, open = false, setOpen = () => {}, onLoginClick, user, onLogoutClick, onProfileClick }) {
   const displayName = (user && (user.username || user.fullName || user.name || (user.email && String(user.email).split('@')[0]))) || 'Tài khoản';
-  const [showMenu, setShowMenu] = React.useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [currentPlaceholderIndex, setCurrentPlaceholderIndex] = useState(0);
+  const [displayText, setDisplayText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
   const navigate = useNavigate();
   const API_BASE_URL = React.useMemo(() => getApiBaseUrl(), []);
   const searchRef = useRef(null);
@@ -31,6 +36,62 @@ function Header({ cartCount = 0, open = false, setOpen = () => {}, onLoginClick,
     clearSearch,
     hideSearchResults,
   } = useProductSearch();
+
+  // Fetch categories for rotating placeholder
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await getRootCategories();
+        const activeCategories = (data || []).filter(cat => cat.status !== false);
+        setCategories(activeCategories);
+      } catch (error) {
+        console.error('Error fetching categories for header:', error);
+        setCategories([]);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Typing animation effect
+  useEffect(() => {
+    if (categories.length === 0) return;
+
+    // Tạo text đầy đủ bao gồm cả "Tìm kiếm"
+    const currentCategoryName = categories[currentPlaceholderIndex]?.name || '';
+    const fullText = `Tìm kiếm ${currentCategoryName}...`;
+    const typingSpeed = 100; // Tốc độ gõ (ms)
+    const deletingSpeed = 50; // Tốc độ xóa (ms)
+    const pauseAfterTyping = 2000; // Dừng lại 2 giây sau khi gõ xong
+    const pauseAfterDeleting = 500; // Dừng lại 0.5 giây sau khi xóa xong
+
+    let timer;
+
+    if (!isDeleting && displayText !== fullText) {
+      // Đang gõ chữ
+      timer = setTimeout(() => {
+        setDisplayText(fullText.slice(0, displayText.length + 1));
+      }, typingSpeed);
+    } else if (!isDeleting && displayText === fullText) {
+      // Gõ xong, chờ rồi bắt đầu xóa
+      timer = setTimeout(() => {
+        setIsDeleting(true);
+      }, pauseAfterTyping);
+    } else if (isDeleting && displayText !== '') {
+      // Đang xóa chữ
+      timer = setTimeout(() => {
+        setDisplayText(displayText.slice(0, -1));
+      }, deletingSpeed);
+    } else if (isDeleting && displayText === '') {
+      // Xóa xong, chuyển sang category tiếp theo
+      timer = setTimeout(() => {
+        setIsDeleting(false);
+        setCurrentPlaceholderIndex((prevIndex) => (prevIndex + 1) % categories.length);
+      }, pauseAfterDeleting);
+    }
+
+    return () => clearTimeout(timer);
+  }, [categories, currentPlaceholderIndex, displayText, isDeleting]);
 
   React.useEffect(() => {
     const onDocClick = (e) => {
@@ -71,7 +132,7 @@ function Header({ cartCount = 0, open = false, setOpen = () => {}, onLoginClick,
           <form onSubmit={handleSearchSubmit} className={cx('search-form')}>
             <input
               type="text"
-              placeholder="Tìm kiếm sản phẩm..."
+              placeholder={categories.length > 0 ? displayText : 'Tìm kiếm sản phẩm...'}
               spellCheck={false}
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}

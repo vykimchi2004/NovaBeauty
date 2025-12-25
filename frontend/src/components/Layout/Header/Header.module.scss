@@ -65,6 +65,11 @@
     /* bo góc bên trái */
     font-size: 15px;
     outline: none;
+    transition: all 0.3s ease;
+
+    &::placeholder {
+      transition: opacity 0.3s ease;
+    }
   }
 
   .search-btn {
