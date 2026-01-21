@@ -15,7 +15,7 @@ export default function AddressListModal({ open, onClose, onSelect }) {
     const [loading, setLoading] = useState(false);
     const [showAddForm, setShowAddForm] = useState(false);
     const { success: showSuccess, error: showError } = useNotification();
-    
+
     const {
         fullName,
         setFullName,
@@ -80,12 +80,8 @@ export default function AddressListModal({ open, onClose, onSelect }) {
     };
 
     const handleAddAddress = async () => {
-        if (!ghnAvailable) {
-            showError('Dịch vụ GHN không khả dụng. Vui lòng kiểm tra cấu hình.');
-            return;
-        }
-
-        if (!fullName.trim() || !phone.trim() || !detailAddress.trim() || !selectedProvinceId || !selectedDistrictId || !selectedWardCode) {
+        // Validation using manual fields
+        if (!fullName.trim() || !phone.trim() || !detailAddress.trim() || !manualProvinceName.trim() || !manualDistrictName.trim() || !manualWardName.trim()) {
             showError('Vui lòng điền đầy đủ thông tin địa chỉ');
             return;
         }
@@ -94,23 +90,23 @@ export default function AddressListModal({ open, onClose, onSelect }) {
             const addressData = normalizeAddressPayload({
                 recipientName: fullName.trim(),
                 recipientPhoneNumber: phone.trim(),
-                provinceName: selectedProvinceName || '',
-                provinceID: selectedProvinceId,
-                districtName: selectedDistrictName || '',
-                districtID: selectedDistrictId,
-                wardName: selectedWardName || '',
-                wardCode: selectedWardCode,
+                provinceName: manualProvinceName.trim(),
+                provinceID: '',
+                districtName: manualDistrictName.trim(),
+                districtID: '',
+                wardName: manualWardName.trim(),
+                wardCode: '',
                 address: detailAddress.trim(),
                 defaultAddress: addresses.length === 0, // Set as default if first address
             });
 
             const newAddress = await createAddress(addressData);
             showSuccess('Thêm địa chỉ thành công!');
-            
+
             // Reload addresses
             const data = await getMyAddresses();
             setAddresses(Array.isArray(data) ? data : []);
-            
+
             // Reset form
             resetForm();
             setShowAddForm(false);
@@ -133,117 +129,82 @@ export default function AddressListModal({ open, onClose, onSelect }) {
                 <div className={cx('body')}>
                     {showAddForm ? (
                         <div className={cx('add-form')}>
-                            {!ghnAvailable ? (
-                                <div className={cx('ghn-unavailable')}>
-                                    Dịch vụ GHN không khả dụng. Vui lòng kiểm tra cấu hình.
-                                </div>
-                            ) : (
-                                <>
-                                    <div className={cx('form-group')}>
-                                        <label>Họ và tên người nhận *</label>
-                                        <input
-                                            type="text"
-                                            value={fullName}
-                                            onChange={(e) => setFullName(e.target.value)}
-                                            placeholder="Nhập họ và tên"
-                                        />
-                                    </div>
+                            <div className={cx('form-group')}>
+                                <label>Họ và tên người nhận *</label>
+                                <input
+                                    type="text"
+                                    value={fullName}
+                                    onChange={(e) => setFullName(e.target.value)}
+                                    placeholder="Nhập họ và tên"
+                                />
+                            </div>
 
-                                    <div className={cx('form-group')}>
-                                        <label>Số điện thoại *</label>
-                                        <input
-                                            type="text"
-                                            value={phone}
-                                            onChange={(e) => setPhone(e.target.value)}
-                                            placeholder="Nhập số điện thoại"
-                                        />
-                                    </div>
+                            <div className={cx('form-group')}>
+                                <label>Số điện thoại *</label>
+                                <input
+                                    type="text"
+                                    value={phone}
+                                    onChange={(e) => setPhone(e.target.value)}
+                                    placeholder="Nhập số điện thoại"
+                                />
+                            </div>
 
-                                    <div className={cx('form-group')}>
-                                        <label>Tỉnh/Thành phố *</label>
-                                        <select
-                                            value={selectedProvinceId || ''}
-                                            onChange={(e) => {
-                                                if (e.target.value) {
-                                                    handleSelectProvince(e.target.value);
-                                                }
-                                            }}
-                                        >
-                                            <option value="">Chọn tỉnh/thành phố</option>
-                                            {provinces.map((province) => (
-                                                <option key={province.ProvinceID} value={province.ProvinceID}>
-                                                    {province.ProvinceName}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
+                            <div className={cx('form-group')}>
+                                <label>Tỉnh/Thành phố *</label>
+                                <input
+                                    type="text"
+                                    value={manualProvinceName}
+                                    onChange={(e) => setManualProvinceName(e.target.value)}
+                                    placeholder="Nhập tỉnh/thành phố"
+                                />
+                            </div>
 
-                                    {selectedProvinceId && (
-                                        <div className={cx('form-group')}>
-                                            <label>Quận/Huyện *</label>
-                                            <select
-                                                value={selectedDistrictId || ''}
-                                                onChange={(e) => {
-                                                    if (e.target.value) {
-                                                        handleSelectDistrict(e.target.value);
-                                                    }
-                                                }}
-                                            >
-                                                <option value="">Chọn quận/huyện</option>
-                                                {districts.map((district) => (
-                                                    <option key={district.DistrictID} value={district.DistrictID}>
-                                                        {district.DistrictName}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    )}
+                            <div className={cx('form-group')}>
+                                <label>Quận/Huyện *</label>
+                                <input
+                                    type="text"
+                                    value={manualDistrictName}
+                                    onChange={(e) => setManualDistrictName(e.target.value)}
+                                    placeholder="Nhập quận/huyện"
+                                />
+                            </div>
 
-                                    {selectedDistrictId && (
-                                        <div className={cx('form-group')}>
-                                            <label>Phường/Xã *</label>
-                                            <select
-                                                value={selectedWardCode || ''}
-                                                onChange={(e) => setWardCode(e.target.value)}
-                                            >
-                                                <option value="">Chọn phường/xã</option>
-                                                {wards.map((ward) => (
-                                                    <option key={ward.WardCode} value={ward.WardCode}>
-                                                        {ward.WardName}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    )}
+                            <div className={cx('form-group')}>
+                                <label>Phường/Xã *</label>
+                                <input
+                                    type="text"
+                                    value={manualWardName}
+                                    onChange={(e) => setManualWardName(e.target.value)}
+                                    placeholder="Nhập phường/xã"
+                                />
+                            </div>
 
-                                    <div className={cx('form-group')}>
-                                        <label>Số nhà, tên đường *</label>
-                                        <input
-                                            type="text"
-                                            value={detailAddress}
-                                            onChange={(e) => setDetailAddress(e.target.value)}
-                                            placeholder="Nhập số nhà, tên đường"
-                                        />
-                                    </div>
+                            <div className={cx('form-group')}>
+                                <label>Số nhà, tên đường *</label>
+                                <input
+                                    type="text"
+                                    value={detailAddress}
+                                    onChange={(e) => setDetailAddress(e.target.value)}
+                                    placeholder="Nhập số nhà, tên đường"
+                                />
+                            </div>
 
-                                    <div className={cx('form-actions')}>
-                                        <button
-                                            type="button"
-                                            className={cx('btn', 'btn-secondary')}
-                                            onClick={() => setShowAddForm(false)}
-                                        >
-                                            Hủy
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className={cx('btn', 'btn-primary')}
-                                            onClick={handleAddAddress}
-                                        >
-                                            Thêm địa chỉ
-                                        </button>
-                                    </div>
-                                </>
-                            )}
+                            <div className={cx('form-actions')}>
+                                <button
+                                    type="button"
+                                    className={cx('btn', 'btn-secondary')}
+                                    onClick={() => setShowAddForm(false)}
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    type="button"
+                                    className={cx('btn', 'btn-primary')}
+                                    onClick={handleAddAddress}
+                                >
+                                    Thêm địa chỉ
+                                </button>
+                            </div>
                         </div>
                     ) : (
                         <>

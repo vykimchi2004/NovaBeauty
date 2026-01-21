@@ -144,18 +144,3 @@ export const STORAGE_KEYS = {
     THEME: 'theme',
 };
 
-// GHN Constants
-export const GHN_DEFAULT_FROM_NAME = 'NovaBeauty Shop';
-export const GHN_DEFAULT_FROM_PHONE = '0846120004';
-export const GHN_DEFAULT_FROM_ADDRESS = '136 Xuân Thủy, Dịch Vọng Hậu, Cầu Giấy, Hà Nội, Vietnam';
-export const GHN_DEFAULT_FROM_WARD_CODE = '1A0602';
-export const GHN_DEFAULT_FROM_DISTRICT_ID = 1485;
-export const GHN_DEFAULT_FROM_PROVINCE_ID = 201;
-
-// Service type
-export const GHN_SERVICE_TYPE_LIGHT = 2; // < 20kg
-export const GHN_SERVICE_TYPE_HEAVY = 5; // >= 20kg
-
-// Weight threshold
-export const GHN_HEAVY_SERVICE_WEIGHT_THRESHOLD = 20000; // 20kg in grams
-

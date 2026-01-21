@@ -25,7 +25,7 @@ function CheckoutDetailPage() {
 
   // Danh sách cartItemId được chọn truyền từ trang giỏ hàng
   const selectedItemIds = location.state?.selectedItemIds || [];
-  
+
   // Thông tin checkout trực tiếp (không qua giỏ hàng)
   const directCheckout = location.state?.directCheckout || false;
   const directProductId = location.state?.productId;
@@ -41,7 +41,7 @@ function CheckoutDetailPage() {
   const [showAddAddressForm, setShowAddAddressForm] = useState(false);
   const [isDefaultAddress, setIsDefaultAddress] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('momo'); // 'momo' | 'cod'
-  const [shippingMethod, setShippingMethod] = useState('ghn_standard'); // hiện tại chỉ 1 lựa chọn
+  const [shippingMethod, setShippingMethod] = useState('standard'); // hiện tại chỉ 1 lựa chọn
   const [orderNote, setOrderNote] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState(null);
@@ -50,13 +50,13 @@ function CheckoutDetailPage() {
   // State cho cart và voucher (giống LuminaBook)
   const [cart, setCart] = useState(null);
   const [cartLoading, setCartLoading] = useState(false);
-  
+
   // State cho voucher
   const [voucherCodeInput, setVoucherCodeInput] = useState('');
   const [applyingVoucher, setApplyingVoucher] = useState(false);
   const [selectedVoucherCode, setSelectedVoucherCode] = useState('');
   const [userId, setUserId] = useState(null);
-  
+
   // Lấy voucher discount từ cart (giống LuminaBook)
   const voucherDiscount = cart?.voucherDiscount || 0;
 
@@ -82,11 +82,11 @@ function CheckoutDetailPage() {
   // Tạo item ảo cho checkout trực tiếp
   const directCheckoutItem = useMemo(() => {
     if (!directCheckout || !directProduct) return null;
-    
+
     // Tính giá dựa trên variant nếu có colorCode - ÁP DỤNG DISCOUNT TỪ PROMOTION
     let unitPrice = directProduct.currentPrice || directProduct.price || 0;
     let finalPrice = unitPrice * directQuantity;
-    
+
     if (directColorCode && directProduct.manufacturingLocation) {
       // Chuẩn hóa variant records
       const variants = normalizeVariantRecords(directProduct.manufacturingLocation);
@@ -100,19 +100,19 @@ function CheckoutDetailPage() {
         const variantPrice = parseFloat(variant.price);
         const tax = directProduct.tax != null ? directProduct.tax : 0.08; // Tax là decimal (0.08 = 8%)
         const priceWithTax = variantPrice * (1 + tax);
-        
+
         // Áp dụng discount từ promotion nếu có - TÍNH THEO TỶ LỆ ĐỂ TẤT CẢ VARIANT GIẢM CÙNG MỨC
         if (directProduct.promotionId && directProduct.discountValue && directProduct.discountValue > 0 && directProduct.unitPrice) {
           // Tính giá gốc của sản phẩm (unitPrice + tax) - đây là giá trước discount
           const productUnitPrice = parseFloat(directProduct.unitPrice) || 0;
           const productTax = directProduct.tax != null ? directProduct.tax : 0.08;
           const originalProductPriceWithTax = productUnitPrice * (1 + productTax);
-          
+
           // Tính tỷ lệ discount (%) từ giá gốc của sản phẩm
-          const discountRate = originalProductPriceWithTax > 0 
-            ? directProduct.discountValue / originalProductPriceWithTax 
+          const discountRate = originalProductPriceWithTax > 0
+            ? directProduct.discountValue / originalProductPriceWithTax
             : 0;
-          
+
           // Áp dụng cùng tỷ lệ discount cho variant
           const variantDiscount = priceWithTax * discountRate;
           const finalVariantPrice = Math.max(0, priceWithTax - variantDiscount);
@@ -124,7 +124,7 @@ function CheckoutDetailPage() {
         finalPrice = unitPrice * directQuantity;
       }
     }
-    
+
     return {
       id: `direct-${directProductId}-${directColorCode || 'no-color'}`,
       productId: directProductId,
@@ -145,7 +145,7 @@ function CheckoutDetailPage() {
     if (directCheckout && directCheckoutItem) {
       return [directCheckoutItem];
     }
-    
+
     // Checkout từ giỏ hàng: lấy từ cart.items (giống LuminaBook)
     const items = cart?.items || [];
     if (!selectedItemIds || selectedItemIds.length === 0) return items;
@@ -324,7 +324,7 @@ function CheckoutDetailPage() {
         if (Array.isArray(addressesData) && addressesData.length > 0) {
           const defaultAddr = addressesData.find((addr) => addr.defaultAddress);
           const selectedAddr = defaultAddr || addressesData[0];
-          
+
           if (selectedAddr) {
             setSelectedAddress(selectedAddr);
             await selectSavedAddress(selectedAddr);
@@ -358,7 +358,7 @@ function CheckoutDetailPage() {
 
     // Chỉ load nếu không phải direct checkout
     if (!directCheckout) {
-    loadData();
+      loadData();
     } else {
       // Direct checkout: chỉ load user và addresses
       const loadDirectData = async () => {
@@ -390,7 +390,7 @@ function CheckoutDetailPage() {
           if (Array.isArray(addressesData) && addressesData.length > 0) {
             const defaultAddr = addressesData.find((addr) => addr.defaultAddress);
             const selectedAddr = defaultAddr || addressesData[0];
-            
+
             if (selectedAddr) {
               setSelectedAddress(selectedAddr);
               await selectSavedAddress(selectedAddr);
@@ -456,7 +456,7 @@ function CheckoutDetailPage() {
   const addressText = selectedAddress
     ? formatFullAddress(selectedAddress)
     : address || 'Vui lòng cập nhật địa chỉ giao hàng';
-  
+
   const recipientName = selectedAddress?.recipientName || fullName || 'Khách hàng';
   const recipientPhone = selectedAddress?.recipientPhoneNumber || phone || '---';
 
@@ -466,8 +466,7 @@ function CheckoutDetailPage() {
         selectedAddress.recipientName,
         selectedAddress.recipientPhoneNumber || selectedAddress.recipientPhone,
         selectedAddress.address,
-        selectedAddress.wardCode,
-        selectedAddress.districtID,
+        // Removed validation for wardCode/districtID since it's now manual
       ];
       return requiredFields.every((value) => value && String(value).trim().length > 0);
     }
@@ -483,7 +482,7 @@ function CheckoutDetailPage() {
       : 'COD — Thanh toán khi nhận hàng';
 
   const shippingMethodLabel =
-    shippingMethod === 'ghn_standard' ? 'Giao hàng GHN (Tiêu chuẩn)' : 'Phương thức khác';
+    shippingMethod === 'standard' ? 'Giao hàng tiêu chuẩn' : 'Phương thức khác';
 
   const handleBackToCart = () => {
     navigate('/cart');
@@ -509,7 +508,7 @@ function CheckoutDetailPage() {
       setApplyingVoucher(true);
       const cartService = (await import('~/services/cart')).default;
       const cartData = await cartService.applyVoucher(code);
-      
+
       setCart(cartData);
       const appliedCode = (cartData?.appliedVoucherCode || code).toString().toUpperCase();
       setSelectedVoucherCode(appliedCode);
@@ -529,7 +528,7 @@ function CheckoutDetailPage() {
     try {
       const cartService = (await import('~/services/cart')).default;
       await cartService.clearVoucher();
-      
+
       // Reload cart để lấy dữ liệu mới nhất
       const cartData = await cartService.getCart();
       setCart(cartData);
@@ -576,7 +575,7 @@ function CheckoutDetailPage() {
     const finalRecipientName = selectedAddress?.recipientName || fullName;
     const finalRecipientPhone = selectedAddress?.recipientPhoneNumber || phone;
     const finalAddressText = selectedAddress ? formatFullAddress(selectedAddress) : address;
-    
+
     const shippingAddressJson = JSON.stringify({
       name: finalRecipientName,
       phone: finalRecipientPhone,
@@ -586,7 +585,7 @@ function CheckoutDetailPage() {
     setPlacingOrder(true);
     try {
       let result;
-      
+
       // Nếu là checkout trực tiếp (không qua giỏ hàng)
       if (directCheckout && directProductId) {
         const directRequest = {
@@ -599,7 +598,7 @@ function CheckoutDetailPage() {
           shippingFee: shippingFee || 0,
           paymentMethod: paymentMethod || 'cod',
         };
-        
+
         result = await orderService.checkoutDirect(directRequest);
       } else {
         // Checkout từ giỏ hàng (logic cũ)
@@ -614,27 +613,27 @@ function CheckoutDetailPage() {
 
         result = await orderService.createOrder(request);
       }
-      
+
       console.log('[CheckoutDetailPage] Order creation result:', result);
-      
+
       // Kiểm tra cấu trúc response
       if (!result) {
         throw new Error('Không nhận được phản hồi từ server.');
       }
-      
+
       // Backend đã xóa các items đã đặt hàng
       // Cart page sẽ tự động reload khi user quay lại (giống LuminaBook)
-      
+
       // Nếu là COD, chuyển sang trang thank you
       if (paymentMethod === 'cod') {
         // result có thể là CheckoutInitResponse { order, payUrl } hoặc trực tiếp là order object
         const orderData = result.order || result;
-        
+
         if (!orderData) {
           console.error('[CheckoutDetailPage] Invalid order data:', result);
           throw new Error('Dữ liệu đơn hàng không hợp lệ.');
         }
-        
+
         if (selectedVoucherCode && userId) {
           markVoucherUsed(userId, selectedVoucherCode);
         }
@@ -699,16 +698,16 @@ function CheckoutDetailPage() {
 
   const handleSetDefaultAddress = async (addr, e) => {
     e.stopPropagation(); // Ngăn chặn event bubble lên parent div
-    
+
     // Backend trả về 'id' trong AddressResponse (mapped từ addressId)
     const addressId = addr.id || addr.addressId || addr.address_id;
-    
+
     if (!addressId) {
       console.error('Address ID not found:', addr);
       notify.error('Không tìm thấy ID địa chỉ. Vui lòng thử lại.');
       return;
     }
-    
+
     try {
       await setDefaultAddress(addressId);
       notify.success('Đã đặt làm địa chỉ mặc định thành công.');
@@ -796,7 +795,7 @@ function CheckoutDetailPage() {
       </div>
     );
   }
-  
+
   // Kiểm tra nếu là direct checkout nhưng không có sản phẩm
   if (directCheckout && !directProduct) {
     return (
@@ -1113,7 +1112,7 @@ function CheckoutDetailPage() {
             }}
           >
             <h3 className={cx('addressModalTitle')}>Địa chỉ giao hàng</h3>
-            
+
             {!showAddAddressForm ? (
               <>
                 {/* Danh sách địa chỉ đã lưu */}
@@ -1122,13 +1121,13 @@ function CheckoutDetailPage() {
                     {savedAddresses.map((addr) => {
                       // Build địa chỉ đầy đủ từ các field sử dụng formatFullAddress
                       const fullAddr = formatFullAddress(addr);
-                      
+
                       // Backend trả về 'id' trong AddressResponse (mapped từ addressId)
                       const addressId = String(addr.id || addr.addressId || addr.address_id || '');
-                      const isSelected = selectedAddress?.id === addr.id || 
-                                        selectedAddress?.addressId === addr.addressId ||
-                                        String(selectedAddressId || '') === addressId;
-                      
+                      const isSelected = selectedAddress?.id === addr.id ||
+                        selectedAddress?.addressId === addr.addressId ||
+                        String(selectedAddressId || '') === addressId;
+
                       return (
                         <div
                           key={addressId}
@@ -1237,187 +1236,187 @@ function CheckoutDetailPage() {
                 </div>
 
                 <div className={cx('addressForm')}>
-              <div className={cx('addressFormRow')}>
-                <input
-                  type="text"
-                  placeholder="Họ và tên người nhận"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                />
-                <input
-                  type="text"
-                  placeholder="Số điện thoại"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                />
-              </div>
-
-              {ghnAvailable ? (
-                <>
                   <div className={cx('addressFormRow')}>
-                    <div
-                      className={cx(
-                        'addressDropdown',
-                        !selectedProvinceId && 'addressDropdownPlaceholder',
-                      )}
-                      ref={provinceDropdownRef}
-                    >
-                      <button
-                        type="button"
-                        className={cx('addressDropdownButton')}
-                        onClick={toggleProvinceDropdown}
-                        disabled={!provinces.length}
-                      >
-                        {selectedProvinceName || 'Chọn tỉnh / thành phố'}
-                        <span className={cx('addressDropdownIcon')} />
-                      </button>
-                      {showProvinceDropdown && (
-                        <div className={cx('addressDropdownList')}>
-                          {provinces.map((p) => (
-                            <button
-                              type="button"
-                              key={p.ProvinceID || p.id}
-                              className={cx('addressDropdownOption')}
-                              onClick={() => handleProvinceSelect(String(p.ProvinceID || p.id))}
-                            >
-                              {p.ProvinceName || p.name}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div
-                      className={cx(
-                        'addressDropdown',
-                        (!selectedDistrictId || !districts.length) &&
-                          'addressDropdownPlaceholder',
-                        !selectedProvinceId && 'addressDropdownDisabled',
-                      )}
-                      ref={districtDropdownRef}
-                    >
-                      <button
-                        type="button"
-                        className={cx('addressDropdownButton')}
-                        onClick={toggleDistrictDropdown}
-                        disabled={!selectedProvinceId || !districts.length}
-                      >
-                        {selectedDistrictName || 'Chọn quận / huyện'}
-                        <span className={cx('addressDropdownIcon')} />
-                      </button>
-                      {showDistrictDropdown && (
-                        <div className={cx('addressDropdownList')}>
-                          {districts.map((d) => (
-                            <button
-                              type="button"
-                              key={d.DistrictID || d.id}
-                              className={cx('addressDropdownOption')}
-                              onClick={() => handleDistrictSelect(String(d.DistrictID || d.id))}
-                            >
-                              {d.DistrictName || d.name}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className={cx('addressFormRow')}>
-                    <div
-                      className={cx(
-                        'addressDropdown',
-                        (!selectedWardCode || !wards.length) && 'addressDropdownPlaceholder',
-                        !selectedDistrictId && 'addressDropdownDisabled',
-                      )}
-                      ref={wardDropdownRef}
-                    >
-                      <button
-                        type="button"
-                        className={cx('addressDropdownButton')}
-                        onClick={toggleWardDropdown}
-                        disabled={!selectedDistrictId || !wards.length}
-                      >
-                        {selectedWardName || 'Chọn phường / xã'}
-                        <span className={cx('addressDropdownIcon')} />
-                      </button>
-                      {showWardDropdown && (
-                        <div className={cx('addressDropdownList')}>
-                          {wards.map((w) => (
-                            <button
-                              type="button"
-                              key={w.WardCode || w.code}
-                              className={cx('addressDropdownOption')}
-                              onClick={() => handleWardSelect(String(w.WardCode || w.code))}
-                            >
-                              {w.WardName || w.name}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
                     <input
                       type="text"
-                      placeholder="Số nhà, tên đường..."
-                      value={detailAddress}
-                      onChange={(e) => setDetailAddress(e.target.value)}
+                      placeholder="Họ và tên người nhận"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Số điện thoại"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
                     />
                   </div>
-                </>
-              ) : (
-                <div className={cx('addressFormRow')} style={{ padding: '20px', textAlign: 'center', backgroundColor: '#fff3cd', borderRadius: '8px', border: '1px solid #ffc107' }}>
-                  <p style={{ margin: 0, color: '#856404', fontWeight: 'bold' }}>
-                    ⚠️ Không thể kết nối đến dịch vụ GHN
-                  </p>
-                  <p style={{ margin: '8px 0 0 0', color: '#856404', fontSize: '14px' }}>
-                    Vui lòng kiểm tra:
-                  </p>
-                  <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', textAlign: 'left', color: '#856404', fontSize: '14px' }}>
-                    <li>Backend đã được khởi động chưa?</li>
-                    <li>Cấu hình GHN_TOKEN và GHN_SHOP_ID trong application.yaml</li>
-                    <li>Kết nối mạng có ổn định không?</li>
-                  </ul>
-                  <p style={{ margin: '12px 0 0 0', color: '#856404', fontSize: '13px', fontStyle: 'italic' }}>
-                    Hệ thống yêu cầu GHN để chọn địa chỉ. Vui lòng liên hệ quản trị viên để được hỗ trợ.
-                  </p>
-                </div>
-              )}
 
-              {(addressError || phoneError) && (
-                <div className={cx('addressErrors')}>
-                  {addressError && <p>{addressError}</p>}
-                  {phoneError && <p>{phoneError}</p>}
-                </div>
-              )}
+                  {ghnAvailable ? (
+                    <>
+                      <div className={cx('addressFormRow')}>
+                        <div
+                          className={cx(
+                            'addressDropdown',
+                            !selectedProvinceId && 'addressDropdownPlaceholder',
+                          )}
+                          ref={provinceDropdownRef}
+                        >
+                          <button
+                            type="button"
+                            className={cx('addressDropdownButton')}
+                            onClick={toggleProvinceDropdown}
+                            disabled={!provinces.length}
+                          >
+                            {selectedProvinceName || 'Chọn tỉnh / thành phố'}
+                            <span className={cx('addressDropdownIcon')} />
+                          </button>
+                          {showProvinceDropdown && (
+                            <div className={cx('addressDropdownList')}>
+                              {provinces.map((p) => (
+                                <button
+                                  type="button"
+                                  key={p.ProvinceID || p.id}
+                                  className={cx('addressDropdownOption')}
+                                  onClick={() => handleProvinceSelect(String(p.ProvinceID || p.id))}
+                                >
+                                  {p.ProvinceName || p.name}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div
+                          className={cx(
+                            'addressDropdown',
+                            (!selectedDistrictId || !districts.length) &&
+                            'addressDropdownPlaceholder',
+                            !selectedProvinceId && 'addressDropdownDisabled',
+                          )}
+                          ref={districtDropdownRef}
+                        >
+                          <button
+                            type="button"
+                            className={cx('addressDropdownButton')}
+                            onClick={toggleDistrictDropdown}
+                            disabled={!selectedProvinceId || !districts.length}
+                          >
+                            {selectedDistrictName || 'Chọn quận / huyện'}
+                            <span className={cx('addressDropdownIcon')} />
+                          </button>
+                          {showDistrictDropdown && (
+                            <div className={cx('addressDropdownList')}>
+                              {districts.map((d) => (
+                                <button
+                                  type="button"
+                                  key={d.DistrictID || d.id}
+                                  className={cx('addressDropdownOption')}
+                                  onClick={() => handleDistrictSelect(String(d.DistrictID || d.id))}
+                                >
+                                  {d.DistrictName || d.name}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
 
-              <label className={cx('defaultAddressCheckbox')}>
-                <input
-                  type="checkbox"
-                  checked={isDefaultAddress}
-                  onChange={(e) => setIsDefaultAddress(e.target.checked)}
-                />
-                <span>Đặt làm địa chỉ mặc định</span>
-              </label>
+                      <div className={cx('addressFormRow')}>
+                        <div
+                          className={cx(
+                            'addressDropdown',
+                            (!selectedWardCode || !wards.length) && 'addressDropdownPlaceholder',
+                            !selectedDistrictId && 'addressDropdownDisabled',
+                          )}
+                          ref={wardDropdownRef}
+                        >
+                          <button
+                            type="button"
+                            className={cx('addressDropdownButton')}
+                            onClick={toggleWardDropdown}
+                            disabled={!selectedDistrictId || !wards.length}
+                          >
+                            {selectedWardName || 'Chọn phường / xã'}
+                            <span className={cx('addressDropdownIcon')} />
+                          </button>
+                          {showWardDropdown && (
+                            <div className={cx('addressDropdownList')}>
+                              {wards.map((w) => (
+                                <button
+                                  type="button"
+                                  key={w.WardCode || w.code}
+                                  className={cx('addressDropdownOption')}
+                                  onClick={() => handleWardSelect(String(w.WardCode || w.code))}
+                                >
+                                  {w.WardName || w.name}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Số nhà, tên đường..."
+                          value={detailAddress}
+                          onChange={(e) => setDetailAddress(e.target.value)}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className={cx('addressFormRow')} style={{ padding: '20px', textAlign: 'center', backgroundColor: '#fff3cd', borderRadius: '8px', border: '1px solid #ffc107' }}>
+                      <p style={{ margin: 0, color: '#856404', fontWeight: 'bold' }}>
+                        ⚠️ Không thể kết nối đến dịch vụ GHN
+                      </p>
+                      <p style={{ margin: '8px 0 0 0', color: '#856404', fontSize: '14px' }}>
+                        Vui lòng kiểm tra:
+                      </p>
+                      <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', textAlign: 'left', color: '#856404', fontSize: '14px' }}>
+                        <li>Backend đã được khởi động chưa?</li>
+                        <li>Cấu hình GHN_TOKEN và GHN_SHOP_ID trong application.yaml</li>
+                        <li>Kết nối mạng có ổn định không?</li>
+                      </ul>
+                      <p style={{ margin: '12px 0 0 0', color: '#856404', fontSize: '13px', fontStyle: 'italic' }}>
+                        Hệ thống yêu cầu GHN để chọn địa chỉ. Vui lòng liên hệ quản trị viên để được hỗ trợ.
+                      </p>
+                    </div>
+                  )}
 
-              <div className={cx('addressFormActions')}>
-                <button
-                  type="button"
-                  className={cx('btn', 'btnCancelAddress')}
-                  onClick={() => {
-                    setShowAddressModal(false);
-                    setShowAddAddressForm(false);
-                  }}
-                >
-                  Hủy
-                </button>
-                <button
-                  type="button"
-                  className={cx('btn', 'btnApply')}
-                  onClick={handleSaveAddress}
-                  disabled={!ghnAvailable}
-                  style={!ghnAvailable ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
-                >
-                  Lưu địa chỉ
-                </button>
-              </div>
+                  {(addressError || phoneError) && (
+                    <div className={cx('addressErrors')}>
+                      {addressError && <p>{addressError}</p>}
+                      {phoneError && <p>{phoneError}</p>}
+                    </div>
+                  )}
+
+                  <label className={cx('defaultAddressCheckbox')}>
+                    <input
+                      type="checkbox"
+                      checked={isDefaultAddress}
+                      onChange={(e) => setIsDefaultAddress(e.target.checked)}
+                    />
+                    <span>Đặt làm địa chỉ mặc định</span>
+                  </label>
+
+                  <div className={cx('addressFormActions')}>
+                    <button
+                      type="button"
+                      className={cx('btn', 'btnCancelAddress')}
+                      onClick={() => {
+                        setShowAddressModal(false);
+                        setShowAddAddressForm(false);
+                      }}
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="button"
+                      className={cx('btn', 'btnApply')}
+                      onClick={handleSaveAddress}
+                      disabled={!ghnAvailable}
+                      style={!ghnAvailable ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                    >
+                      Lưu địa chỉ
+                    </button>
+                  </div>
                 </div>
               </>
             )}

@@ -21,74 +21,23 @@ export async function setDefaultAddress(addressId) {
   return apiClient.put(`/addresses/${addressId}/set-default`);
 }
 
-// GHN location helpers
-const extractResult = (payload) => {
-  if (!payload) return [];
-  if (Array.isArray(payload)) return payload;
-  return payload.result || payload.data || [];
-};
-
-const fetchJson = async (url, options) => {
-  try {
-    const res = await fetch(url, options);
-    if (!res.ok) {
-      const errorText = await res.text();
-      let errorMessage = `Request failed with status ${res.status}`;
-      try {
-        const errorJson = JSON.parse(errorText);
-        errorMessage = errorJson.message || errorJson.error || errorMessage;
-      } catch (e) {
-        // Nếu không parse được JSON, dùng errorText
-        if (errorText) errorMessage = errorText;
-      }
-      const error = new Error(errorMessage);
-      error.status = res.status;
-      error.statusText = res.statusText;
-      throw error;
-    }
-    return res.json();
-  } catch (error) {
-    // Nếu là lỗi network (không kết nối được server)
-    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-      const networkError = new Error('Không thể kết nối đến server. Vui lòng kiểm tra backend đã chạy chưa.');
-      networkError.status = 0;
-      networkError.isNetworkError = true;
-      throw networkError;
-    }
-    throw error;
-  }
-};
+// GHN location helpers removed
 
 export async function getProvinces() {
-  const data = await fetchJson(`${API_BASE_URL}/shipments/ghn/provinces`);
-  return extractResult(data);
+  return [];
 }
 
 export async function getDistricts(provinceId) {
-  const data = await fetchJson(`${API_BASE_URL}/shipments/ghn/districts?province_id=${provinceId}`);
-  return extractResult(data);
+  return [];
 }
 
 export async function getWards(districtId) {
-  const data = await fetchJson(`${API_BASE_URL}/shipments/ghn/wards?district_id=${districtId}`);
-  return extractResult(data);
+  return [];
 }
 
-// Tính phí vận chuyển GHN dựa trên địa chỉ & trọng lượng ước tính
+// Tính phí vận chuyển (đã xóa GHN, trả về 0)
 export async function calculateShippingFee(payload) {
-  console.log('[calculateShippingFee] Request payload:', payload);
-  const data = await fetchJson(`${API_BASE_URL}/shipments/ghn/fees`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  });
-  console.log('[calculateShippingFee] Raw response:', data);
-  // Backend bọc kết quả trong ApiResponse { result: ... } hoặc { data: ... }
-  const result = data.result || data.data || data;
-  console.log('[calculateShippingFee] Extracted result:', result);
-  return result;
+  return { total: 0 };
 }
 
 // Format địa chỉ đầy đủ từ các field

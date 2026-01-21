@@ -1,0 +1,202 @@
+package com.hanoi_metro.backend.service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.hanoi_metro.backend.dto.request.CategoryCreationRequest;
+import com.hanoi_metro.backend.dto.request.CategoryUpdateRequest;
+import com.hanoi_metro.backend.dto.response.CategoryResponse;
+import com.hanoi_metro.backend.entity.Category;
+import com.hanoi_metro.backend.exception.AppException;
+import com.hanoi_metro.backend.exception.ErrorCode;
+import com.hanoi_metro.backend.mapper.CategoryMapper;
+import com.hanoi_metro.backend.repository.CategoryRepository;
+
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
+
+@Service
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@Slf4j
+public class CategoryService {
+
+    CategoryRepository categoryRepository;
+    CategoryMapper categoryMapper;
+
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
+    public CategoryResponse createCategory(CategoryCreationRequest request) {
+        // Check if id already exists
+        if (categoryRepository.findById(request.getId()).isPresent()) {
+            throw new AppException(ErrorCode.CATEGORY_ALREADY_EXISTS); // Mã danh mục đã tồn tại
+        }
+
+        // Check if name already exists
+        if (categoryRepository.findByName(request.getName()).isPresent()) {
+            throw new AppException(ErrorCode.CATEGORY_ALREADY_EXISTS); // Tên danh mục đã tồn tại
+        }
+
+        // Create category entity using mapper
+        Category category = categoryMapper.toCategory(request);
+        category.setStatus(request.getStatus() != null ? request.getStatus() : true);
+        category.setCreatedAt(LocalDateTime.now());
+        category.setUpdatedAt(LocalDateTime.now());
+
+        // Set parent category if provided
+        if (request.getParentId() != null && !request.getParentId().isEmpty()) {
+            Category parentCategory = categoryRepository
+                    .findById(request.getParentId())
+                    .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
+            category.setParentCategory(parentCategory);
+        }
+
+        try {
+            Category savedCategory = categoryRepository.save(category);
+            log.info("Category created with ID: {}", savedCategory.getId());
+            return categoryMapper.toResponse(savedCategory);
+        } catch (DataIntegrityViolationException e) {
+            log.error("Data integrity violation when creating category", e);
+            // This can happen if id or name violates unique constraint despite our checks
+            throw new AppException(ErrorCode.CATEGORY_ALREADY_EXISTS);
+        }
+    }
+
+    public CategoryResponse getCategoryById(String categoryId) {
+        Category category = categoryRepository
+                .findById(categoryId)
+                .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
+
+        return categoryMapper.toResponse(category);
+    }
+
+    public List<CategoryResponse> getAllCategories() {
+        List<Category> categories = categoryRepository.findAll();
+
+        return categories.stream().map(categoryMapper::toResponse).toList();
+    }
+
+    public List<CategoryResponse> getRootCategories() {
+        List<Category> rootCategories = categoryRepository.findByParentCategoryIsNull();
+
+        return rootCategories.stream().map(categoryMapper::toResponse).toList();
+    }
+
+    public List<CategoryResponse> getSubCategories(String parentId) {
+        List<Category> subCategories = categoryRepository.findByParentCategoryId(parentId);
+
+        return subCategories.stream().map(categoryMapper::toResponse).toList();
+    }
+
+    public List<CategoryResponse> getActiveCategories() {
+        List<Category> activeCategories = categoryRepository.findByStatus(true);
+
+        return activeCategories.stream().map(categoryMapper::toResponse).toList();
+    }
+
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
+    public CategoryResponse updateCategory(String categoryId, CategoryUpdateRequest request) {
+        Category category = categoryRepository
+                .findById(categoryId)
+                .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
+
+        // Check if ID is being changed
+        String newId = request.getId();
+        boolean idChanged = newId != null && !newId.isEmpty() && !newId.equals(categoryId);
+        
+        if (idChanged) {
+            // Check if category has sub-categories - cannot change ID if it has children
+            long subCategoryCount = categoryRepository.countSubCategoriesByCategoryId(categoryId);
+            if (subCategoryCount > 0) {
+                throw new AppException(ErrorCode.CATEGORY_CANNOT_CHANGE_ID_HAS_CHILDREN);
+            }
+            
+            // Check if new ID already exists
+            if (categoryRepository.findById(newId).isPresent()) {
+                throw new AppException(ErrorCode.CATEGORY_ALREADY_EXISTS);
+            }
+            
+            // If ID is changed, create new category with new ID and copy all data
+            Category newCategory = new Category();
+            newCategory.setId(newId);
+            newCategory.setName(request.getName() != null ? request.getName() : category.getName());
+            newCategory.setDescription(request.getDescription() != null ? request.getDescription() : category.getDescription());
+            newCategory.setStatus(request.getStatus() != null ? request.getStatus() : category.getStatus());
+            newCategory.setCreatedAt(category.getCreatedAt());
+            newCategory.setUpdatedAt(LocalDateTime.now());
+
+            String pid = request.getParentId();
+
+// ✅ null hoặc "" => bỏ cha (danh mục gốc)
+            if (pid == null || pid.isBlank()) {
+                newCategory.setParentCategory(null);
+            } else {
+                Category parentCategory = categoryRepository
+                        .findById(pid)
+                        .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
+                newCategory.setParentCategory(parentCategory);
+            }
+
+
+
+            // Save new category first
+            Category savedCategory = categoryRepository.save(newCategory);
+            
+            // Delete old category (since we already checked there are no subcategories, this is safe)
+            categoryRepository.delete(category);
+            
+            log.info("Category updated: {} -> {}", categoryId, newId);
+            return categoryMapper.toResponse(savedCategory);
+        } else {
+            // Normal update without ID change
+            categoryMapper.updateCategory(category, request);
+            category.setUpdatedAt(LocalDateTime.now());
+
+            String pid = request.getParentId();
+
+// ✅ null hoặc "" => bỏ cha (danh mục gốc)
+            if (pid == null || pid.isBlank()) {
+                category.setParentCategory(null);
+            } else {
+                Category parentCategory = categoryRepository
+                        .findById(pid)
+                        .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
+                category.setParentCategory(parentCategory);
+            }
+
+
+            Category savedCategory = categoryRepository.save(category);
+            log.info("Category updated: {}", categoryId);
+            return categoryMapper.toResponse(savedCategory);
+        }
+    }
+
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
+    public void deleteCategory(String categoryId) {
+        Category category = categoryRepository
+                .findById(categoryId)
+                .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_EXISTED));
+
+        // Check if category has sub-categories
+        if (categoryRepository.countSubCategoriesByCategoryId(categoryId) > 0) {
+            throw new AppException(ErrorCode.CATEGORY_HAS_SUBCATEGORIES);
+        }
+
+        // Check if category has products
+        if (categoryRepository.countProductsByCategoryId(categoryId) > 0) {
+            throw new AppException(ErrorCode.CATEGORY_HAS_PRODUCTS);
+        }
+
+        categoryRepository.delete(category);
+        log.info("Category deleted: {}", categoryId);
+    }
+}

@@ -3,14 +3,14 @@
 server:
   port: 8080
   servlet:
-    context-path: /nova_beauty
+    context-path: /hanoi_metro
   tomcat:
     max-swallow-size: 200MB
 
 #  Config cau hinh database
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/nova_beauty?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/hanoi_metro?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     driverClassName: com.mysql.cj.jdbc.Driver
     username: root
     password: root
@@ -47,13 +47,8 @@ jwt:
 
 app:
   frontend:
-    base-url: "http://localhost:8080/nova_beauty"
+    base-url: "http://localhost:8080/hanoi_metro"
 
-# GHN shipment configuration
-ghn:
-  token: ${GHN_TOKEN}
-  shop-id: ${GHN_SHOP_ID}
-  base-url: https://dev-online-gateway.ghn.vn
 
 # Momo payment configuration
 momo:
@@ -62,7 +57,7 @@ momo:
   return-url: "http://localhost:3000/order-success"
   end-point: "https://test-payment.momo.vn/v2/gateway/api"
   # Lưu ý: context-path của backend là /nova_beauty nên IPN URL cần kèm context-path
-  ipn-url: "http://localhost:8080/nova_beauty/api/momo/ipn-handler"
+  ipn-url: "http://localhost:8080/hanoi_metro/api/momo/ipn-handler"
   access-key: "mTCKt9W3eU1m39TW"
   secret-key: "SetA5RDnLHvt51AULf51DyauxUo3kDU6"
   request-type: "captureWallet"
